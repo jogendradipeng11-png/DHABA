@@ -269,7 +269,7 @@ let currentTable = '';
 let customerOrder = [];
 let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
-let currentPaymentMode = "";
+let currentPaymentMode = "";   // Will be set only when customer chooses payment
 
 // ====================== MENU ======================
 function loadAndListenMenu() {
@@ -474,7 +474,7 @@ function openBillInNewTab(order) {
       setTimeout(() => window.close(), 1000);
     }
     function sendWhatsAppBill() {
-      let msg = "Shree & Shriyan Dhaba\\nInvoice: " + invoiceNo + "\\nTable: " + orderData.table + "\\nCustomer: " + (orderData.name || "Guest") + "\\nPayment Mode: " + (orderData.paymentMode || "Cash") + "\\n\\n";
+      let msg = "Shree & Shriyan Dhaba\\nInvoice: " + invoiceNo + "\\nTable: " + orderData.table + "\\nCustomer: " + (orderData.name || "Guest") + "\\nPayment Mode: " + (orderData.paymentMode || "Not Specified") + "\\n\\n";
       orderData.items.forEach(item => msg += item.name + " x" + item.qty + " - ₹" + (item.qty * item.price) + "\\n");
       const total = orderData.items.reduce((sum, item) => sum + item.qty * item.price, 0) * 1.05;
       msg += "\\nGrand Total: ₹" + total.toFixed(0);
@@ -515,7 +515,7 @@ function notifyCustomerOrderAccepted(table, name) {
   });
 }
 
-// ====================== CUSTOMER SIDE - FIXED (Name Required) ======================
+// ====================== CUSTOMER SIDE ======================
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim();
@@ -590,16 +590,18 @@ function placeCustomerOrder() {
     items: JSON.parse(JSON.stringify(customerOrder)),
     total: total,
     timestamp: new Date().toLocaleString(),
-    status: "pending",
-    paymentMode: "Online"
+    status: "pending"
+    // paymentMode removed - will be set only when customer chooses payment
   };
   db.ref('tableOrders/' + orderId).set(orderData);
   db.ref('newOrders/' + orderId).set(orderData);
   alert(`✅ Order Placed Successfully for Table ${currentTable}`);
 }
 
+// ====================== PAY BY CASH ======================
 function payByCash() {
   if (customerOrder.length === 0) return alert("Cart is empty!");
+  
   currentPaymentMode = "Cash";
   
   const orderId = Date.now();
@@ -626,6 +628,32 @@ function payByCash() {
   alert("✅ Cash payment request sent to staff. Please pay at the counter when food is ready.");
 }
 
+// ====================== MARK AS PAID (Online) ======================
+function markAsPaid() {
+  const paidAmt = parseFloat(document.getElementById("paidAmount").value);
+  const total = parseFloat(document.getElementById("custTotal").innerText);
+  const whatsapp = document.getElementById("custWhatsApp").value.trim() || "Not Provided";
+  if (!paidAmt || paidAmt < total) {
+    alert("Please enter correct paid amount (≥ total)");
+    return;
+  }
+
+  currentPaymentMode = "Online";
+
+  document.getElementById("paymentSuccessMsg").style.display = "block";
+  let msg = `Shree & Shriyan Dhaba - Payment Receipt\nTable: ${currentTable}\nCustomer: ${currentName}\n\n`;
+  customerOrder.forEach(item => msg += `${item.name} x${item.qty} = ₹${item.qty * item.price}\n`);
+  msg += `\nPaid: ₹${paidAmt}\nThank You! Come Again 😊`;
+  if (whatsapp && whatsapp.length >= 10) {
+    window.open("https://wa.me/" + whatsapp + "?text=" + encodeURIComponent(msg));
+  } else {
+    window.open("https://wa.me/?text=" + encodeURIComponent(msg));
+  }
+  alert("✅ Payment Confirmed! Receipt sent to WhatsApp.");
+  customerOrder = [];
+  renderCustomerOrder();
+}
+
 function generateDynamicPhonePeQR() {
   const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
   const container = document.getElementById("dynamicPhonePeQR");
@@ -643,28 +671,6 @@ function generateDynamicPhonePeQR() {
     </p>
   `;
   container.style.display = "block";
-}
-
-function markAsPaid() {
-  const paidAmt = parseFloat(document.getElementById("paidAmount").value);
-  const total = parseFloat(document.getElementById("custTotal").innerText);
-  const whatsapp = document.getElementById("custWhatsApp").value.trim() || "Not Provided";
-  if (!paidAmt || paidAmt < total) {
-    alert("Please enter correct paid amount (≥ total)");
-    return;
-  }
-  document.getElementById("paymentSuccessMsg").style.display = "block";
-  let msg = `Shree & Shriyan Dhaba - Payment Receipt\nTable: ${currentTable}\nCustomer: ${currentName}\n\n`;
-  customerOrder.forEach(item => msg += `${item.name} x${item.qty} = ₹${item.qty * item.price}\n`);
-  msg += `\nPaid: ₹${paidAmt}\nThank You! Come Again 😊`;
-  if (whatsapp && whatsapp.length >= 10) {
-    window.open("https://wa.me/" + whatsapp + "?text=" + encodeURIComponent(msg));
-  } else {
-    window.open("https://wa.me/?text=" + encodeURIComponent(msg));
-  }
-  alert("✅ Payment Confirmed! Receipt sent to WhatsApp.");
-  customerOrder = [];
-  renderCustomerOrder();
 }
 
 // ====================== LISTEN FOR ACCEPTED ORDERS ======================
