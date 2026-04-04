@@ -173,7 +173,6 @@
     <!-- STAFF POS VIEW -->
     <div id="staffView">
         <div class="logo">
-            <!-- YOUR REAL LOGO FROM IMGUR -->
             <img src="https://i.imgur.com/epOIKaj.png" alt="Shree & Shriyan Dhaba Logo">
             <h2>Shree & Shriyan Dhaba</h2>
             <p style="text-align:center; color:#d84315; font-size:13.5px; line-height:1.4; margin:5px 0;">
@@ -393,21 +392,24 @@ function renderBill() {
   document.getElementById("total").innerText = total.toFixed(2);
 }
 
-// ====================== AUTO CLEAR ======================
+// ====================== AUTO CLEAR WITH PROPER INVOICE INCREMENT ======================
 function clearBill() {
   bill = [];
   renderBill();
   document.getElementById("customerName").value = "";
   currentTable = '';
+
+  // Properly increment invoice number
   count++;
   localStorage.setItem("inv", count);
   document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
+
   showSuccess("✅ Bill Printed & Cleared Successfully");
 }
 
-// ====================== OPEN BILL IN NEW TAB ======================
+// ====================== OPEN BILL IN NEW TAB (with correct invoice) ======================
 function openBillInNewTab(order) {
-  const invoice = "INV" + String(Date.now()).slice(-6);
+  const invoice = "INV" + String(count).padStart(3, '0');   // Use current count
   let subtotal = order.items.reduce((sum, item) => sum + item.qty * item.price, 0);
   const finalTotal = (subtotal * 1.05).toFixed(2);
 
@@ -466,6 +468,11 @@ function openBillInNewTab(order) {
   const newTab = window.open('', '_blank');
   newTab.document.write(billHtml);
   newTab.document.close();
+
+  // Increment invoice after opening bill
+  count++;
+  localStorage.setItem("inv", count);
+  document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
 }
 
 // ====================== ACCEPT ORDER ======================
