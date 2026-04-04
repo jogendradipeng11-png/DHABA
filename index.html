@@ -481,7 +481,7 @@ function openBillInNewTab(order) {
     newWin.document.write(billHTML);
     newWin.document.close();
   } else {
-    alert("Pop-up blocked! Please allow pop-ups for this website.");
+    alert("Pop-up blocked! Please allow pop-ups for this site and try again.");
   }
 }
 
@@ -639,7 +639,7 @@ function listenForNewOrders() {
 function generateQRCode() {
   const tableNo = document.getElementById("qrTableNum").value.trim();
   if (!tableNo) {
-    alert("Please enter Table Number");
+    alert("Please enter a Table Number");
     return;
   }
   const hostedUrl = window.location.href.split('?')[0];
@@ -647,15 +647,11 @@ function generateQRCode() {
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(orderLink)}`;
   
   document.getElementById("qrContainer").innerHTML = `
-    <img src="${qrSrc}" style="width:250px;border:8px solid #d84315;border-radius:12px;">
-    <p style="margin-top:8px;">Table ${tableNo} QR Code - Scan to Order</p>
+    <img src="${qrSrc}" style="width:250px; border:8px solid #d84315; border-radius:12px;" alt="Table QR">
+    <p style="margin-top:10px; font-weight:bold;">Table ${tableNo} - Scan to Start Ordering</p>
   `;
+  console.log("QR Generated for Table:", tableNo); // For debugging
 }
-
-// ====================== OTHER FUNCTIONS ======================
-function exportExcel() { alert("Export ready"); }
-function sendWhatsApp() { alert("WhatsApp ready"); }
-function dailyReport() { alert("Check Firebase"); }
 
 // ====================== INITIALIZE ======================
 function initializeApp() {
