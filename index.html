@@ -200,7 +200,6 @@
             <div class="total">Your Total: ₹ <span id="custTotal">0</span></div>
             <button onclick="placeCustomerOrder()" style="background:#d84315;">✅ Place Order for Kitchen</button>
             
-            <!-- Payment Section -->
             <div class="payment-section">
                 <h4 style="margin:12px 0 8px 0; color:#2e7d32;">💰 Payment Options</h4>
                 <input id="custWhatsApp" type="tel" placeholder="WhatsApp Number (for receipt)" maxlength="10">
@@ -216,7 +215,6 @@
                     💡 If payment fails, open PhonePe app → Scan QR code
                 </p>
 
-                <!-- New Cash Payment Button -->
                 <button onclick="payByCash()" class="cash-btn" style="margin-top:15px;">
                     💵 Pay by Cash
                 </button>
@@ -271,9 +269,9 @@ let currentTable = '';
 let customerOrder = [];
 let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
-let currentPaymentMode = "";   // New: to track cash or online
+let currentPaymentMode = "";
 
-// ====================== MENU ====================== (Unchanged - same as before)
+// ====================== MENU ======================
 function loadAndListenMenu() {
   db.ref('menu').on('value', (snapshot) => {
     const data = snapshot.val();
@@ -316,7 +314,7 @@ function showCurrentMenu() {
   alert(msg);
 }
 
-// ====================== STAFF BILL ====================== (Unchanged)
+// ====================== STAFF BILL ======================
 document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
 function addItem() {
   const idx = document.getElementById("item").value;
@@ -356,7 +354,7 @@ function clearBill() {
   document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
 }
 
-// ====================== THERMAL PRINT ====================== (Unchanged)
+// ====================== THERMAL PRINT ======================
 function printThermalBill(itemsList, invoiceNo, customerName, tableNo = '', paymentMode = '') {
   let subtotal = 0;
   let itemsHtml = '';
@@ -413,7 +411,7 @@ function printBill() {
   clearBill();
 }
 
-// ====================== OPEN BILL IN NEW TAB (Updated to show Cash) ======================
+// ====================== OPEN BILL IN NEW TAB ======================
 function openBillInNewTab(order) {
   const invoiceNo = "INV" + String(count).padStart(3, '0');
   let subtotal = 0;
@@ -477,9 +475,7 @@ function openBillInNewTab(order) {
     }
     function sendWhatsAppBill() {
       let msg = "Shree & Shriyan Dhaba\\nInvoice: " + invoiceNo + "\\nTable: " + orderData.table + "\\nCustomer: " + (orderData.name || "Guest") + "\\nPayment Mode: " + (orderData.paymentMode || "Cash") + "\\n\\n";
-      orderData.items.forEach(item => {
-        msg += item.name + " x" + item.qty + " - ₹" + (item.qty * item.price) + "\\n";
-      });
+      orderData.items.forEach(item => msg += item.name + " x" + item.qty + " - ₹" + (item.qty * item.price) + "\\n");
       const total = orderData.items.reduce((sum, item) => sum + item.qty * item.price, 0) * 1.05;
       msg += "\\nGrand Total: ₹" + total.toFixed(0);
       window.open("https://wa.me/?text=" + encodeURIComponent(msg));
@@ -498,39 +494,82 @@ function openBillInNewTab(order) {
   }
 }
 
-// ====================== NEW: CASH PAYMENT FUNCTION ======================
-function payByCash() {
-  if (customerOrder.length === 0) return alert("Cart is empty!");
-
-  currentPaymentMode = "Cash";
-  
-  // Notify Staff
-  const orderId = Date.now();
-  const orderData = {
-    id: orderId,
-    table: currentTable,
-    name: currentName,
-    items: JSON.parse(JSON.stringify(customerOrder)),
-    total: parseFloat(document.getElementById("custTotal").innerText),
-    timestamp: new Date().toLocaleString(),
-    status: "pending",
-    paymentMode: "Cash"
-  };
-
-  db.ref('tableOrders/' + orderId).set(orderData);
-  db.ref('newOrders/' + orderId).set(orderData);
-
-  // Show success to customer
-  document.getElementById("paymentSuccessMsg").innerHTML = `
-    ✅ Cash Payment Requested!<br>
-    <span style="font-size:16px;">Our staff has been notified. Please pay at the counter.</span>
-  `;
-  document.getElementById("paymentSuccessMsg").style.display = "block";
-
-  alert("✅ Cash payment request sent to staff. Please pay at the counter when food is ready.");
+// ====================== ACCEPT ORDER ======================
+function acceptOrder(orderId) {
+  if (!confirm("Accept this order?")) return;
+  db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
+    const ord = snapshot.val();
+    if (!ord || ord.status !== "pending") return alert("Order not found or already accepted");
+    
+    openBillInNewTab(ord);
+    db.ref('tableOrders/' + orderId).update({ status: "accepted" });
+    notifyCustomerOrderAccepted(ord.table, ord.name);
+  });
+}
+function notifyCustomerOrderAccepted(table, name) {
+  db.ref('acceptedOrders/' + table).set({
+    table: table,
+    name: name,
+    message: "accepted",
+    timestamp: new Date().toLocaleString()
+  });
 }
 
-// ====================== Rest of the code remains same ======================
+// ====================== CUSTOMER SIDE - FIXED ======================
+function joinTable() {
+  currentTable = document.getElementById("custTable").value.trim();
+  currentName = document.getElementById("custName").value.trim() || "Guest";
+  if (!currentTable) return alert("Please enter Table Number");
+
+  document.getElementById("signInSection").style.display = "none";
+  document.getElementById("menuSection").style.display = "block";
+  document.getElementById("displayTable").innerText = currentTable;
+  document.getElementById("displayName").innerText = currentName;
+
+  loadCustomerMenu();
+  renderCustomerOrder();
+  listenForAcceptedOrders();   // Important: Now properly called
+}
+
+function loadCustomerMenu() {
+  let html = '';
+  items.forEach((item, idx) => {
+    html += `<div class="menu-item">
+      <span><strong>${item.name}</strong> <small>₹${item.price}</small></span>
+      <button onclick="addCustomerItem(${idx})" style="background:#2e7d32;padding:8px 16px;border-radius:6px;">+ Add</button>
+    </div>`;
+  });
+  document.getElementById("menuItems").innerHTML = html;
+}
+
+function addCustomerItem(idx) {
+  let item = items[idx];
+  let existing = customerOrder.find(o => o.name === item.name);
+  if (existing) existing.qty += 1;
+  else customerOrder.push({...item, qty: 1});
+  renderCustomerOrder();
+}
+
+function renderCustomerOrder() {
+  let html = "", total = 0;
+  customerOrder.forEach((b, i) => {
+    let t = b.qty * b.price;
+    total += t;
+    html += `<tr><td>${b.name}</td><td>${b.qty}</td><td>₹${t}</td><td onclick="delCustomerItem(${i})" style="color:red;cursor:pointer;">❌</td></tr>`;
+  });
+  document.getElementById("customerBill").innerHTML = html;
+  document.getElementById("custTotal").innerText = total.toFixed(2);
+  generateDynamicPhonePeQR();
+}
+
+function delCustomerItem(i) { customerOrder.splice(i,1); renderCustomerOrder(); }
+function clearCustomerOrder() {
+  if(confirm("Clear cart?")) {
+    customerOrder = [];
+    renderCustomerOrder();
+  }
+}
+
 function placeCustomerOrder() {
   if (customerOrder.length === 0) return alert("Cart is empty!");
   const total = parseFloat(document.getElementById("custTotal").innerText);
@@ -550,6 +589,35 @@ function placeCustomerOrder() {
   alert(`✅ Order Placed Successfully for Table ${currentTable}`);
 }
 
+// ====================== CASH PAYMENT ======================
+function payByCash() {
+  if (customerOrder.length === 0) return alert("Cart is empty!");
+  currentPaymentMode = "Cash";
+  
+  const orderId = Date.now();
+  const orderData = {
+    id: orderId,
+    table: currentTable,
+    name: currentName,
+    items: JSON.parse(JSON.stringify(customerOrder)),
+    total: parseFloat(document.getElementById("custTotal").innerText),
+    timestamp: new Date().toLocaleString(),
+    status: "pending",
+    paymentMode: "Cash"
+  };
+
+  db.ref('tableOrders/' + orderId).set(orderData);
+  db.ref('newOrders/' + orderId).set(orderData);
+
+  document.getElementById("paymentSuccessMsg").innerHTML = `
+    ✅ Cash Payment Requested!<br>
+    <span style="font-size:16px;">Our staff has been notified. Please pay at the counter.</span>
+  `;
+  document.getElementById("paymentSuccessMsg").style.display = "block";
+
+  alert("✅ Cash payment request sent to staff. Please pay at the counter when food is ready.");
+}
+
 function generateDynamicPhonePeQR() {
   const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
   const container = document.getElementById("dynamicPhonePeQR");
@@ -567,6 +635,40 @@ function generateDynamicPhonePeQR() {
     </p>
   `;
   container.style.display = "block";
+}
+
+function markAsPaid() {
+  const paidAmt = parseFloat(document.getElementById("paidAmount").value);
+  const total = parseFloat(document.getElementById("custTotal").innerText);
+  const whatsapp = document.getElementById("custWhatsApp").value.trim() || "Not Provided";
+  if (!paidAmt || paidAmt < total) {
+    alert("Please enter correct paid amount (≥ total)");
+    return;
+  }
+  document.getElementById("paymentSuccessMsg").style.display = "block";
+  let msg = `Shree & Shriyan Dhaba - Payment Receipt\nTable: ${currentTable}\nCustomer: ${currentName}\n\n`;
+  customerOrder.forEach(item => msg += `${item.name} x${item.qty} = ₹${item.qty * item.price}\n`);
+  msg += `\nPaid: ₹${paidAmt}\nThank You! Come Again 😊`;
+  if (whatsapp && whatsapp.length >= 10) {
+    window.open("https://wa.me/" + whatsapp + "?text=" + encodeURIComponent(msg));
+  } else {
+    window.open("https://wa.me/?text=" + encodeURIComponent(msg));
+  }
+  alert("✅ Payment Confirmed! Receipt sent to WhatsApp.");
+  customerOrder = [];
+  renderCustomerOrder();
+}
+
+// ====================== LISTEN FOR ACCEPTED ORDERS (Fixed) ======================
+function listenForAcceptedOrders() {
+  if (currentTable) {
+    db.ref('acceptedOrders/' + currentTable).on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.message === "accepted") {
+        document.getElementById("customerAcceptedMsg").style.display = "block";
+      }
+    });
+  }
 }
 
 // ====================== NOTIFICATIONS ======================
@@ -589,27 +691,6 @@ function listenForNewOrders() {
       document.getElementById("notificationContainer").appendChild(n);
       setTimeout(() => n.remove(), 20000);
     }
-  });
-}
-
-// ====================== ACCEPT ORDER ======================
-function acceptOrder(orderId) {
-  if (!confirm("Accept this order?")) return;
-  db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
-    const ord = snapshot.val();
-    if (!ord || ord.status !== "pending") return alert("Order not found or already accepted");
-    
-    openBillInNewTab(ord);
-    db.ref('tableOrders/' + orderId).update({ status: "accepted" });
-    notifyCustomerOrderAccepted(ord.table, ord.name);
-  });
-}
-function notifyCustomerOrderAccepted(table, name) {
-  db.ref('acceptedOrders/' + table).set({
-    table: table,
-    name: name,
-    message: "accepted",
-    timestamp: new Date().toLocaleString()
   });
 }
 
@@ -637,10 +718,18 @@ function initializeApp() {
   const urlParams = new URLSearchParams(window.location.search);
   const mode = urlParams.get('mode');
   currentTable = urlParams.get('table') || '';
+
   if (mode === 'customer') {
     document.getElementById('staffView').style.display = 'none';
     document.getElementById('customerView').style.display = 'block';
     document.getElementById('custTable').value = currentTable;
+    
+    // Auto start ordering if table is passed via QR
+    if (currentTable) {
+      setTimeout(() => {
+        joinTable();
+      }, 500);
+    }
   } else {
     document.getElementById('staffView').style.display = 'block';
     listenForNewOrders();
