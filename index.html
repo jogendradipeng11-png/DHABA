@@ -78,7 +78,7 @@
         font-weight: bold;
     }
 
-    /* NEW: Order Notification */
+    /* Order Notification - Staff Only */
     .notification-container {
         position: fixed;
         top: 10px;
@@ -117,6 +117,19 @@
         color: #d84315;
     }
 
+    /* Customer Order Accepted Message */
+    #customerAcceptedMsg {
+        display: none;
+        background: #2e7d32;
+        color: white;
+        padding: 20px;
+        margin: 15px 0;
+        border-radius: 12px;
+        text-align: center;
+        font-size: 18px;
+        font-weight: bold;
+    }
+
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
     .logo img { width: 100px; display: block; margin: auto; }
@@ -127,21 +140,15 @@
         margin-top: 5px;
     }
 
-    /* CUSTOMIZED PRINT LAYOUT */
+    /* PRINT LAYOUT */
     @media print {
         body * { visibility: hidden; }
         #printArea, #printArea * { visibility: visible; }
         #printArea {
-            position: absolute;
-            left: 0; top: 0;
-            width: 100%;
-            max-width: 380px;
-            margin: 0 auto;
-            padding: 15px 20px;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-            line-height: 1.4;
-            text-align: center;
+            position: absolute; left: 0; top: 0;
+            width: 100%; max-width: 380px; margin: 0 auto;
+            padding: 15px 20px; font-family: Arial, sans-serif;
+            font-size: 14px; line-height: 1.4; text-align: center;
         }
         .print-header { margin-bottom: 20px; border-bottom: 2px dashed #d84315; padding-bottom: 15px; }
         .print-header img { width: 90px; margin-bottom: 8px; }
@@ -224,11 +231,17 @@
             <div class="total">Your Total: ₹ <span id="custTotal">0</span></div>
             <button onclick="placeCustomerOrder()" style="background:#d84315;">✅ Place Order for Kitchen</button>
             <button onclick="clearCustomerOrder()" style="background:#666;">🗑️ Clear Cart</button>
+
+            <!-- Customer Accepted Message -->
+            <div id="customerAcceptedMsg">
+                ✅ Your order has been accepted by the kitchen!<br>
+                <span style="font-size:16px;">Our team is now preparing your food. Thank you!</span>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Order Notifications Container -->
+<!-- Staff Order Notifications Container -->
 <div id="notificationContainer" class="notification-container"></div>
 
 <!-- Hidden Print Area -->
@@ -436,10 +449,9 @@ function saveBillWithSync(isFromCustomer = false, custName = null, custTable = n
   db.ref('bills/' + Date.now()).set(billData);
 }
 
-// ====================== ORDER NOTIFICATIONS ======================
+// ====================== STAFF NOTIFICATION ======================
 function showOrderNotification(order) {
   const container = document.getElementById("notificationContainer");
-  
   const notif = document.createElement("div");
   notif.className = "order-notification";
   notif.innerHTML = `
@@ -455,27 +467,21 @@ function showOrderNotification(order) {
   `;
   container.appendChild(notif);
 
-  // Auto hide after 15 seconds if not dismissed
-  setTimeout(() => {
-    if (notif.parentElement) notif.remove();
-  }, 15000);
+  setTimeout(() => { if (notif.parentElement) notif.remove(); }, 15000);
 }
 
 function viewOrderFromNotification(orderId) {
   showTableOrders();
-  // Optional: highlight the specific order (can be enhanced later)
 }
 
-// ====================== LIVE TABLE ORDERS WITH 5s REFRESH ======================
+// ====================== LIVE TABLE ORDERS ======================
 function showTableOrders() {
   document.getElementById("ordersPanel").style.display = "block";
   renderLiveOrders();
 
   if (liveOrdersListener) liveOrdersListener.off();
   liveOrdersListener = db.ref('tableOrders');
-  liveOrdersListener.on('value', (snapshot) => {
-    renderLiveOrders(snapshot);
-  });
+  liveOrdersListener.on('value', (snapshot) => renderLiveOrders(snapshot));
 
   if (refreshInterval) clearInterval(refreshInterval);
   refreshInterval = setInterval(() => renderLiveOrders(), 5000);
@@ -488,11 +494,8 @@ function hideOrdersPanel() {
 }
 
 function renderLiveOrders(snapshot) {
-  if (snapshot) {
-    processOrders(snapshot.val());
-  } else {
-    db.ref('tableOrders').once('value', (snap) => processOrders(snap.val()));
-  }
+  if (snapshot) processOrders(snapshot.val());
+  else db.ref('tableOrders').once('value', (snap) => processOrders(snap.val()));
 }
 
 function processOrders(data) {
@@ -523,22 +526,40 @@ function processOrders(data) {
   document.getElementById("ordersPanel").innerHTML = html;
 }
 
-// ====================== ACCEPT ORDER ======================
+// ====================== ACCEPT ORDER - NOTIFY CUSTOMER ======================
 function acceptOrder(orderId) {
   if (!confirm("Accept this order and add to current bill?")) return;
+
   db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
     const ord = snapshot.val();
     if (!ord || ord.status !== "pending") return alert("Order not found or already accepted");
+
     document.getElementById("customerName").value = ord.name || `Table ${ord.table}`;
     bill = bill.concat(ord.items.map(item => ({...item})));
     renderBill();
+
     db.ref('tableOrders/' + orderId).update({ status: "accepted" });
+
     saveBillWithSync(true, ord.name, ord.table);
+
     alert(`✅ Order from Table ${ord.table} (${ord.name}) accepted and added to bill`);
+
+    // Notify Customer that order is accepted
+    notifyCustomerOrderAccepted(ord.table, ord.name);
   });
 }
 
-// ====================== CUSTOMER PLACE ORDER - TRIGGER NOTIFICATION ======================
+function notifyCustomerOrderAccepted(table, name) {
+  // This will be checked by customer view
+  db.ref('acceptedOrders/' + table).set({
+    table: table,
+    name: name,
+    message: "accepted",
+    timestamp: new Date().toLocaleString()
+  });
+}
+
+// ====================== CUSTOMER PLACE ORDER ======================
 function placeCustomerOrder() {
   if (customerOrder.length === 0) return alert("Cart is empty!");
   const total = parseFloat(document.getElementById("custTotal").innerText);
@@ -555,12 +576,28 @@ function placeCustomerOrder() {
 
   db.ref('tableOrders/' + orderId).set(orderData);
 
-  // Show Notification to Staff
+  // Show notification ONLY on Staff side
   showOrderNotification(orderData);
 
   alert(`✅ Order Placed Successfully for Table ${currentTable}`);
   customerOrder = [];
   renderCustomerOrder();
+}
+
+// ====================== CUSTOMER ACCEPTED LISTENER ======================
+function listenForAcceptedOrders() {
+  if (!currentTable) return;
+  db.ref('acceptedOrders/' + currentTable).on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data && data.message === "accepted") {
+      document.getElementById("customerAcceptedMsg").style.display = "block";
+      setTimeout(() => {
+        document.getElementById("customerAcceptedMsg").style.display = "none";
+        // Optional: clear the accepted record
+        db.ref('acceptedOrders/' + currentTable).remove();
+      }, 8000);
+    }
+  });
 }
 
 // ====================== OTHER FUNCTIONS ======================
@@ -614,6 +651,7 @@ function joinTable() {
   document.getElementById("displayName").innerText = currentName;
   loadCustomerMenu();
   renderCustomerOrder();
+  listenForAcceptedOrders();   // Start listening for acceptance
 }
 
 function loadCustomerMenu() {
