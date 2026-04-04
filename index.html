@@ -232,7 +232,6 @@
             <button onclick="placeCustomerOrder()" style="background:#d84315;">✅ Place Order for Kitchen</button>
             <button onclick="clearCustomerOrder()" style="background:#666;">🗑️ Clear Cart</button>
 
-            <!-- Customer Accepted Message -->
             <div id="customerAcceptedMsg">
                 ✅ Your order has been accepted by the kitchen!<br>
                 <span style="font-size:16px;">Our team is now preparing your food. Thank you!</span>
@@ -291,9 +290,9 @@ const db = firebase.database();
 
 // ====================== GLOBAL VARIABLES ======================
 let items = [];
-let bill = [];
+let bill = [];                    // Current bill (for manual entry or same table)
+let currentTable = '';            // Currently active table for bill
 let customerOrder = [];
-let currentTable = '';
 let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
 let liveOrdersListener = null;
@@ -388,6 +387,7 @@ function clearBill() {
   bill = [];
   renderBill();
   document.getElementById("customerName").value = "";
+  currentTable = '';
   count++;
   localStorage.setItem("inv", count);
   document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
@@ -449,7 +449,7 @@ function saveBillWithSync(isFromCustomer = false, custName = null, custTable = n
   db.ref('bills/' + Date.now()).set(billData);
 }
 
-// ====================== STAFF NOTIFICATION (Only for Staff) ======================
+// ====================== STAFF NOTIFICATION ======================
 function showOrderNotification(order) {
   const container = document.getElementById("notificationContainer");
   const notif = document.createElement("div");
@@ -460,9 +460,9 @@ function showOrderNotification(order) {
     <p><strong>Table ${order.table}</strong> • ${order.name}</p>
     <p><strong>Total: ₹${order.total}</strong></p>
     <p style="font-size:13px;color:#666;">${order.timestamp}</p>
-    <button onclick="viewOrderFromNotification(${order.id}); this.parentElement.remove();" 
-            style="background:#d84315; width:auto; padding:8px 16px; margin-top:8px;">
-      📋 View & Accept
+    <button onclick="acceptOrder(${order.id}); this.parentElement.remove();" 
+            style="background:#2e7d32; width:auto; padding:8px 16px; margin-top:8px;">
+      ✅ Accept Order
     </button>
   `;
   container.appendChild(notif);
@@ -526,22 +526,28 @@ function processOrders(data) {
   document.getElementById("ordersPanel").innerHTML = html;
 }
 
-// ====================== ACCEPT ORDER ======================
+// ====================== ACCEPT ORDER - SEPARATE BILL PER TABLE ======================
 function acceptOrder(orderId) {
-  if (!confirm("Accept this order and add to current bill?")) return;
+  if (!confirm("Accept this order? It will create a separate bill for this table.")) return;
 
   db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
     const ord = snapshot.val();
     if (!ord || ord.status !== "pending") return alert("Order not found or already accepted");
 
+    // Set current bill to this table's order (separate bill)
+    bill = ord.items.map(item => ({...item}));
+    currentTable = ord.table;
     document.getElementById("customerName").value = ord.name || `Table ${ord.table}`;
-    bill = bill.concat(ord.items.map(item => ({...item})));
+
     renderBill();
 
+    // Mark as accepted
     db.ref('tableOrders/' + orderId).update({ status: "accepted" });
+
+    // Save this table's bill
     saveBillWithSync(true, ord.name, ord.table);
 
-    alert(`✅ Order from Table ${ord.table} (${ord.name}) accepted and added to bill`);
+    alert(`✅ Order from Table ${ord.table} accepted.\nSeparate bill created for Table ${ord.table}.`);
 
     // Notify Customer
     notifyCustomerOrderAccepted(ord.table, ord.name);
@@ -557,7 +563,7 @@ function notifyCustomerOrderAccepted(table, name) {
   });
 }
 
-// ====================== CUSTOMER PLACE ORDER (No notification here) ======================
+// ====================== CUSTOMER PLACE ORDER ======================
 function placeCustomerOrder() {
   if (customerOrder.length === 0) return alert("Cart is empty!");
   const total = parseFloat(document.getElementById("custTotal").innerText);
@@ -574,7 +580,7 @@ function placeCustomerOrder() {
 
   db.ref('tableOrders/' + orderId).set(orderData);
 
-  // Show notification ONLY on Staff POS (by saving to a temp node that staff listens to)
+  // Show notification only on Staff POS
   db.ref('newOrders/' + orderId).set(orderData);
 
   alert(`✅ Order Placed Successfully for Table ${currentTable}`);
@@ -588,10 +594,7 @@ function listenForNewOrders() {
     const order = snapshot.val();
     if (order) {
       showOrderNotification(order);
-      // Remove after showing notification
-      setTimeout(() => {
-        db.ref('newOrders/' + order.id).remove();
-      }, 10000);
+      setTimeout(() => db.ref('newOrders/' + order.id).remove(), 10000);
     }
   });
 }
@@ -710,7 +713,7 @@ function initializeApp() {
     document.getElementById('custTable').value = currentTable;
   } else {
     document.getElementById('staffView').style.display = 'block';
-    listenForNewOrders();   // Only Staff listens for new orders
+    listenForNewOrders();
   }
   loadAndListenMenu();
 }
