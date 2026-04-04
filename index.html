@@ -402,7 +402,7 @@ function printBill() {
   clearBill();
 }
 
-// ====================== FIXED: OPEN BILL IN NEW TAB ======================
+// ====================== OPEN BILL IN NEW TAB ======================
 function openBillInNewTab(order) {
   const invoiceNo = "INV" + String(count).padStart(3, '0');
   let subtotal = 0;
@@ -420,7 +420,7 @@ function openBillInNewTab(order) {
 <head>
   <title>Bill - ${invoiceNo}</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 380px; margin: 20px auto; padding: 15px; background:#fff; }
+    body { font-family: Arial, sans-serif; max-width: 380px; margin: 20px auto; padding: 15px; }
     table { width: 100%; border-collapse: collapse; margin: 15px 0; }
     th, td { padding: 8px; border-bottom: 1px dotted #ccc; }
     .amount { text-align: right; }
@@ -449,36 +449,28 @@ function openBillInNewTab(order) {
   <button class="thermal-btn" onclick="printThermal()">🖨️ Print Thermal + Auto Cut</button>
   <button class="normal-btn" onclick="printNormal()">🧾 Normal Print & Clear</button>
   <button class="whatsapp-btn" onclick="sendWhatsAppBill()">📲 Send Bill on WhatsApp</button>
-
   <script>
     const orderData = ${JSON.stringify(order)};
     const invoiceNo = "${invoiceNo}";
-    
     function printThermal() {
-      if (window.opener && typeof window.opener.printThermalBill === 'function') {
+      if (window.opener && typeof window.opener.printThermalBill === "function") {
         window.opener.printThermalBill(orderData.items, invoiceNo, orderData.name || "Guest", orderData.table);
         window.opener.clearBill();
       }
-      setTimeout(() => window.close(), 800);
+      setTimeout(() => window.close(), 1000);
     }
-    
     function printNormal() {
       window.print();
-      if (window.opener && typeof window.opener.clearBill === 'function') {
-        window.opener.clearBill();
-      }
-      setTimeout(() => window.close(), 800);
+      if (window.opener && typeof window.opener.clearBill === "function") window.opener.clearBill();
+      setTimeout(() => window.close(), 1000);
     }
-    
     function sendWhatsAppBill() {
       let msg = "Shree & Shriyan Dhaba\\nInvoice: " + invoiceNo + "\\nTable: " + orderData.table + "\\nCustomer: " + (orderData.name || "Guest") + "\\n\\n";
-      orderData.items.forEach(item => {
-        msg += item.name + " x" + item.qty + " - ₹" + (item.qty * item.price) + "\\n";
-      });
+      orderData.items.forEach(item => msg += item.name + " x" + item.qty + " - ₹" + (item.qty * item.price) + "\\n");
       const total = orderData.items.reduce((sum, item) => sum + item.qty * item.price, 0) * 1.05;
       msg += "\\nGrand Total: ₹" + total.toFixed(0);
       window.open("https://wa.me/?text=" + encodeURIComponent(msg));
-      setTimeout(() => window.close(), 800);
+      setTimeout(() => window.close(), 1000);
     }
   <\/script>
 </body>
@@ -489,7 +481,7 @@ function openBillInNewTab(order) {
     newWin.document.write(billHTML);
     newWin.document.close();
   } else {
-    alert("Pop-up blocked! Please allow pop-ups for this site.");
+    alert("Pop-up blocked! Please allow pop-ups for this website.");
   }
 }
 
@@ -500,7 +492,7 @@ function acceptOrder(orderId) {
     const ord = snapshot.val();
     if (!ord || ord.status !== "pending") return alert("Order not found or already accepted");
     
-    openBillInNewTab(ord);   // This will now reliably open the bill page
+    openBillInNewTab(ord);
     db.ref('tableOrders/' + orderId).update({ status: "accepted" });
     notifyCustomerOrderAccepted(ord.table, ord.name);
   });
@@ -514,7 +506,7 @@ function notifyCustomerOrderAccepted(table, name) {
   });
 }
 
-// ====================== CUSTOMER SIDE (Unchanged) ======================
+// ====================== CUSTOMER SIDE ======================
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim() || "Guest";
@@ -642,6 +634,28 @@ function listenForNewOrders() {
     }
   });
 }
+
+// ====================== GENERATE TABLE QR CODE (FIXED) ======================
+function generateQRCode() {
+  const tableNo = document.getElementById("qrTableNum").value.trim();
+  if (!tableNo) {
+    alert("Please enter Table Number");
+    return;
+  }
+  const hostedUrl = window.location.href.split('?')[0];
+  const orderLink = `${hostedUrl}?mode=customer&table=${tableNo}`;
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(orderLink)}`;
+  
+  document.getElementById("qrContainer").innerHTML = `
+    <img src="${qrSrc}" style="width:250px;border:8px solid #d84315;border-radius:12px;">
+    <p style="margin-top:8px;">Table ${tableNo} QR Code - Scan to Order</p>
+  `;
+}
+
+// ====================== OTHER FUNCTIONS ======================
+function exportExcel() { alert("Export ready"); }
+function sendWhatsApp() { alert("WhatsApp ready"); }
+function dailyReport() { alert("Check Firebase"); }
 
 // ====================== INITIALIZE ======================
 function initializeApp() {
