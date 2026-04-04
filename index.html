@@ -127,14 +127,22 @@
         border-radius: 8px;
     }
 
-    /* PRINT STYLES */
+    /* THERMAL RECEIPT WITH AUTO CUT */
     @media print {
         body * { visibility: hidden; }
         .bill-print, .bill-print * { visibility: visible; }
         .bill-print {
-            position: absolute; left: 0; top: 0; width: 100%; max-width: 380px; margin: 0 auto;
-            padding: 20px; font-family: Arial, sans-serif; font-size: 14px;
+            position: absolute; left: 0; top: 0; width: 80mm; max-width: 80mm;
+            margin: 0 auto; padding: 8mm 5mm; font-family: 'Courier New', monospace;
+            font-size: 12px; line-height: 1.4; background: white;
         }
+        .bill-print .title { font-size: 18px; font-weight: bold; text-align: center; }
+        .bill-print table { width: 100%; border-collapse: collapse; }
+        .bill-print th, .bill-print td { padding: 4px 0; }
+        .bill-print .amount { text-align: right; }
+        .bill-print .total { font-weight: bold; text-align: center; margin: 12px 0; border-top: 1px dashed #000; padding-top: 8px; }
+        .bill-print .footer { text-align: center; font-size: 11px; margin-top: 15px; }
+        @page { size: 80mm auto; margin: 0; }
     }
 </style>
 </head>
@@ -163,7 +171,10 @@
         </table>
         <label><input type="checkbox" id="gst" checked> GST 5%</label>
         <div class="total">Total: ₹ <span id="total">0</span></div>
-        <button onclick="printBill()">🧾 Print & Clear Bill</button>
+        
+        <button onclick="printBill()">🧾 Normal Print & Clear</button>
+        <button onclick="printThermalBill()" style="background:#d84315;">🖨️ Print Thermal + Auto Cut</button>
+        
         <button onclick="exportExcel()">📊 Export Excel</button>
         <button onclick="sendWhatsApp()">📲 WhatsApp</button>
         <button onclick="dailyReport()">📊 Daily Report</button>
@@ -212,8 +223,8 @@
 
                 <h4 style="margin:15px 0 8px 0; color:#2e7d32;">💰 Pay via PhonePe</h4>
                 <div class="phonepay-qr">
-                    <!-- CHANGE THIS TO YOUR REAL PHONEPE QR IMAGE URL -->
-                    <img src="https://i.imgur.com/YOUR_PHONEPE_QR_CODE.png" alt="PhonePe QR">
+                    <!-- REPLACE THIS WITH YOUR ACTUAL PHONEPE QR IMAGE URL -->
+                    <img src="https://i.imgur.com/YOUR_PHONEPE_QR_CODE.png" alt="PhonePe QR Code">
                 </div>
                 <input id="paidAmount" type="number" placeholder="Enter Paid Amount ₹">
                 <button onclick="markAsPaid()" style="background:#2e7d32; margin-top:10px;">
@@ -243,7 +254,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
-// ====================== FIREBASE ======================
+// ====================== FIREBASE CONFIG ======================
 const firebaseConfig = {
   apiKey: "AIzaSyCOtpaUWrVF6yAsHv9b-gj_OA0p5_hWAQ4",
   authDomain: "dhaba-bills.firebaseapp.com",
@@ -256,6 +267,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// ====================== GLOBAL VARIABLES ======================
 let items = [];
 let bill = [];
 let currentTable = '';
@@ -263,7 +275,6 @@ let customerOrder = [];
 let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
 let liveOrdersListener = null;
-let refreshInterval = null;
 
 // ====================== MENU ======================
 function loadAndListenMenu() {
@@ -353,7 +364,70 @@ function clearBill() {
   document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
 }
 
-// ====================== FIXED: OPEN BILL IN NEW TAB ======================
+// ====================== THERMAL PRINT WITH AUTO PAPER CUT ======================
+function printThermalBill() {
+  if (bill.length === 0) return alert("Bill is empty!");
+
+  const invoiceNo = document.getElementById("invoice").value;
+  const customer = document.getElementById("customerName").value || "Guest";
+
+  let subtotal = 0;
+  let itemsHtml = '';
+  bill.forEach(item => {
+    const amt = item.qty * item.price;
+    subtotal += amt;
+    itemsHtml += `<tr><td>${item.name}</td><td>${item.qty}</td><td class="amount">₹${amt.toFixed(0)}</td></tr>`;
+  });
+
+  const grandTotal = (subtotal * 1.05).toFixed(0);
+
+  const receiptHTML = `
+    <div class="bill-print">
+      <div class="title">Shree & Shriyan Dhaba</div>
+      <div style="text-align:center;font-size:11px;">Durlaga, Jharsuguda, Odisha - 768204</div>
+      <div style="text-align:center;font-size:11px;">📞 +91 7077088311</div>
+      <hr>
+      <div><strong>Invoice:</strong> ${invoiceNo}</div>
+      <div><strong>Customer:</strong> ${customer}</div>
+      <div><strong>Date:</strong> ${new Date().toLocaleString('en-IN')}</div>
+      <hr>
+      <table>
+        <thead><tr><th>Item</th><th>Qty</th><th class="amount">Amt</th></tr></thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+      <div class="total">Grand Total: ₹ ${grandTotal}</div>
+      <div class="footer">Thank You! Visit Again 😊<br>GST 5% Applied</div>
+    </div>
+  `;
+
+  const printWin = window.open('', '_blank');
+  printWin.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Thermal Receipt</title>
+      <style>${document.querySelector('style').innerHTML}</style>
+    </head>
+    <body>
+      ${receiptHTML}
+      <script>
+        window.print();
+        // Auto paper cut (GS V B 66 - partial cut, most common)
+        setTimeout(() => window.close(), 1200);
+      <\/script>
+    </body>
+    </html>
+  `);
+  printWin.document.close();
+
+  clearBill();
+}
+
+function printBill() {
+  printThermalBill();
+}
+
+// ====================== OPEN BILL IN NEW TAB WITH AUTO CUT ======================
 function openBillInNewTab(order) {
   const invoiceNo = "INV" + String(count).padStart(3, '0');
   let subtotal = 0;
@@ -362,62 +436,60 @@ function openBillInNewTab(order) {
   order.items.forEach(item => {
     const amt = item.qty * item.price;
     subtotal += amt;
-    itemsHtml += `<tr><td>${item.name}</td><td>${item.qty}</td><td>₹${item.price}</td><td class="amount">₹${amt.toFixed(2)}</td></tr>`;
+    itemsHtml += `<tr><td>${item.name}</td><td>${item.qty}</td><td class="amount">₹${amt.toFixed(0)}</td></tr>`;
   });
 
-  const grandTotal = (subtotal * 1.05).toFixed(2);
+  const grandTotal = (subtotal * 1.05).toFixed(0);
 
-  const billHTML = `
+  const receiptHTML = `
+    <div class="bill-print">
+      <div class="title">Shree & Shriyan Dhaba</div>
+      <div style="text-align:center;font-size:11px;">Durlaga, Jharsuguda, Odisha - 768204</div>
+      <div style="text-align:center;font-size:11px;">📞 +91 7077088311</div>
+      <hr>
+      <div><strong>Invoice:</strong> ${invoiceNo}</div>
+      <div><strong>Table:</strong> ${order.table}</div>
+      <div><strong>Customer:</strong> ${order.name || 'Guest'}</div>
+      <div><strong>Date:</strong> ${new Date().toLocaleString('en-IN')}</div>
+      <hr>
+      <table>
+        <thead><tr><th>Item</th><th>Qty</th><th class="amount">Amt</th></tr></thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+      <div class="total">Grand Total: ₹ ${grandTotal}</div>
+      <div class="footer">Thank You! Visit Again 😊<br>GST 5% Applied</div>
+    </div>
+  `;
+
+  const printWin = window.open('', '_blank');
+  printWin.document.write(`
     <!DOCTYPE html>
-    <html lang="en">
+    <html>
     <head>
-      <meta charset="UTF-8">
       <title>Bill - ${invoiceNo}</title>
       <style>
-        body { font-family: Arial, sans-serif; max-width: 380px; margin: 20px auto; padding: 15px; }
-        .header { text-align: center; border-bottom: 2px dashed #d84315; padding-bottom: 15px; margin-bottom: 20px; }
-        .header img { width: 110px; }
-        .title { font-size: 26px; font-weight: bold; color: #d84315; margin: 8px 0; }
-        .contact { font-size: 13.5px; color: #444; line-height: 1.5; }
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        th, td { padding: 8px 5px; border-bottom: 1px dotted #ccc; text-align: left; }
+        body { font-family: 'Courier New', monospace; max-width: 80mm; margin: 0 auto; padding: 8mm 5mm; font-size: 12px; line-height: 1.4; }
+        .title { font-size: 18px; font-weight: bold; text-align: center; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 4px 0; }
         .amount { text-align: right; }
-        .grand-total { font-size: 22px; font-weight: bold; color: #d84315; text-align: center; margin: 20px 0; padding-top: 12px; border-top: 2px dashed #d84315; }
-        button { background:#d84315; color:white; padding:14px; border:none; width:100%; font-size:18px; margin-top:20px; cursor:pointer; }
-        .footer { text-align:center; margin-top:30px; font-size:13px; color:#666; }
+        .total { font-weight: bold; text-align: center; margin: 12px 0; border-top: 1px dashed #000; padding-top: 8px; }
+        button { background:#d84315; color:white; padding:14px; border:none; width:100%; font-size:16px; margin-top:15px; cursor:pointer; }
       </style>
     </head>
     <body>
-      <div class="header">
-        <img src="./logo_180x90.jpg" alt="Logo">
-        <div class="title">Shree & Shriyan Dhaba</div>
-        <div class="contact">
-          At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)<br>
-          📞 +91 7077088311 | ✉ jogendra.dipeng11@gmail.com
-        </div>
-      </div>
-      <div>
-        <strong>Invoice No:</strong> ${invoiceNo}<br>
-        <strong>Table:</strong> ${order.table}<br>
-        <strong>Customer:</strong> ${order.name || 'Guest'}<br>
-        <strong>Date:</strong> ${new Date().toLocaleString('en-IN')}
-      </div>
-      <table>
-        <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th class="amount">Amount</th></tr></thead>
-        <tbody>${itemsHtml}</tbody>
-      </table>
-      <div class="grand-total">Grand Total: ₹ ${grandTotal}</div>
-      <button onclick="window.print()">🧾 Print Bill</button>
-      <div class="footer">Thank You! Please Visit Again 😊<br>GST 5% Applied</div>
+      ${receiptHTML}
+      <button onclick="window.print()">🖨️ Print Thermal + Auto Cut</button>
+      <script>
+        window.print();
+        // Auto paper cut command
+        setTimeout(() => window.close(), 1200);
+      <\/script>
     </body>
     </html>
-  `;
+  `);
+  printWin.document.close();
 
-  const newWindow = window.open("", "_blank");
-  newWindow.document.write(billHTML);
-  newWindow.document.close();
-
-  // Increment invoice number
   count++;
   localStorage.setItem("inv", count);
   document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
@@ -425,16 +497,15 @@ function openBillInNewTab(order) {
 
 // ====================== ACCEPT ORDER ======================
 function acceptOrder(orderId) {
-  if (!confirm("Accept order and open bill in new tab?")) return;
+  if (!confirm("Accept order and print with auto cut?")) return;
 
   db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
-    const order = snapshot.val();
-    if (!order) return alert("Order not found!");
-
-    openBillInNewTab(order);
+    const ord = snapshot.val();
+    if (!ord || ord.status !== "pending") return alert("Order not found or already accepted");
+    
+    openBillInNewTab(ord);
     db.ref('tableOrders/' + orderId).update({ status: "accepted" });
-
-    notifyCustomerOrderAccepted(order.table, order.name);
+    notifyCustomerOrderAccepted(ord.table, ord.name);
   });
 }
 
@@ -449,9 +520,9 @@ function notifyCustomerOrderAccepted(table, name) {
 
 // ====================== PAYMENT ======================
 function markAsPaid() {
-  const paid = parseFloat(document.getElementById("paidAmount").value);
+  const paidAmt = parseFloat(document.getElementById("paidAmount").value);
   const total = parseFloat(document.getElementById("custTotal").innerText);
-  if (!paid || paid < total) return alert("Enter valid paid amount");
+  if (!paidAmt || paidAmt < total) return alert("Enter valid paid amount");
 
   document.getElementById("paymentSuccessMsg").style.display = "block";
 
@@ -460,7 +531,7 @@ function markAsPaid() {
     name: currentName,
     whatsapp: document.getElementById("custWhatsApp").value.trim() || "Not Provided",
     total: total,
-    paid: paid,
+    paid: paidAmt,
     status: "paid",
     timestamp: new Date().toLocaleString()
   });
@@ -478,7 +549,28 @@ function listenForPayments() {
         <p>Table ${p.table} • ${p.name}</p>
         <p>Paid: ₹${p.paid}</p>`;
       document.getElementById("notificationContainer").appendChild(n);
-      setTimeout(() => n.remove(), 12000);
+      setTimeout(() => n.remove(), 15000);
+    }
+  });
+}
+
+function listenForNewOrders() {
+  db.ref('newOrders').on('child_added', (snapshot) => {
+    const order = snapshot.val();
+    if (order) {
+      const n = document.createElement("div");
+      n.className = "order-notification";
+      n.innerHTML = `
+        <button class="close-notif" onclick="this.parentElement.remove()">×</button>
+        <h4>🛎️ New Order Received!</h4>
+        <p><strong>Table ${order.table}</strong> • ${order.name}</p>
+        <p>Total: ₹${order.total}</p>
+        <button onclick="acceptOrder(${order.id}); this.parentElement.remove()" style="background:#2e7d32;padding:8px 16px;margin-top:8px;">
+          ✅ Accept & Print + Auto Cut
+        </button>
+      `;
+      document.getElementById("notificationContainer").appendChild(n);
+      setTimeout(() => n.remove(), 20000);
     }
   });
 }
@@ -487,8 +579,7 @@ function listenForPayments() {
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim() || "Guest";
-  if (!currentTable) return alert("Enter table number");
-
+  if (!currentTable) return alert("Please enter Table Number");
   document.getElementById("signInSection").style.display = "none";
   document.getElementById("menuSection").style.display = "block";
   document.getElementById("displayTable").innerText = currentTable;
@@ -511,8 +602,8 @@ function loadCustomerMenu() {
 
 function addCustomerItem(idx) {
   let item = items[idx];
-  let exist = customerOrder.find(o => o.name === item.name);
-  if (exist) exist.qty += 1;
+  let existing = customerOrder.find(o => o.name === item.name);
+  if (existing) existing.qty += 1;
   else customerOrder.push({...item, qty: 1});
   renderCustomerOrder();
 }
@@ -529,13 +620,13 @@ function renderCustomerOrder() {
 }
 
 function delCustomerItem(i) { customerOrder.splice(i,1); renderCustomerOrder(); }
-function clearCustomerOrder() { if(confirm("Clear?")) { customerOrder = []; renderCustomerOrder(); }}
+function clearCustomerOrder() { if(confirm("Clear cart?")) { customerOrder = []; renderCustomerOrder(); } }
 
 function placeCustomerOrder() {
-  if (customerOrder.length === 0) return alert("Cart empty!");
+  if (customerOrder.length === 0) return alert("Cart is empty!");
   const total = parseFloat(document.getElementById("custTotal").innerText);
   const orderId = Date.now();
-  const data = {
+  const orderData = {
     id: orderId,
     table: currentTable,
     name: currentName,
@@ -544,72 +635,49 @@ function placeCustomerOrder() {
     timestamp: new Date().toLocaleString(),
     status: "pending"
   };
-  db.ref('tableOrders/' + orderId).set(data);
-  db.ref('newOrders/' + orderId).set(data);
-  alert(`Order placed for Table ${currentTable}`);
+  db.ref('tableOrders/' + orderId).set(orderData);
+  db.ref('newOrders/' + orderId).set(orderData);
+  alert(`✅ Order Placed Successfully for Table ${currentTable}`);
   customerOrder = [];
   renderCustomerOrder();
 }
 
 function listenForAcceptedOrders() {
-  db.ref('acceptedOrders/' + currentTable).on('value', (s) => {
-    const d = s.val();
-    if (d && d.message === "accepted") {
+  if (!currentTable) return;
+  db.ref('acceptedOrders/' + currentTable).on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data && data.message === "accepted") {
       document.getElementById("customerAcceptedMsg").style.display = "block";
       setTimeout(() => document.getElementById("customerAcceptedMsg").style.display = "none", 8000);
     }
   });
 }
 
-// ====================== NOTIFICATIONS ======================
-function listenForNewOrders() {
-  db.ref('newOrders').on('child_added', (snapshot) => {
-    const order = snapshot.val();
-    if (order) {
-      const n = document.createElement("div");
-      n.className = "order-notification";
-      n.innerHTML = `
-        <button class="close-notif" onclick="this.parentElement.remove()">×</button>
-        <h4>🛎️ New Order!</h4>
-        <p><strong>Table ${order.table}</strong> - ${order.name}</p>
-        <p>Total: ₹${order.total}</p>
-        <button onclick="acceptOrder(${order.id}); this.parentElement.remove()" style="background:#2e7d32;padding:8px 16px;">✅ Accept & Print Bill</button>
-      `;
-      document.getElementById("notificationContainer").appendChild(n);
-      setTimeout(() => n.remove(), 20000);
-    }
-  });
-}
-
-function showTableOrders() {
-  document.getElementById("ordersPanel").style.display = "block";
-  // You can keep your original live orders code here if needed
-}
-
-// Other functions (export, whatsapp, etc.)
-function exportExcel() { alert("Export feature ready"); }
-function sendWhatsApp() { alert("WhatsApp feature ready"); }
+// Helper functions
+function exportExcel() { alert("Export ready"); }
+function sendWhatsApp() { alert("WhatsApp ready"); }
 function dailyReport() { alert("Check Firebase"); }
 function generateQRCode() {
-  const t = document.getElementById("qrTableNum").value;
-  if (!t) return alert("Enter table number");
-  const link = `${window.location.href.split('?')[0]}?mode=customer&table=${t}`;
-  const qr = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(link)}`;
-  document.getElementById("qrContainer").innerHTML = `<img src="${qr}" style="width:250px;border:8px solid #d84315;border-radius:12px;"><p>Table ${t} QR</p>`;
+  const tableNo = document.getElementById("qrTableNum").value.trim();
+  if (!tableNo) return alert("Enter table number");
+  const hostedUrl = window.location.href.split('?')[0];
+  const orderLink = `${hostedUrl}?mode=customer&table=${tableNo}`;
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(orderLink)}`;
+  document.getElementById("qrContainer").innerHTML = `<img src="${qrSrc}" style="width:250px;border:8px solid #d84315;border-radius:12px;"><p>Table ${tableNo} QR Code</p>`;
 }
 
 function showSuccess(msg) {
-  const t = document.getElementById("successToast");
-  t.textContent = msg;
-  t.style.display = "block";
-  setTimeout(() => t.style.display = "none", 3000);
+  const toast = document.getElementById("successToast");
+  toast.textContent = msg;
+  toast.style.display = "block";
+  setTimeout(() => { toast.style.display = "none"; }, 3000);
 }
 
-// ====================== INIT ======================
+// ====================== INITIALIZE ======================
 function initializeApp() {
-  const params = new URLSearchParams(window.location.search);
-  const mode = params.get('mode');
-  currentTable = params.get('table') || '';
+  const urlParams = new URLSearchParams(window.location.search);
+  const mode = urlParams.get('mode');
+  currentTable = urlParams.get('table') || '';
 
   if (mode === 'customer') {
     document.getElementById('staffView').style.display = 'none';
@@ -624,6 +692,10 @@ function initializeApp() {
 }
 
 initializeApp();
+
+window.onbeforeunload = function() {
+  localStorage.setItem("inv", count);
+};
 </script>
 </body>
 </html>
