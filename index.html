@@ -515,20 +515,24 @@ function notifyCustomerOrderAccepted(table, name) {
   });
 }
 
-// ====================== CUSTOMER SIDE - FIXED ======================
+// ====================== CUSTOMER SIDE - FIXED NAME HANDLING ======================
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim() || "Guest";
-  if (!currentTable) return alert("Please enter Table Number");
+
+  if (!currentTable) {
+    alert("Please enter Table Number");
+    return;
+  }
 
   document.getElementById("signInSection").style.display = "none";
   document.getElementById("menuSection").style.display = "block";
   document.getElementById("displayTable").innerText = currentTable;
-  document.getElementById("displayName").innerText = currentName;
+  document.getElementById("displayName").innerText = currentName;   // Now correctly shows entered name or "Guest"
 
   loadCustomerMenu();
   renderCustomerOrder();
-  listenForAcceptedOrders();   // Important: Now properly called
+  listenForAcceptedOrders();
 }
 
 function loadCustomerMenu() {
@@ -589,7 +593,6 @@ function placeCustomerOrder() {
   alert(`✅ Order Placed Successfully for Table ${currentTable}`);
 }
 
-// ====================== CASH PAYMENT ======================
 function payByCash() {
   if (customerOrder.length === 0) return alert("Cart is empty!");
   currentPaymentMode = "Cash";
@@ -659,7 +662,7 @@ function markAsPaid() {
   renderCustomerOrder();
 }
 
-// ====================== LISTEN FOR ACCEPTED ORDERS (Fixed) ======================
+// ====================== LISTEN FOR ACCEPTED ORDERS ======================
 function listenForAcceptedOrders() {
   if (currentTable) {
     db.ref('acceptedOrders/' + currentTable).on('value', (snapshot) => {
@@ -724,11 +727,11 @@ function initializeApp() {
     document.getElementById('customerView').style.display = 'block';
     document.getElementById('custTable').value = currentTable;
     
-    // Auto start ordering if table is passed via QR
+    // Auto trigger joinTable if coming from QR
     if (currentTable) {
       setTimeout(() => {
         joinTable();
-      }, 500);
+      }, 300);
     }
   } else {
     document.getElementById('staffView').style.display = 'block';
