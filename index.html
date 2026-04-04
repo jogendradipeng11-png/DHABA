@@ -148,7 +148,7 @@
 </head>
 <body>
 <div class="container">
-    <!-- STAFF POS VIEW - Unchanged -->
+    <!-- STAFF POS VIEW -->
     <div id="staffView">
         <div class="logo">
             <img src="./logo_180x90.jpg" alt="Shree & Shriyan Dhaba Logo">
@@ -191,7 +191,7 @@
         <div id="ordersPanel" style="display:none;"></div>
     </div>
 
-    <!-- CUSTOMER VIEW - Unchanged -->
+    <!-- CUSTOMER VIEW -->
     <div id="customerView" style="display:none;">
         <div class="logo">
             <img src="./logo_180x90.jpg" alt="Logo" style="width:130px;">
@@ -412,7 +412,6 @@ function printThermalBill(itemsList, invoiceNo, customerName, tableNo = '') {
   printWin.document.close();
 }
 
-// ====================== STAFF PRINT ======================
 function printBill() {
   if (bill.length === 0) return alert("Bill is empty!");
   const invoiceNo = document.getElementById("invoice").value;
@@ -421,7 +420,7 @@ function printBill() {
   clearBill();
 }
 
-// ====================== OPEN BILL IN NEW TAB - SHOW FULL BILL + PRINT OPTIONS ======================
+// ====================== OPEN BILL IN NEW TAB - FULL BILL + PRINT OPTIONS ======================
 function openBillInNewTab(order) {
   const invoiceNo = "INV" + String(count).padStart(3, '0');
 
@@ -477,11 +476,13 @@ function openBillInNewTab(order) {
 
     function printThermal() {
       window.opener.printThermalBill(orderData.items, invoiceNo, orderData.name, orderData.table);
+      window.opener.clearBill();   // Clear bill on staff POS after print
       setTimeout(() => window.close(), 1000);
     }
 
     function printNormal() {
       window.print();
+      window.opener.clearBill();   // Clear bill on staff POS after print
       setTimeout(() => window.close(), 1000);
     }
 
@@ -493,6 +494,8 @@ function openBillInNewTab(order) {
       const total = orderData.items.reduce((sum, item) => sum + item.qty * item.price, 0) * 1.05;
       msg += "\\nGrand Total: ₹" + total.toFixed(0);
       window.open("https://wa.me/?text=" + encodeURIComponent(msg));
+      window.opener.clearBill();   // Clear bill on staff POS after WhatsApp
+      setTimeout(() => window.close(), 1000);
     }
   <\/script>
 </body>
@@ -502,9 +505,7 @@ function openBillInNewTab(order) {
   newWin.document.write(billHTML);
   newWin.document.close();
 
-  count++;
-  localStorage.setItem("inv", count);
-  document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
+  // Do NOT increment invoice here - only when actually printing
 }
 
 // ====================== ACCEPT ORDER ======================
@@ -530,7 +531,7 @@ function notifyCustomerOrderAccepted(table, name) {
   });
 }
 
-// ====================== CUSTOMER & OTHER FUNCTIONS (Unchanged) ======================
+// ====================== CUSTOMER & OTHER FUNCTIONS (UNCHANGED) ======================
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim() || "Guest";
