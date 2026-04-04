@@ -173,7 +173,7 @@
         <div id="ordersPanel" style="display:none;"></div>
     </div>
 
-    <!-- CUSTOMER VIEW - Modified as requested -->
+    <!-- CUSTOMER VIEW - Modified -->
     <div id="customerView" style="display:none;">
         <div class="logo">
             <img src="./logo_180x90.jpg" alt="Logo" style="width:130px;">
@@ -197,26 +197,22 @@
             </table>
             <div class="total">Your Total: ₹ <span id="custTotal">0</span></div>
 
-            <!-- Place Order Button -->
+            <!-- Place Order Button - Now works independently -->
             <button onclick="placeCustomerOrder()" style="background:#d84315;">✅ Place Order for Kitchen</button>
 
-            <!-- Payment Section -->
+            <!-- Payment Section - Below -->
             <div class="payment-section">
-                <h4 style="margin:12px 0 8px 0; color:#2e7d32;">💰 Payment Section</h4>
+                <h4 style="margin:12px 0 8px 0; color:#2e7d32;">💰 Payment (After Ordering)</h4>
                 <input id="custWhatsApp" type="tel" placeholder="WhatsApp Number (for receipt)" maxlength="10">
                 
-                <h4 style="margin:12px 0 8px 0; color:#2e7d32;">Scan PhonePe QR to Pay</h4>
+                <h4 style="margin:12px 0 8px 0; color:#2e7d32;">Scan & Pay via PhonePe</h4>
                 <div class="phonepay-qr">
-                    <img src="https://i.imgur.com/YOUR_PHONEPE_QR_CODE.png" alt="PhonePe QR Code" id="phonepeQR">
+                    <img src="https://i.imgur.com/YOUR_PHONEPE_QR_CODE.png" alt="PhonePe QR Code">
                 </div>
                 
-                <button onclick="activatePayment()" style="background:#ff9800; margin-top:10px;">
-                    📷 I Have Scanned QR Code - Confirm Payment
-                </button>
-                
                 <input id="paidAmount" type="number" placeholder="Enter Paid Amount ₹" style="margin-top:8px;">
-                <button onclick="markAsPaid()" id="confirmPaidBtn" style="background:#2e7d32; margin-top:8px;" disabled>
-                    ✅ I Have Paid - Send Order & Receipt
+                <button onclick="markAsPaid()" style="background:#2e7d32; margin-top:10px;">
+                    ✅ I Have Paid - Get Receipt on WhatsApp
                 </button>
             </div>
 
@@ -229,7 +225,7 @@
 
             <div id="paymentSuccessMsg">
                 ✅ Payment Received Successfully!<br>
-                <span style="font-size:18px;">Thank You! Come Again 😊</span>
+                <span style="font-size:18px;">Receipt sent to WhatsApp. Thank You! Come Again 😊</span>
             </div>
         </div>
     </div>
@@ -262,7 +258,6 @@ let customerOrder = [];
 let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
 let liveOrdersListener = null;
-let paymentActivated = false;   // New flag for QR scan
 
 // ====================== MENU ======================
 function loadAndListenMenu() {
@@ -536,8 +531,6 @@ function joinTable() {
   loadCustomerMenu();
   renderCustomerOrder();
   listenForAcceptedOrders();
-  paymentActivated = false;
-  document.getElementById("confirmPaidBtn").disabled = true;
 }
 
 function loadCustomerMenu() {
@@ -578,35 +571,11 @@ function clearCustomerOrder() {
   } 
 }
 
-// Place Order for Kitchen (can be clicked first)
+// Place Order for Kitchen - Now works directly
 function placeCustomerOrder() {
   if (customerOrder.length === 0) return alert("Cart is empty!");
-  alert("Order placed for kitchen. Please complete payment below to confirm and receive receipt on WhatsApp.");
-}
 
-// Activate Payment after scanning QR (simulated)
-function activatePayment() {
-  paymentActivated = true;
-  alert("✅ QR Code Scanned Successfully!\nYou can now confirm payment.");
-  document.getElementById("confirmPaidBtn").disabled = false;
-}
-
-// Confirm Payment & Send Order + Receipt on WhatsApp
-function markAsPaid() {
-  if (!paymentActivated) return alert("Please scan the PhonePe QR code first using the camera.");
-
-  const paidAmt = parseFloat(document.getElementById("paidAmount").value);
   const total = parseFloat(document.getElementById("custTotal").innerText);
-  const whatsapp = document.getElementById("custWhatsApp").value.trim() || "Not Provided";
-
-  if (!paidAmt || paidAmt < total) {
-    alert("Please enter correct paid amount (≥ total)");
-    return;
-  }
-
-  document.getElementById("paymentSuccessMsg").style.display = "block";
-
-  // Send paid order to kitchen
   const orderId = Date.now();
   const orderData = {
     id: orderId,
@@ -615,36 +584,54 @@ function markAsPaid() {
     items: JSON.parse(JSON.stringify(customerOrder)),
     total: total,
     timestamp: new Date().toLocaleString(),
-    status: "paid",
-    whatsapp: whatsapp,
-    paidAmount: paidAmt
+    status: "pending",           // Order placed but payment pending
+    whatsapp: document.getElementById("custWhatsApp").value.trim() || "Not Provided"
   };
 
   db.ref('tableOrders/' + orderId).set(orderData);
   db.ref('newOrders/' + orderId).set(orderData);
 
-  // Auto send receipt on WhatsApp
-  let msg = `Shree & Shriyan Dhaba Payment Receipt\n`;
-  msg += `Invoice: ${"INV" + Date.now().toString().slice(-6)}\n`;
+  alert(`✅ Order Placed Successfully for Table ${currentTable}\nPlease pay using the section below to get receipt on WhatsApp.`);
+
+  // Do NOT clear cart here - customer can pay later
+}
+
+// Confirm Payment & Send Receipt
+function markAsPaid() {
+  const paidAmt = parseFloat(document.getElementById("paidAmount").value);
+  const total = parseFloat(document.getElementById("custTotal").innerText);
+  const whatsapp = document.getElementById("custWhatsApp").value.trim();
+
+  if (!paidAmt || paidAmt < total) {
+    alert("Please enter correct paid amount (≥ total)");
+    return;
+  }
+
+  document.getElementById("paymentSuccessMsg").style.display = "block";
+
+  // Send receipt on WhatsApp
+  let msg = `Shree & Shriyan Dhaba - Payment Receipt\n`;
   msg += `Table: ${currentTable}\n`;
   msg += `Customer: ${currentName}\n\n`;
   customerOrder.forEach(item => {
     msg += `${item.name} x${item.qty} = ₹${item.qty * item.price}\n`;
   });
-  msg += `\nPaid Amount: ₹${paidAmt}\nThank You! Come Again 😊`;
+  msg += `\nPaid: ₹${paidAmt}\nThank You! Come Again 😊`;
 
-  window.open("https://wa.me/" + whatsapp + "?text=" + encodeURIComponent(msg));
+  if (whatsapp) {
+    window.open("https://wa.me/" + whatsapp + "?text=" + encodeURIComponent(msg));
+  } else {
+    window.open("https://wa.me/?text=" + encodeURIComponent(msg));
+  }
 
-  alert(`✅ Payment Confirmed! Receipt sent to WhatsApp.\nOrder sent to kitchen.`);
+  alert("✅ Payment Confirmed! Receipt sent to WhatsApp.");
 
-  // Clear cart
+  // Clear cart after payment
   customerOrder = [];
   renderCustomerOrder();
-  paymentActivated = false;
-  document.getElementById("confirmPaidBtn").disabled = true;
 }
 
-// Rest of the code (staff side, notifications, etc.) remains unchanged
+// Rest of the code remains unchanged
 function listenForAcceptedOrders() {
   if (!currentTable) return;
   db.ref('acceptedOrders/' + currentTable).on('value', (snapshot) => {
