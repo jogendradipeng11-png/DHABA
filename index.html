@@ -131,7 +131,7 @@
 </head>
 <body>
 <div class="container">
-    <!-- STAFF POS VIEW (Unchanged) -->
+    <!-- STAFF POS VIEW -->
     <div id="staffView">
         <div class="logo">
             <img src="./logo_180x90.jpg" alt="Shree & Shriyan Dhaba Logo">
@@ -197,7 +197,6 @@
             <div class="total">Your Total: ₹ <span id="custTotal">0</span></div>
             <button onclick="placeCustomerOrder()" style="background:#d84315;">✅ Place Order for Kitchen</button>
             
-            <!-- Payment Section with Dynamic QR -->
             <div class="payment-section">
                 <h4 style="margin:12px 0 8px 0; color:#2e7d32;">💰 Payment Options</h4>
                 <input id="custWhatsApp" type="tel" placeholder="WhatsApp Number (for receipt)" maxlength="10">
@@ -252,8 +251,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// ====================== YOUR UPI DETAILS ======================
-const MERCHANT_UPI = "8847810037jp@ybl";     // ← CHANGE TO YOUR ACTUAL MERCHANT UPI ID
+// ====================== UPI DETAILS ======================
+const MERCHANT_UPI = "8847810037jp@ybl";     // ← Change to your merchant UPI
 const MERCHANT_NAME = "Shree & Shriyan Dhaba";
 
 // ====================== GLOBAL VARIABLES ======================
@@ -403,7 +402,7 @@ function printBill() {
   clearBill();
 }
 
-// ====================== OPEN BILL IN NEW TAB (FIXED & COMPLETE) ======================
+// ====================== FIXED: OPEN BILL IN NEW TAB ======================
 function openBillInNewTab(order) {
   const invoiceNo = "INV" + String(count).padStart(3, '0');
   let subtotal = 0;
@@ -421,11 +420,11 @@ function openBillInNewTab(order) {
 <head>
   <title>Bill - ${invoiceNo}</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 380px; margin: 20px auto; padding: 15px; }
+    body { font-family: Arial, sans-serif; max-width: 380px; margin: 20px auto; padding: 15px; background:#fff; }
     table { width: 100%; border-collapse: collapse; margin: 15px 0; }
     th, td { padding: 8px; border-bottom: 1px dotted #ccc; }
     .amount { text-align: right; }
-    .total { font-size: 20px; font-weight: bold; text-align: center; margin: 20px 0; border-top: 2px dashed #d84315; padding-top: 10px; }
+    .total { font-size: 22px; font-weight: bold; text-align: center; margin: 20px 0; border-top: 2px dashed #d84315; padding-top: 10px; }
     button { width: 100%; padding: 14px; margin: 8px 0; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; }
     .thermal-btn { background: #d84315; color: white; }
     .normal-btn { background: #2e7d32; color: white; }
@@ -450,19 +449,27 @@ function openBillInNewTab(order) {
   <button class="thermal-btn" onclick="printThermal()">🖨️ Print Thermal + Auto Cut</button>
   <button class="normal-btn" onclick="printNormal()">🧾 Normal Print & Clear</button>
   <button class="whatsapp-btn" onclick="sendWhatsAppBill()">📲 Send Bill on WhatsApp</button>
+
   <script>
     const orderData = ${JSON.stringify(order)};
     const invoiceNo = "${invoiceNo}";
+    
     function printThermal() {
-      window.opener.printThermalBill(orderData.items, invoiceNo, orderData.name || "Guest", orderData.table);
-      window.opener.clearBill();
-      setTimeout(() => window.close(), 1000);
+      if (window.opener && typeof window.opener.printThermalBill === 'function') {
+        window.opener.printThermalBill(orderData.items, invoiceNo, orderData.name || "Guest", orderData.table);
+        window.opener.clearBill();
+      }
+      setTimeout(() => window.close(), 800);
     }
+    
     function printNormal() {
       window.print();
-      window.opener.clearBill();
-      setTimeout(() => window.close(), 1000);
+      if (window.opener && typeof window.opener.clearBill === 'function') {
+        window.opener.clearBill();
+      }
+      setTimeout(() => window.close(), 800);
     }
+    
     function sendWhatsAppBill() {
       let msg = "Shree & Shriyan Dhaba\\nInvoice: " + invoiceNo + "\\nTable: " + orderData.table + "\\nCustomer: " + (orderData.name || "Guest") + "\\n\\n";
       orderData.items.forEach(item => {
@@ -471,15 +478,19 @@ function openBillInNewTab(order) {
       const total = orderData.items.reduce((sum, item) => sum + item.qty * item.price, 0) * 1.05;
       msg += "\\nGrand Total: ₹" + total.toFixed(0);
       window.open("https://wa.me/?text=" + encodeURIComponent(msg));
-      setTimeout(() => window.close(), 1000);
+      setTimeout(() => window.close(), 800);
     }
   <\/script>
 </body>
 </html>`;
 
   const newWin = window.open('', '_blank');
-  newWin.document.write(billHTML);
-  newWin.document.close();
+  if (newWin) {
+    newWin.document.write(billHTML);
+    newWin.document.close();
+  } else {
+    alert("Pop-up blocked! Please allow pop-ups for this site.");
+  }
 }
 
 // ====================== ACCEPT ORDER ======================
@@ -489,7 +500,7 @@ function acceptOrder(orderId) {
     const ord = snapshot.val();
     if (!ord || ord.status !== "pending") return alert("Order not found or already accepted");
     
-    openBillInNewTab(ord);   // Opens bill with print options
+    openBillInNewTab(ord);   // This will now reliably open the bill page
     db.ref('tableOrders/' + orderId).update({ status: "accepted" });
     notifyCustomerOrderAccepted(ord.table, ord.name);
   });
@@ -503,7 +514,7 @@ function notifyCustomerOrderAccepted(table, name) {
   });
 }
 
-// ====================== CUSTOMER SIDE ======================
+// ====================== CUSTOMER SIDE (Unchanged) ======================
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim() || "Guest";
@@ -569,21 +580,16 @@ function placeCustomerOrder() {
   alert(`✅ Order Placed Successfully for Table ${currentTable}`);
 }
 
-// ====================== DYNAMIC PHONEPE QR ======================
 function generateDynamicPhonePeQR() {
   const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
   const container = document.getElementById("dynamicPhonePeQR");
-  
   if (total <= 0) {
     container.style.display = "none";
     return;
   }
-
   const txnNote = `Table${currentTable}_Order_${Date.now()}`;
   const upiLink = `upi://pay?pa=${MERCHANT_UPI}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${total.toFixed(2)}&cu=INR&tr=${Date.now()}&tn=${encodeURIComponent(txnNote)}`;
-
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(upiLink)}`;
-
   container.innerHTML = `
     <img src="${qrUrl}" onclick="window.location.href='${upiLink}'" alt="Pay with PhonePe">
     <p style="margin:12px 0 0 0; font-size:15px; font-weight:bold; color:#6739B7;">
@@ -602,12 +608,8 @@ function markAsPaid() {
     return;
   }
   document.getElementById("paymentSuccessMsg").style.display = "block";
-  let msg = `Shree & Shriyan Dhaba - Payment Receipt\n`;
-  msg += `Table: ${currentTable}\n`;
-  msg += `Customer: ${currentName}\n\n`;
-  customerOrder.forEach(item => {
-    msg += `${item.name} x${item.qty} = ₹${item.qty * item.price}\n`;
-  });
+  let msg = `Shree & Shriyan Dhaba - Payment Receipt\nTable: ${currentTable}\nCustomer: ${currentName}\n\n`;
+  customerOrder.forEach(item => msg += `${item.name} x${item.qty} = ₹${item.qty * item.price}\n`);
   msg += `\nPaid: ₹${paidAmt}\nThank You! Come Again 😊`;
   if (whatsapp && whatsapp.length >= 10) {
     window.open("https://wa.me/" + whatsapp + "?text=" + encodeURIComponent(msg));
@@ -639,19 +641,6 @@ function listenForNewOrders() {
       setTimeout(() => n.remove(), 20000);
     }
   });
-}
-
-// ====================== OTHER HELPER FUNCTIONS ======================
-function exportExcel() { alert("Export ready"); }
-function sendWhatsApp() { alert("WhatsApp ready"); }
-function dailyReport() { alert("Check Firebase"); }
-function generateQRCode() {
-  const tableNo = document.getElementById("qrTableNum").value.trim();
-  if (!tableNo) return alert("Enter table number");
-  const hostedUrl = window.location.href.split('?')[0];
-  const orderLink = `${hostedUrl}?mode=customer&table=${tableNo}`;
-  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(orderLink)}`;
-  document.getElementById("qrContainer").innerHTML = `<img src="${qrSrc}" style="width:250px;border:8px solid #d84315;border-radius:12px;"><p>Table ${tableNo} QR Code</p>`;
 }
 
 // ====================== INITIALIZE ======================
