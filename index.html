@@ -421,10 +421,12 @@ function printBill() {
   clearBill();
 }
 
-// ====================== AUTO SAVE BILL TO DESKTOP ======================
+// ====================== AUTO SAVE BILL WITH CUSTOM NAME ======================
 function autoSaveBill(order, invoiceNo) {
   const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-  const filename = `Dhaba_Bills_${date}.txt`;
+  const customerName = (order.name || "Guest").replace(/[^a-zA-Z0-9]/g, '_'); // Safe filename
+  const tableNo = order.table || "NA";
+  const filename = `Dhaba_Bill_${customerName}_Table${tableNo}_${invoiceNo}_${date}.txt`;
 
   let content = `Shree & Shriyan Dhaba\n`;
   content += `At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)\n`;
@@ -512,12 +514,14 @@ function openBillInNewTab(order) {
 
     function printThermal() {
       window.opener.printThermalBill(orderData.items, invoiceNo, orderData.name, orderData.table);
+      window.opener.autoSaveBill(orderData, invoiceNo);
       window.opener.clearBill();
       setTimeout(() => window.close(), 1000);
     }
 
     function printNormal() {
       window.print();
+      window.opener.autoSaveBill(orderData, invoiceNo);
       window.opener.clearBill();
       setTimeout(() => window.close(), 1000);
     }
@@ -530,6 +534,7 @@ function openBillInNewTab(order) {
       const total = orderData.items.reduce((sum, item) => sum + item.qty * item.price, 0) * 1.05;
       msg += "\\nGrand Total: ₹" + total.toFixed(0);
       window.open("https://wa.me/?text=" + encodeURIComponent(msg));
+      window.opener.autoSaveBill(orderData, invoiceNo);
       window.opener.clearBill();
       setTimeout(() => window.close(), 1000);
     }
