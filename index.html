@@ -421,7 +421,39 @@ function printBill() {
   clearBill();
 }
 
-// ====================== OPEN BILL IN NEW TAB - FULL BILL + PRINT OPTIONS ======================
+// ====================== AUTO SAVE BILL TO DESKTOP ======================
+function autoSaveBill(order, invoiceNo) {
+  const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const filename = `Dhaba_Bills_${date}.txt`;
+
+  let content = `Shree & Shriyan Dhaba\n`;
+  content += `At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)\n`;
+  content += `📞 +91 7077088311 | ✉ jogendra.dipeng11@gmail.com\n\n`;
+  content += `Invoice: ${invoiceNo}\n`;
+  content += `Table: ${order.table}\n`;
+  content += `Customer: ${order.name || 'Guest'}\n`;
+  content += `Date: ${new Date().toLocaleString('en-IN')}\n\n`;
+  content += `Items:\n`;
+  order.items.forEach(item => {
+    const amt = item.qty * item.price;
+    content += `${item.name} x ${item.qty} = ₹${amt}\n`;
+  });
+  const grandTotal = order.items.reduce((sum, item) => sum + item.qty * item.price, 0) * 1.05;
+  content += `\nGrand Total: ₹${grandTotal.toFixed(0)}\n\n`;
+  content += `Thank You! Visit Again 😊\nGST 5% Applied`;
+
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ====================== OPEN BILL IN NEW TAB ======================
 function openBillInNewTab(order) {
   const invoiceNo = "INV" + String(count).padStart(3, '0');
 
@@ -508,8 +540,6 @@ function openBillInNewTab(order) {
   const newWin = window.open('', '_blank');
   newWin.document.write(billHTML);
   newWin.document.close();
-
-  // Bill remains visible on staff POS until print action
 }
 
 // ====================== ACCEPT ORDER ======================
