@@ -185,7 +185,7 @@
         <div id="signInSection">
             <h3 style="text-align:center;">Welcome!</h3>
             <input id="custTable" type="number" placeholder="Your Table Number">
-            <input id="custName" placeholder="Your Name (optional)">
+            <input id="custName" placeholder="Your Name (required)">
             <button onclick="joinTable()" style="background:#d84315;font-size:18px;">✅ Start Ordering</button>
         </div>
         <div id="menuSection" style="display:none;">
@@ -515,20 +515,25 @@ function notifyCustomerOrderAccepted(table, name) {
   });
 }
 
-// ====================== CUSTOMER SIDE - FIXED NAME HANDLING ======================
+// ====================== CUSTOMER SIDE - FIXED (Name Required) ======================
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
-  currentName = document.getElementById("custName").value.trim() || "Guest";
+  currentName = document.getElementById("custName").value.trim();
 
   if (!currentTable) {
     alert("Please enter Table Number");
     return;
   }
 
+  if (!currentName) {
+    alert("Please enter your name to start ordering");
+    return;
+  }
+
   document.getElementById("signInSection").style.display = "none";
   document.getElementById("menuSection").style.display = "block";
   document.getElementById("displayTable").innerText = currentTable;
-  document.getElementById("displayName").innerText = currentName;   // Now correctly shows entered name or "Guest"
+  document.getElementById("displayName").innerText = currentName;
 
   loadCustomerMenu();
   renderCustomerOrder();
@@ -727,7 +732,6 @@ function initializeApp() {
     document.getElementById('customerView').style.display = 'block';
     document.getElementById('custTable').value = currentTable;
     
-    // Auto trigger joinTable if coming from QR
     if (currentTable) {
       setTimeout(() => {
         joinTable();
