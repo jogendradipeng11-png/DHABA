@@ -421,12 +421,12 @@ function printBill() {
   clearBill();
 }
 
-// ====================== AUTO SAVE BILL WITH CUSTOM NAME ======================
+// ====================== AUTO SAVE BILL WITH CUSTOM FILENAME ======================
 function autoSaveBill(order, invoiceNo) {
-  const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-  const customerName = (order.name || "Guest").replace(/[^a-zA-Z0-9]/g, '_'); // Safe filename
-  const tableNo = order.table || "NA";
-  const filename = `Dhaba_Bill_${customerName}_Table${tableNo}_${invoiceNo}_${date}.txt`;
+  const date = new Date().toISOString().split('T')[0];
+  const safeCustomer = (order.name || "Guest").replace(/[^a-zA-Z0-9]/g, '_');
+  const safeTable = (order.table || "NA").replace(/[^a-zA-Z0-9]/g, '_');
+  const filename = `Dhaba_Bill_${safeCustomer}_Table${safeTable}_${invoiceNo}_${date}.txt`;
 
   let content = `Shree & Shriyan Dhaba\n`;
   content += `At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)\n`;
