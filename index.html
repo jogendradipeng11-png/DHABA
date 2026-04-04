@@ -148,7 +148,7 @@
 </head>
 <body>
 <div class="container">
-    <!-- STAFF POS VIEW -->
+    <!-- STAFF POS VIEW - Unchanged -->
     <div id="staffView">
         <div class="logo">
             <img src="./logo_180x90.jpg" alt="Shree & Shriyan Dhaba Logo">
@@ -191,7 +191,7 @@
         <div id="ordersPanel" style="display:none;"></div>
     </div>
 
-    <!-- CUSTOMER VIEW -->
+    <!-- CUSTOMER VIEW - Unchanged -->
     <div id="customerView" style="display:none;">
         <div class="logo">
             <img src="./logo_180x90.jpg" alt="Logo" style="width:130px;">
@@ -361,7 +361,7 @@ function clearBill() {
   document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
 }
 
-// ====================== THERMAL PRINT WITH AUTO CUT ======================
+// ====================== THERMAL PRINT ======================
 function printThermalBill(itemsList, invoiceNo, customerName, tableNo = '') {
   let subtotal = 0;
   let itemsHtml = '';
@@ -412,9 +412,27 @@ function printThermalBill(itemsList, invoiceNo, customerName, tableNo = '') {
   printWin.document.close();
 }
 
-// ====================== OPEN BILL IN NEW TAB WITH 3 OPTIONS ======================
+// ====================== STAFF PRINT ======================
+function printBill() {
+  if (bill.length === 0) return alert("Bill is empty!");
+  const invoiceNo = document.getElementById("invoice").value;
+  const customer = document.getElementById("customerName").value || "Guest";
+  printThermalBill(bill, invoiceNo, customer);
+  clearBill();
+}
+
+// ====================== OPEN BILL IN NEW TAB - SHOW FULL BILL + PRINT OPTIONS ======================
 function openBillInNewTab(order) {
   const invoiceNo = "INV" + String(count).padStart(3, '0');
+
+  let subtotal = 0;
+  let itemsHtml = '';
+  order.items.forEach(item => {
+    const amt = item.qty * item.price;
+    subtotal += amt;
+    itemsHtml += `<tr><td>${item.name}</td><td>${item.qty}</td><td style="text-align:right">₹${amt}</td></tr>`;
+  });
+  const grandTotal = (subtotal * 1.05).toFixed(0);
 
   const billHTML = `
 <!DOCTYPE html>
@@ -422,21 +440,33 @@ function openBillInNewTab(order) {
 <head>
   <title>Bill - ${invoiceNo}</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 380px; margin: 20px auto; padding: 15px; text-align: center; }
-    button { 
-      width: 100%; padding: 14px; margin: 8px 0; font-size: 16px; border: none; 
-      border-radius: 8px; cursor: pointer; 
-    }
+    body { font-family: Arial, sans-serif; max-width: 380px; margin: 20px auto; padding: 15px; }
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    th, td { padding: 8px; border-bottom: 1px dotted #ccc; }
+    .amount { text-align: right; }
+    .total { font-size: 20px; font-weight: bold; text-align: center; margin: 20px 0; border-top: 2px dashed #d84315; padding-top: 10px; }
+    button { width: 100%; padding: 14px; margin: 8px 0; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; }
     .thermal-btn { background: #d84315; color: white; }
     .normal-btn { background: #2e7d32; color: white; }
     .whatsapp-btn { background: #25D366; color: white; }
   </style>
 </head>
 <body>
-  <h2>Order from Table ${order.table}</h2>
-  <p><strong>Customer:</strong> ${order.name || 'Guest'}</p>
+  <h2 style="text-align:center;color:#d84315;">Shree & Shriyan Dhaba</h2>
   <p><strong>Invoice:</strong> ${invoiceNo}</p>
+  <p><strong>Table:</strong> ${order.table}</p>
+  <p><strong>Customer:</strong> ${order.name || 'Guest'}</p>
+  <p><strong>Date:</strong> ${new Date().toLocaleString('en-IN')}</p>
 
+  <table>
+    <thead><tr><th>Item</th><th>Qty</th><th class="amount">Amount</th></tr></thead>
+    <tbody>${itemsHtml}</tbody>
+  </table>
+
+  <div class="total">Grand Total: ₹ ${grandTotal}</div>
+
+  <hr>
+  <h3 style="text-align:center;">Choose Print Method</h3>
   <button class="thermal-btn" onclick="printThermal()">🖨️ Print Thermal + Auto Cut</button>
   <button class="normal-btn" onclick="printNormal()">🧾 Normal Print & Clear</button>
   <button class="whatsapp-btn" onclick="sendWhatsAppBill()">📲 Send Bill on WhatsApp</button>
@@ -447,12 +477,12 @@ function openBillInNewTab(order) {
 
     function printThermal() {
       window.opener.printThermalBill(orderData.items, invoiceNo, orderData.name, orderData.table);
-      setTimeout(() => window.close(), 800);
+      setTimeout(() => window.close(), 1000);
     }
 
     function printNormal() {
       window.print();
-      setTimeout(() => window.close(), 800);
+      setTimeout(() => window.close(), 1000);
     }
 
     function sendWhatsAppBill() {
@@ -472,7 +502,6 @@ function openBillInNewTab(order) {
   newWin.document.write(billHTML);
   newWin.document.close();
 
-  // Increment invoice
   count++;
   localStorage.setItem("inv", count);
   document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
@@ -501,18 +530,7 @@ function notifyCustomerOrderAccepted(table, name) {
   });
 }
 
-// ====================== STAFF THERMAL PRINT ======================
-function printThermalBill() {
-  if (bill.length === 0) return alert("Bill is empty!");
-  const invoiceNo = document.getElementById("invoice").value;
-  const customer = document.getElementById("customerName").value || "Guest";
-  printThermalBill(bill, invoiceNo, customer);
-  clearBill();
-}
-
-// ====================== CUSTOMER SIDE & OTHER FUNCTIONS ======================
-// (All other functions remain exactly the same as before)
-
+// ====================== CUSTOMER & OTHER FUNCTIONS (Unchanged) ======================
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim() || "Guest";
