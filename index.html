@@ -173,7 +173,7 @@
         <div id="ordersPanel" style="display:none;"></div>
     </div>
 
-    <!-- CUSTOMER VIEW - Modified -->
+    <!-- CUSTOMER VIEW -->
     <div id="customerView" style="display:none;">
         <div class="logo">
             <img src="./logo_180x90.jpg" alt="Logo" style="width:130px;">
@@ -197,19 +197,20 @@
             </table>
             <div class="total">Your Total: ₹ <span id="custTotal">0</span></div>
 
-            <!-- Place Order Button - Now works independently -->
             <button onclick="placeCustomerOrder()" style="background:#d84315;">✅ Place Order for Kitchen</button>
 
-            <!-- Payment Section - Below -->
+            <!-- Payment Section -->
             <div class="payment-section">
-                <h4 style="margin:12px 0 8px 0; color:#2e7d32;">💰 Payment (After Ordering)</h4>
+                <h4 style="margin:12px 0 8px 0; color:#2e7d32;">💰 Payment Options</h4>
                 <input id="custWhatsApp" type="tel" placeholder="WhatsApp Number (for receipt)" maxlength="10">
-                
-                <h4 style="margin:12px 0 8px 0; color:#2e7d32;">Scan & Pay via PhonePe</h4>
-                <div class="phonepay-qr">
-                    <img src="https://i.imgur.com/YOUR_PHONEPE_QR_CODE.png" alt="PhonePe QR Code">
+
+                <h4 style="margin:12px 0 8px 0;">UPI Payment</h4>
+                <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:10px 0;">
+                    <button onclick="selectUPI('PhonePe')" style="background:#6739B7;color:white;padding:10px;border-radius:8px;width:auto;">PhonePe</button>
+                    <button onclick="selectUPI('GooglePay')" style="background:#4285F4;color:white;padding:10px;border-radius:8px;width:auto;">Google Pay</button>
+                    <button onclick="selectUPI('Paytm')" style="background:#00B9F1;color:white;padding:10px;border-radius:8px;width:auto;">Paytm</button>
                 </div>
-                
+
                 <input id="paidAmount" type="number" placeholder="Enter Paid Amount ₹" style="margin-top:8px;">
                 <button onclick="markAsPaid()" style="background:#2e7d32; margin-top:10px;">
                     ✅ I Have Paid - Get Receipt on WhatsApp
@@ -225,7 +226,7 @@
 
             <div id="paymentSuccessMsg">
                 ✅ Payment Received Successfully!<br>
-                <span style="font-size:18px;">Receipt sent to WhatsApp. Thank You! Come Again 😊</span>
+                <span style="font-size:18px;">Receipt sent to WhatsApp. Thank You!</span>
             </div>
         </div>
     </div>
@@ -258,6 +259,7 @@ let customerOrder = [];
 let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
 let liveOrdersListener = null;
+let selectedUPI = "";
 
 // ====================== MENU ======================
 function loadAndListenMenu() {
@@ -407,6 +409,40 @@ function printBill() {
   clearBill();
 }
 
+// ====================== AUTO SAVE BILL ======================
+function autoSaveBill(order, invoiceNo) {
+  const date = new Date().toISOString().split('T')[0];
+  const safeCustomer = (order.name || "Guest").replace(/[^a-zA-Z0-9]/g, '_');
+  const safeTable = (order.table || "NA").replace(/[^a-zA-Z0-9]/g, '_');
+  const filename = `Dhaba_Bill_${safeCustomer}_Table${safeTable}_${invoiceNo}_${date}.txt`;
+
+  let content = `Shree & Shriyan Dhaba\n`;
+  content += `At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)\n`;
+  content += `📞 +91 7077088311 | ✉ jogendra.dipeng11@gmail.com\n\n`;
+  content += `Invoice: ${invoiceNo}\n`;
+  content += `Table: ${order.table}\n`;
+  content += `Customer: ${order.name || 'Guest'}\n`;
+  content += `Date: ${new Date().toLocaleString('en-IN')}\n\n`;
+  content += `Items:\n`;
+  order.items.forEach(item => {
+    const amt = item.qty * item.price;
+    content += `${item.name} x ${item.qty} = ₹${amt}\n`;
+  });
+  const grandTotal = order.items.reduce((sum, item) => sum + item.qty * item.price, 0) * 1.05;
+  content += `\nGrand Total: ₹${grandTotal.toFixed(0)}\n\n`;
+  content += `Thank You! Visit Again 😊\nGST 5% Applied`;
+
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // ====================== OPEN BILL IN NEW TAB ======================
 function openBillInNewTab(order) {
   const invoiceNo = "INV" + String(count).padStart(3, '0');
@@ -466,12 +502,14 @@ function openBillInNewTab(order) {
 
     function printThermal() {
       window.opener.printThermalBill(orderData.items, invoiceNo, orderData.name, orderData.table);
+      window.opener.autoSaveBill(orderData, invoiceNo);
       window.opener.clearBill();
       setTimeout(() => window.close(), 1000);
     }
 
     function printNormal() {
       window.print();
+      window.opener.autoSaveBill(orderData, invoiceNo);
       window.opener.clearBill();
       setTimeout(() => window.close(), 1000);
     }
@@ -484,6 +522,7 @@ function openBillInNewTab(order) {
       const total = orderData.items.reduce((sum, item) => sum + item.qty * item.price, 0) * 1.05;
       msg += "\\nGrand Total: ₹" + total.toFixed(0);
       window.open("https://wa.me/?text=" + encodeURIComponent(msg));
+      window.opener.autoSaveBill(orderData, invoiceNo);
       window.opener.clearBill();
       setTimeout(() => window.close(), 1000);
     }
@@ -519,7 +558,7 @@ function notifyCustomerOrderAccepted(table, name) {
   });
 }
 
-// ====================== CUSTOMER SIDE - MODIFIED AS REQUESTED ======================
+// ====================== CUSTOMER SIDE ======================
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim() || "Guest";
@@ -571,7 +610,6 @@ function clearCustomerOrder() {
   } 
 }
 
-// Place Order for Kitchen - Now works directly
 function placeCustomerOrder() {
   if (customerOrder.length === 0) return alert("Cart is empty!");
 
@@ -584,23 +622,24 @@ function placeCustomerOrder() {
     items: JSON.parse(JSON.stringify(customerOrder)),
     total: total,
     timestamp: new Date().toLocaleString(),
-    status: "pending",           // Order placed but payment pending
-    whatsapp: document.getElementById("custWhatsApp").value.trim() || "Not Provided"
+    status: "pending"
   };
 
   db.ref('tableOrders/' + orderId).set(orderData);
   db.ref('newOrders/' + orderId).set(orderData);
 
-  alert(`✅ Order Placed Successfully for Table ${currentTable}\nPlease pay using the section below to get receipt on WhatsApp.`);
-
-  // Do NOT clear cart here - customer can pay later
+  alert(`✅ Order Placed Successfully for Table ${currentTable}\nYou can pay later using the payment section below.`);
 }
 
-// Confirm Payment & Send Receipt
+function selectUPI(upi) {
+  selectedUPI = upi;
+  alert(`Selected: ${upi}\nPlease scan the QR code above to pay.`);
+}
+
 function markAsPaid() {
   const paidAmt = parseFloat(document.getElementById("paidAmount").value);
   const total = parseFloat(document.getElementById("custTotal").innerText);
-  const whatsapp = document.getElementById("custWhatsApp").value.trim();
+  const whatsapp = document.getElementById("custWhatsApp").value.trim() || "Not Provided";
 
   if (!paidAmt || paidAmt < total) {
     alert("Please enter correct paid amount (≥ total)");
@@ -618,7 +657,7 @@ function markAsPaid() {
   });
   msg += `\nPaid: ₹${paidAmt}\nThank You! Come Again 😊`;
 
-  if (whatsapp) {
+  if (whatsapp && whatsapp.length >= 10) {
     window.open("https://wa.me/" + whatsapp + "?text=" + encodeURIComponent(msg));
   } else {
     window.open("https://wa.me/?text=" + encodeURIComponent(msg));
@@ -626,23 +665,11 @@ function markAsPaid() {
 
   alert("✅ Payment Confirmed! Receipt sent to WhatsApp.");
 
-  // Clear cart after payment
   customerOrder = [];
   renderCustomerOrder();
 }
 
-// Rest of the code remains unchanged
-function listenForAcceptedOrders() {
-  if (!currentTable) return;
-  db.ref('acceptedOrders/' + currentTable).on('value', (snapshot) => {
-    const data = snapshot.val();
-    if (data && data.message === "accepted") {
-      document.getElementById("customerAcceptedMsg").style.display = "block";
-      setTimeout(() => document.getElementById("customerAcceptedMsg").style.display = "none", 8000);
-    }
-  });
-}
-
+// ====================== NOTIFICATIONS ======================
 function listenForNewOrders() {
   db.ref('newOrders').on('child_added', (snapshot) => {
     const order = snapshot.val();
@@ -681,6 +708,29 @@ function listenForPayments() {
   });
 }
 
+function acceptOrder(orderId) {
+  if (!confirm("Accept this order?")) return;
+
+  db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
+    const ord = snapshot.val();
+    if (!ord || ord.status !== "pending") return alert("Order not found or already accepted");
+    
+    openBillInNewTab(ord);
+    db.ref('tableOrders/' + orderId).update({ status: "accepted" });
+    notifyCustomerOrderAccepted(ord.table, ord.name);
+  });
+}
+
+function notifyCustomerOrderAccepted(table, name) {
+  db.ref('acceptedOrders/' + table).set({
+    table: table,
+    name: name,
+    message: "accepted",
+    timestamp: new Date().toLocaleString()
+  });
+}
+
+// ====================== OTHER HELPER FUNCTIONS ======================
 function exportExcel() { alert("Export ready"); }
 function sendWhatsApp() { alert("WhatsApp ready"); }
 function dailyReport() { alert("Check Firebase"); }
