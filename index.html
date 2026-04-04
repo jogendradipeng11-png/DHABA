@@ -361,7 +361,7 @@ function clearBill() {
   document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
 }
 
-// ====================== THERMAL PRINT ======================
+// ====================== THERMAL PRINT WITH LOGO ======================
 function printThermalBill(itemsList, invoiceNo, customerName, tableNo = '') {
   let subtotal = 0;
   let itemsHtml = '';
@@ -375,9 +375,10 @@ function printThermalBill(itemsList, invoiceNo, customerName, tableNo = '') {
 
   const receiptHTML = `
     <div class="bill-print">
+      <img src="./logo_180x90.jpg" alt="Logo" style="width:80px;display:block;margin:0 auto 8px auto;">
       <div class="title">Shree & Shriyan Dhaba</div>
-      <div style="text-align:center;font-size:11px;">Durlaga, Jharsuguda, Odisha - 768204</div>
-      <div style="text-align:center;font-size:11px;">📞 +91 7077088311</div>
+      <div style="text-align:center;font-size:11px;">At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)</div>
+      <div style="text-align:center;font-size:11px;">📞 +91 7077088311 | ✉ jogendra.dipeng11@gmail.com</div>
       <hr>
       <div><strong>Invoice:</strong> ${invoiceNo}</div>
       ${tableNo ? `<div><strong>Table:</strong> ${tableNo}</div>` : ''}
@@ -451,7 +452,10 @@ function openBillInNewTab(order) {
   </style>
 </head>
 <body>
+  <img src="./logo_180x90.jpg" alt="Logo" style="width:110px;display:block;margin:0 auto 10px auto;">
   <h2 style="text-align:center;color:#d84315;">Shree & Shriyan Dhaba</h2>
+  <p style="text-align:center;font-size:13px;">At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)<br>📞 +91 7077088311 | ✉ jogendra.dipeng11@gmail.com</p>
+
   <p><strong>Invoice:</strong> ${invoiceNo}</p>
   <p><strong>Table:</strong> ${order.table}</p>
   <p><strong>Customer:</strong> ${order.name || 'Guest'}</p>
@@ -476,13 +480,13 @@ function openBillInNewTab(order) {
 
     function printThermal() {
       window.opener.printThermalBill(orderData.items, invoiceNo, orderData.name, orderData.table);
-      window.opener.clearBill();   // Clear bill on staff POS after print
+      window.opener.clearBill();
       setTimeout(() => window.close(), 1000);
     }
 
     function printNormal() {
       window.print();
-      window.opener.clearBill();   // Clear bill on staff POS after print
+      window.opener.clearBill();
       setTimeout(() => window.close(), 1000);
     }
 
@@ -494,7 +498,7 @@ function openBillInNewTab(order) {
       const total = orderData.items.reduce((sum, item) => sum + item.qty * item.price, 0) * 1.05;
       msg += "\\nGrand Total: ₹" + total.toFixed(0);
       window.open("https://wa.me/?text=" + encodeURIComponent(msg));
-      window.opener.clearBill();   // Clear bill on staff POS after WhatsApp
+      window.opener.clearBill();
       setTimeout(() => window.close(), 1000);
     }
   <\/script>
@@ -505,7 +509,7 @@ function openBillInNewTab(order) {
   newWin.document.write(billHTML);
   newWin.document.close();
 
-  // Do NOT increment invoice here - only when actually printing
+  // Bill remains visible on staff POS until print action
 }
 
 // ====================== ACCEPT ORDER ======================
