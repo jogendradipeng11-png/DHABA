@@ -159,20 +159,17 @@
         <button onclick="sendWhatsApp()">📲 WhatsApp</button>
         <button onclick="dailyReport()">📊 Daily Report</button>
         <button onclick="showTableOrders()" style="background:#d84315;">📋 Live Table Orders</button>
-
         <h4>Manage Menu (Real-time Sync)</h4>
         <input id="newItemName" placeholder="New Item Name">
         <input id="newItemPrice" type="number" placeholder="Price (₹)">
         <button onclick="addNewMenuItem()" style="background:#ff9800;">➕ Add / Update Item</button>
         <button onclick="showCurrentMenu()" style="background:#666;">📋 Show Current Menu</button>
-
         <h4>Generate QR for Table Ordering</h4>
         <input id="qrTableNum" type="number" placeholder="Table Number">
         <button onclick="generateQRCode()" style="background:#ff9800;">📱 Generate Table QR</button>
         <div id="qrContainer" style="text-align:center;margin:15px 0;"></div>
         <div id="ordersPanel" style="display:none;"></div>
     </div>
-
     <!-- CUSTOMER VIEW -->
     <div id="customerView" style="display:none;">
         <div class="logo">
@@ -196,34 +193,33 @@
                 <tbody id="customerBill"></tbody>
             </table>
             <div class="total">Your Total: ₹ <span id="custTotal">0</span></div>
-
             <button onclick="placeCustomerOrder()" style="background:#d84315;">✅ Place Order for Kitchen</button>
-
             <!-- Payment Section -->
             <div class="payment-section">
                 <h4 style="margin:12px 0 8px 0; color:#2e7d32;">💰 Payment Options</h4>
                 <input id="custWhatsApp" type="tel" placeholder="WhatsApp Number (for receipt)" maxlength="10">
-
                 <h4 style="margin:12px 0 8px 0;">UPI Payment</h4>
                 <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:10px 0;">
                     <button onclick="selectUPI('PhonePe')" style="background:#6739B7;color:white;padding:10px;border-radius:8px;width:auto;">PhonePe</button>
                     <button onclick="selectUPI('GooglePay')" style="background:#4285F4;color:white;padding:10px;border-radius:8px;width:auto;">Google Pay</button>
                     <button onclick="selectUPI('Paytm')" style="background:#00B9F1;color:white;padding:10px;border-radius:8px;width:auto;">Paytm</button>
                 </div>
+                
+                <!-- NEW: Dynamic PhonePe UPI QR (auto-detects bill amount) -->
+                <h4 style="margin:15px 0 8px 0; color:#6739B7; text-align:center;">📱 PhonePe QR - Scan or Click to Pay Exact Amount</h4>
+                <div id="dynamicPhonePeQR" class="phonepay-qr" style="text-align:center; margin:10px 0; display:none;"></div>
+                <p style="text-align:center; font-size:13px; color:#d84315; margin-top:5px;">Amount is automatically filled • Opens PhonePe app directly</p>
 
                 <input id="paidAmount" type="number" placeholder="Enter Paid Amount ₹" style="margin-top:8px;">
                 <button onclick="markAsPaid()" style="background:#2e7d32; margin-top:10px;">
                     ✅ I Have Paid - Get Receipt on WhatsApp
                 </button>
             </div>
-
             <button onclick="clearCustomerOrder()" style="background:#666;">🗑️ Clear Cart</button>
-
             <div id="customerAcceptedMsg">
                 ✅ Your order has been accepted by the kitchen!<br>
                 <span style="font-size:16px;">Our team is now preparing your food. Thank you!</span>
             </div>
-
             <div id="paymentSuccessMsg">
                 ✅ Payment Received Successfully!<br>
                 <span style="font-size:18px;">Receipt sent to WhatsApp. Thank You!</span>
@@ -231,10 +227,8 @@
         </div>
     </div>
 </div>
-
 <div id="notificationContainer" class="notification-container"></div>
 <div id="successToast" class="success-toast"></div>
-
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
@@ -250,7 +244,6 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-
 // ====================== GLOBAL VARIABLES ======================
 let items = [];
 let bill = [];
@@ -260,6 +253,10 @@ let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
 let liveOrdersListener = null;
 let selectedUPI = "";
+
+// NEW: PhonePe UPI configuration (REPLACE WITH YOUR REAL UPI ID)
+const MERCHANT_UPI = "YOUR_UPI_ID_HERE@okaxis"; // <<<=== CHANGE THIS TO YOUR ACTUAL PHONEPE UPI ID (e.g. dhaba123@paytm or 9876543210@oksbi)
+const MERCHANT_NAME = "Shree & Shriyan Dhaba";
 
 // ====================== MENU ======================
 function loadAndListenMenu() {
@@ -303,10 +300,8 @@ function showCurrentMenu() {
   items.forEach(i => msg += `• ${i.name} - ₹${i.price}\n`);
   alert(msg);
 }
-
 // ====================== STAFF BILL ======================
 document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
-
 function addItem() {
   const idx = document.getElementById("item").value;
   if (idx === "") return alert("Select an item");
@@ -315,7 +310,6 @@ function addItem() {
   bill.push({...item, qty});
   renderBill();
 }
-
 function voiceAdd() {
   if (!('webkitSpeechRecognition' in window)) return alert("Voice not supported");
   let rec = new webkitSpeechRecognition();
@@ -326,9 +320,7 @@ function voiceAdd() {
   };
   rec.start();
 }
-
 function del(i) { bill.splice(i,1); renderBill(); }
-
 function renderBill() {
   let html = "", total = 0;
   bill.forEach((b, i) => {
@@ -340,7 +332,6 @@ function renderBill() {
   document.getElementById("bill").innerHTML = html;
   document.getElementById("total").innerText = total.toFixed(2);
 }
-
 function clearBill() {
   bill = [];
   renderBill();
@@ -348,7 +339,6 @@ function clearBill() {
   localStorage.setItem("inv", count);
   document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
 }
-
 // ====================== THERMAL PRINT ======================
 function printThermalBill(itemsList, invoiceNo, customerName, tableNo = '') {
   let subtotal = 0;
@@ -358,9 +348,7 @@ function printThermalBill(itemsList, invoiceNo, customerName, tableNo = '') {
     subtotal += amt;
     itemsHtml += `<tr><td>${item.name}</td><td>${item.qty}</td><td class="amount">₹${amt.toFixed(0)}</td></tr>`;
   });
-
   const grandTotal = (subtotal * 1.05).toFixed(0);
-
   const receiptHTML = `
     <div class="bill-print">
       <img src="./logo_180x90.jpg" alt="Logo" style="width:80px;display:block;margin:0 auto 8px auto;">
@@ -381,7 +369,6 @@ function printThermalBill(itemsList, invoiceNo, customerName, tableNo = '') {
       <div class="footer">Thank You! Visit Again 😊<br>GST 5% Applied</div>
     </div>
   `;
-
   const printWin = window.open('', '_blank');
   printWin.document.write(`
     <!DOCTYPE html>
@@ -400,7 +387,6 @@ function printThermalBill(itemsList, invoiceNo, customerName, tableNo = '') {
   `);
   printWin.document.close();
 }
-
 function printBill() {
   if (bill.length === 0) return alert("Bill is empty!");
   const invoiceNo = document.getElementById("invoice").value;
@@ -408,14 +394,12 @@ function printBill() {
   printThermalBill(bill, invoiceNo, customer);
   clearBill();
 }
-
 // ====================== AUTO SAVE BILL ======================
 function autoSaveBill(order, invoiceNo) {
   const date = new Date().toISOString().split('T')[0];
   const safeCustomer = (order.name || "Guest").replace(/[^a-zA-Z0-9]/g, '_');
   const safeTable = (order.table || "NA").replace(/[^a-zA-Z0-9]/g, '_');
   const filename = `Dhaba_Bill_${safeCustomer}_Table${safeTable}_${invoiceNo}_${date}.txt`;
-
   let content = `Shree & Shriyan Dhaba\n`;
   content += `At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)\n`;
   content += `📞 +91 7077088311 | ✉ jogendra.dipeng11@gmail.com\n\n`;
@@ -431,7 +415,6 @@ function autoSaveBill(order, invoiceNo) {
   const grandTotal = order.items.reduce((sum, item) => sum + item.qty * item.price, 0) * 1.05;
   content += `\nGrand Total: ₹${grandTotal.toFixed(0)}\n\n`;
   content += `Thank You! Visit Again 😊\nGST 5% Applied`;
-
   const blob = new Blob([content], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -442,11 +425,9 @@ function autoSaveBill(order, invoiceNo) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
-
 // ====================== OPEN BILL IN NEW TAB ======================
 function openBillInNewTab(order) {
   const invoiceNo = "INV" + String(count).padStart(3, '0');
-
   let subtotal = 0;
   let itemsHtml = '';
   order.items.forEach(item => {
@@ -455,7 +436,6 @@ function openBillInNewTab(order) {
     itemsHtml += `<tr><td>${item.name}</td><td>${item.qty}</td><td style="text-align:right">₹${amt}</td></tr>`;
   });
   const grandTotal = (subtotal * 1.05).toFixed(0);
-
   const billHTML = `
 <!DOCTYPE html>
 <html>
@@ -477,43 +457,35 @@ function openBillInNewTab(order) {
   <img src="./logo_180x90.jpg" alt="Logo" style="width:110px;display:block;margin:0 auto 10px auto;">
   <h2 style="text-align:center;color:#d84315;">Shree & Shriyan Dhaba</h2>
   <p style="text-align:center;font-size:13px;">At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)<br>📞 +91 7077088311 | ✉ jogendra.dipeng11@gmail.com</p>
-
   <p><strong>Invoice:</strong> ${invoiceNo}</p>
   <p><strong>Table:</strong> ${order.table}</p>
   <p><strong>Customer:</strong> ${order.name || 'Guest'}</p>
   <p><strong>Date:</strong> ${new Date().toLocaleString('en-IN')}</p>
-
   <table>
     <thead><tr><th>Item</th><th>Qty</th><th class="amount">Amount</th></tr></thead>
     <tbody>${itemsHtml}</tbody>
   </table>
-
   <div class="total">Grand Total: ₹ ${grandTotal}</div>
-
   <hr>
   <h3 style="text-align:center;">Choose Print Method</h3>
   <button class="thermal-btn" onclick="printThermal()">🖨️ Print Thermal + Auto Cut</button>
   <button class="normal-btn" onclick="printNormal()">🧾 Normal Print & Clear</button>
   <button class="whatsapp-btn" onclick="sendWhatsAppBill()">📲 Send Bill on WhatsApp</button>
-
   <script>
     const orderData = ${JSON.stringify(order)};
     const invoiceNo = "${invoiceNo}";
-
     function printThermal() {
       window.opener.printThermalBill(orderData.items, invoiceNo, orderData.name, orderData.table);
       window.opener.autoSaveBill(orderData, invoiceNo);
       window.opener.clearBill();
       setTimeout(() => window.close(), 1000);
     }
-
     function printNormal() {
       window.print();
       window.opener.autoSaveBill(orderData, invoiceNo);
       window.opener.clearBill();
       setTimeout(() => window.close(), 1000);
     }
-
     function sendWhatsAppBill() {
       let msg = "Shree & Shriyan Dhaba\\nInvoice: " + invoiceNo + "\\nTable: " + orderData.table + "\\nCustomer: " + (orderData.name || "Guest") + "\\n\\n";
       orderData.items.forEach(item => {
@@ -529,26 +501,22 @@ function openBillInNewTab(order) {
   <\/script>
 </body>
 </html>`;
-
   const newWin = window.open('', '_blank');
   newWin.document.write(billHTML);
   newWin.document.close();
 }
-
 // ====================== ACCEPT ORDER ======================
 function acceptOrder(orderId) {
   if (!confirm("Accept this order?")) return;
-
   db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
     const ord = snapshot.val();
     if (!ord || ord.status !== "pending") return alert("Order not found or already accepted");
-    
+   
     openBillInNewTab(ord);
     db.ref('tableOrders/' + orderId).update({ status: "accepted" });
     notifyCustomerOrderAccepted(ord.table, ord.name);
   });
 }
-
 function notifyCustomerOrderAccepted(table, name) {
   db.ref('acceptedOrders/' + table).set({
     table: table,
@@ -557,7 +525,6 @@ function notifyCustomerOrderAccepted(table, name) {
     timestamp: new Date().toLocaleString()
   });
 }
-
 // ====================== CUSTOMER SIDE ======================
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
@@ -571,7 +538,6 @@ function joinTable() {
   renderCustomerOrder();
   listenForAcceptedOrders();
 }
-
 function loadCustomerMenu() {
   let html = '';
   items.forEach((item, idx) => {
@@ -582,7 +548,6 @@ function loadCustomerMenu() {
   });
   document.getElementById("menuItems").innerHTML = html;
 }
-
 function addCustomerItem(idx) {
   let item = items[idx];
   let existing = customerOrder.find(o => o.name === item.name);
@@ -590,7 +555,6 @@ function addCustomerItem(idx) {
   else customerOrder.push({...item, qty: 1});
   renderCustomerOrder();
 }
-
 function renderCustomerOrder() {
   let html = "", total = 0;
   customerOrder.forEach((b, i) => {
@@ -600,19 +564,19 @@ function renderCustomerOrder() {
   });
   document.getElementById("customerBill").innerHTML = html;
   document.getElementById("custTotal").innerText = total.toFixed(2);
+  
+  // NEW: Auto-refresh dynamic PhonePe QR whenever cart changes
+  generateDynamicPhonePeQR();
 }
-
 function delCustomerItem(i) { customerOrder.splice(i,1); renderCustomerOrder(); }
-function clearCustomerOrder() { 
-  if(confirm("Clear cart?")) { 
-    customerOrder = []; 
-    renderCustomerOrder(); 
-  } 
+function clearCustomerOrder() {
+  if(confirm("Clear cart?")) {
+    customerOrder = [];
+    renderCustomerOrder();
+  }
 }
-
 function placeCustomerOrder() {
   if (customerOrder.length === 0) return alert("Cart is empty!");
-
   const total = parseFloat(document.getElementById("custTotal").innerText);
   const orderId = Date.now();
   const orderData = {
@@ -624,30 +588,52 @@ function placeCustomerOrder() {
     timestamp: new Date().toLocaleString(),
     status: "pending"
   };
-
   db.ref('tableOrders/' + orderId).set(orderData);
   db.ref('newOrders/' + orderId).set(orderData);
-
   alert(`✅ Order Placed Successfully for Table ${currentTable}\nYou can pay later using the payment section below.`);
+}
+
+// NEW: Dynamic PhonePe UPI QR with bill amount (click opens PhonePe app)
+function generateDynamicPhonePeQR() {
+  const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
+  const container = document.getElementById("dynamicPhonePeQR");
+  
+  if (total <= 0) {
+    container.style.display = "none";
+    return;
+  }
+  
+  // Dynamic UPI deep link that includes exact bill amount
+  const txnNote = `Table${currentTable}_Order_${Date.now()}`;
+  const upiLink = `upi://pay?pa=${MERCHANT_UPI}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${total.toFixed(2)}&cu=INR&tr=${Date.now()}&tn=${encodeURIComponent(txnNote)}`;
+  
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(upiLink)}`;
+  
+  container.innerHTML = `
+    <img src="${qrUrl}" alt="PhonePe QR Code" style="cursor:pointer;" onclick="openPhonePeApp('${upiLink}')">
+    <p style="margin-top:8px; font-size:13px; color:#6739B7;">₹${total.toFixed(2)} • Click/Scan to pay with PhonePe</p>
+  `;
+  container.style.display = "block";
+}
+
+function openPhonePeApp(upiLink) {
+  // Clicking the QR directly opens PhonePe / UPI app with pre-filled amount
+  window.location.href = upiLink;
 }
 
 function selectUPI(upi) {
   selectedUPI = upi;
   alert(`Selected: ${upi}\nPlease scan the QR code above to pay.`);
 }
-
 function markAsPaid() {
   const paidAmt = parseFloat(document.getElementById("paidAmount").value);
   const total = parseFloat(document.getElementById("custTotal").innerText);
   const whatsapp = document.getElementById("custWhatsApp").value.trim() || "Not Provided";
-
   if (!paidAmt || paidAmt < total) {
     alert("Please enter correct paid amount (≥ total)");
     return;
   }
-
   document.getElementById("paymentSuccessMsg").style.display = "block";
-
   // Send receipt on WhatsApp
   let msg = `Shree & Shriyan Dhaba - Payment Receipt\n`;
   msg += `Table: ${currentTable}\n`;
@@ -656,19 +642,15 @@ function markAsPaid() {
     msg += `${item.name} x${item.qty} = ₹${item.qty * item.price}\n`;
   });
   msg += `\nPaid: ₹${paidAmt}\nThank You! Come Again 😊`;
-
   if (whatsapp && whatsapp.length >= 10) {
     window.open("https://wa.me/" + whatsapp + "?text=" + encodeURIComponent(msg));
   } else {
     window.open("https://wa.me/?text=" + encodeURIComponent(msg));
   }
-
   alert("✅ Payment Confirmed! Receipt sent to WhatsApp.");
-
   customerOrder = [];
   renderCustomerOrder();
 }
-
 // ====================== NOTIFICATIONS ======================
 function listenForNewOrders() {
   db.ref('newOrders').on('child_added', (snapshot) => {
@@ -690,7 +672,6 @@ function listenForNewOrders() {
     }
   });
 }
-
 function listenForPayments() {
   db.ref('payments').on('child_added', (snapshot) => {
     const p = snapshot.val();
@@ -707,20 +688,17 @@ function listenForPayments() {
     }
   });
 }
-
 function acceptOrder(orderId) {
   if (!confirm("Accept this order?")) return;
-
   db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
     const ord = snapshot.val();
     if (!ord || ord.status !== "pending") return alert("Order not found or already accepted");
-    
+   
     openBillInNewTab(ord);
     db.ref('tableOrders/' + orderId).update({ status: "accepted" });
     notifyCustomerOrderAccepted(ord.table, ord.name);
   });
 }
-
 function notifyCustomerOrderAccepted(table, name) {
   db.ref('acceptedOrders/' + table).set({
     table: table,
@@ -729,7 +707,6 @@ function notifyCustomerOrderAccepted(table, name) {
     timestamp: new Date().toLocaleString()
   });
 }
-
 // ====================== OTHER HELPER FUNCTIONS ======================
 function exportExcel() { alert("Export ready"); }
 function sendWhatsApp() { alert("WhatsApp ready"); }
@@ -742,20 +719,17 @@ function generateQRCode() {
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(orderLink)}`;
   document.getElementById("qrContainer").innerHTML = `<img src="${qrSrc}" style="width:250px;border:8px solid #d84315;border-radius:12px;"><p>Table ${tableNo} QR Code</p>`;
 }
-
 function showSuccess(msg) {
   const toast = document.getElementById("successToast");
   toast.textContent = msg;
   toast.style.display = "block";
   setTimeout(() => { toast.style.display = "none"; }, 3000);
 }
-
 // ====================== INITIALIZE ======================
 function initializeApp() {
   const urlParams = new URLSearchParams(window.location.search);
   const mode = urlParams.get('mode');
   currentTable = urlParams.get('table') || '';
-
   if (mode === 'customer') {
     document.getElementById('staffView').style.display = 'none';
     document.getElementById('customerView').style.display = 'block';
@@ -767,9 +741,7 @@ function initializeApp() {
   }
   loadAndListenMenu();
 }
-
 initializeApp();
-
 window.onbeforeunload = function() {
   localStorage.setItem("inv", count);
 };
