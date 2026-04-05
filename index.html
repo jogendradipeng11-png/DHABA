@@ -216,7 +216,7 @@
                     Tap the QR code below to directly open PhonePe with your exact bill amount
                 </p>
 
-                <div id="dynamicPhonePeQR" class="phonepay-qr" style="display:none;"></div>
+                <div id="dynamicPhonePeQR" class="phonepay-qr" style="display:none; text-align:center;"></div>
 
                 <p style="text-align:center; font-size:13px; color:#666;">
                     💡 If payment fails, open PhonePe app → Scan QR code
@@ -292,7 +292,10 @@ function changeLanguage(lang) {
     document.getElementById('paidBtn').textContent = t.iHavePaid;
     document.getElementById('clearCartBtn').textContent = t.clearCart;
 
-    if (document.getElementById("menuSection").style.display !== "none") loadCustomerMenu();
+    // Refresh menu if customer view is active
+    if (document.getElementById("menuSection").style.display !== "none") {
+        loadCustomerMenu();
+    }
 }
 
 // ====================== FIREBASE ======================
@@ -382,14 +385,9 @@ function addItem() {
   renderBill();
 }
 
-function voiceAdd() {
-  alert("Voice Add feature coming soon...");
-}
+function voiceAdd() { alert("Voice Add coming soon..."); }
 
-function del(i) {
-  bill.splice(i, 1);
-  renderBill();
-}
+function del(i) { bill.splice(i, 1); renderBill(); }
 
 function renderBill() {
   let html = "", subtotal = 0;
@@ -414,16 +412,13 @@ function clearBill() {
 function printThermalBill() {
   if (bill.length === 0) return alert("Bill is empty!");
   const invoiceNo = document.getElementById("invoice").value;
-  const customer = document.getElementById("customerName").value || "Guest";
-  alert(`✅ Thermal Print triggered for Invoice ${invoiceNo}\n\n(Print function ready)`);
+  alert(`✅ Thermal Print triggered for Invoice ${invoiceNo}`);
   clearBill();
 }
 
-function printBill() {
-  printThermalBill();
-}
+function printBill() { printThermalBill(); }
 
-// ====================== QR CODE (FIXED) ======================
+// ====================== QR CODE ======================
 function generateQRCode() {
   const tableNo = document.getElementById("qrTableNum").value.trim();
   if (!tableNo) return alert("Please enter Table Number");
@@ -433,13 +428,8 @@ function generateQRCode() {
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(orderLink)}`;
 
   document.getElementById("qrContainer").innerHTML = `
-    <img src="${qrSrc}" 
-         style="width:250px; border:8px solid #d84315; border-radius:12px;" 
-         alt="Table QR Code"
-         onerror="this.parentElement.innerHTML='<p style=\'color:red;\'>QR Code failed to load. Check internet.</p>';">
-    <p style="margin-top:10px; font-weight:bold; color:#d84315;">
-      Table ${tableNo} - Scan to Start Ordering
-    </p>
+    <img src="${qrSrc}" style="width:250px; border:8px solid #d84315; border-radius:12px;" alt="Table QR">
+    <p style="margin-top:10px; font-weight:bold; color:#d84315;">Table ${tableNo} - Scan to Start Ordering</p>
   `;
 }
 
@@ -486,6 +476,9 @@ function renderCustomerOrder() {
   });
   document.getElementById("customerBill").innerHTML = html;
   document.getElementById("custTotal").innerText = total.toFixed(2);
+
+  // Generate dynamic PhonePe QR automatically when order changes
+  generateDynamicPhonePeQR();
 }
 
 function delCustomerItem(i) {
@@ -514,11 +507,34 @@ function markAsPaid() {
   const paidAmt = parseFloat(document.getElementById("paidAmount").value);
   const total = parseFloat(document.getElementById("custTotal").innerText);
   if (!paidAmt || paidAmt < total) return alert("Please enter correct paid amount");
-  
+
   document.getElementById("paymentSuccessMsg").style.display = "block";
   alert("✅ Payment Confirmed! Receipt sent to WhatsApp.");
   customerOrder = [];
   renderCustomerOrder();
+}
+
+// ====================== DYNAMIC PHONEPE QR (FIXED) ======================
+function generateDynamicPhonePeQR() {
+  const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
+  const container = document.getElementById("dynamicPhonePeQR");
+
+  if (total <= 0 || !currentTable) {
+    container.style.display = "none";
+    return;
+  }
+
+  const txnNote = `Table${currentTable}_Order_${Date.now()}`;
+  const upiLink = `upi://pay?pa=${MERCHANT_UPI}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${total.toFixed(2)}&cu=INR&tr=${Date.now()}&tn=${encodeURIComponent(txnNote)}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(upiLink)}`;
+
+  container.innerHTML = `
+    <img src="${qrUrl}" onclick="window.location.href='${upiLink}'" alt="PhonePe QR">
+    <p style="margin:12px 0 0 0; font-size:15px; font-weight:bold; color:#6739B7;">
+      ₹${total.toFixed(2)} — Tap QR to open PhonePe
+    </p>
+  `;
+  container.style.display = "block";
 }
 
 // ====================== NOTIFICATIONS ======================
@@ -535,7 +551,7 @@ function listenForNewOrders() {
   });
 }
 
-// ====================== OTHER FUNCTIONS ======================
+// ====================== OTHER ======================
 function exportExcel() { alert("Export ready"); }
 function sendWhatsApp() { alert("WhatsApp ready"); }
 function dailyReport() { alert("Check Firebase"); }
@@ -562,9 +578,7 @@ function initializeApp() {
 
 initializeApp();
 
-window.onbeforeunload = () => {
-  localStorage.setItem("inv", count);
-};
+window.onbeforeunload = () => localStorage.setItem("inv", count);
 </script>
 </body>
 </html>
