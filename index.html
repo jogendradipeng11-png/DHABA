@@ -254,12 +254,7 @@ function addNewMenuItem() {
     items[existingIndex].price = price;
     alert(`Price updated for "${nameEn}"`);
   } else {
-    items.push({
-      name_en: nameEn,
-      name_hi: nameEn,
-      name_or: nameEn,
-      price: price
-    });
+    items.push({ name_en: nameEn, name_hi: nameEn, name_or: nameEn, price: price });
     alert(`New item "${nameEn}" added`);
   }
   saveMenu();
@@ -291,19 +286,39 @@ function renderBill() {
 
 function del(i) { bill.splice(i, 1); renderBill(); }
 
-// ====================== CUSTOMER MENU - FIXED LANGUAGE DISPLAY ======================
+// ====================== CUSTOMER JOIN (Name Required) ======================
+function joinTable() {
+  currentTable = document.getElementById("custTable").value.trim();
+  currentName = document.getElementById("custName").value.trim();
+
+  if (!currentTable) {
+    alert("Please enter your Table Number");
+    return;
+  }
+  if (!currentName) {
+    alert("Please enter your Name (required)");
+    return;
+  }
+
+  document.getElementById("signInSection").style.display = "none";
+  document.getElementById("menuSection").style.display = "block";
+
+  document.getElementById("displayTable").innerText = currentTable;
+  document.getElementById("displayName").innerText = currentName;
+
+  loadCustomerMenu();
+  renderCustomerOrder();
+}
+
+// ====================== CUSTOMER MENU - FIXED LANGUAGE ======================
 function loadCustomerMenu() {
   let html = '';
   items.forEach((item, idx) => {
-    let displayName = "Unknown Item";
+    let displayName = item.name_en || "Unknown Item";
     
-    if (currentLang === 'hi' && item.name_hi) {
-      displayName = item.name_hi;
-    } else if (currentLang === 'or' && item.name_or) {
-      displayName = item.name_or;
-    } else if (item.name_en) {
-      displayName = item.name_en;
-    }
+    if (currentLang === 'hi' && item.name_hi) displayName = item.name_hi;
+    else if (currentLang === 'or' && item.name_or) displayName = item.name_or;
+    else if (item.name_en) displayName = item.name_en;
 
     html += `<div class="menu-item">
       <span><strong>${displayName}</strong> <small>₹${item.price}</small></span>
@@ -373,7 +388,7 @@ function generateDynamicPhonePeQR() {
   container.style.display = "block";
 }
 
-// ====================== OTHER FUNCTIONS ======================
+// ====================== OTHER ======================
 function voiceAdd() { alert("Voice Add coming soon..."); }
 function exportExcel() { alert("Export ready"); }
 function sendWhatsApp() { alert("WhatsApp ready"); }
@@ -392,26 +407,6 @@ function generateQRCode() {
     <img src="${qrSrc}" style="width:250px; border:8px solid #d84315; border-radius:12px;" alt="Table QR">
     <p style="margin-top:10px; font-weight:bold; color:#d84315;">Table ${tableNo} - Scan to Start Ordering</p>
   `;
-}
-
-// ====================== JOIN TABLE ======================
-function joinTable() {
-  currentTable = document.getElementById("custTable").value.trim();
-  currentName = document.getElementById("custName").value.trim() || "Guest";
-
-  if (!currentTable) {
-    alert("Please enter your Table Number");
-    return;
-  }
-
-  document.getElementById("signInSection").style.display = "none";
-  document.getElementById("menuSection").style.display = "block";
-
-  document.getElementById("displayTable").innerText = currentTable;
-  document.getElementById("displayName").innerText = currentName;
-
-  loadCustomerMenu();
-  renderCustomerOrder();
 }
 
 // ====================== INITIALIZE ======================
