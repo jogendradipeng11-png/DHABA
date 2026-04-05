@@ -208,60 +208,37 @@ let customerOrder = [];
 let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
 
-// ====================== MENU + AUTO TRANSLATION ======================
-function loadAndListenMenu() {
-  db.ref('menu').on('value', (snapshot) => {
-    const data = snapshot.val();
-    items = data ? Object.values(data) : [];
-    renderStaffMenu();
-    if (document.getElementById("menuSection") && document.getElementById("menuSection").style.display !== "none") {
-      loadCustomerMenu();
-    }
-  });
-}
-
-function saveMenu() {
-  const menuObj = {};
-  items.forEach((item, i) => menuObj[i] = item);
-  db.ref('menu').set(menuObj);
-}
-
-function renderStaffMenu() {
-  const select = document.getElementById("item");
-  select.innerHTML = '<option value="">-- Select Item --</option>';
-  items.forEach((item, idx) => {
-    select.innerHTML += `<option value="${idx}">${item.name_en} - ₹${item.price}</option>`;
-  });
-}
-
-// ====================== AUTOMATIC TRANSLATION + SAVE ======================
+// ====================== AUTO TRANSLATION FUNCTION ======================
 async function translateText(text, targetLang) {
+  if (!text) return text;
   try {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
-    const response = await fetch(url);
-    const data = await response.json();
-    return data[0][0][0];   // Extract translated text
-  } catch (e) {
-    console.error("Translation failed", e);
-    return text; // fallback
+    const res = await fetch(url);
+    const data = await res.json();
+    return data[0][0][0] || text;
+  } catch (err) {
+    console.error("Translation error:", err);
+    return text; // fallback to English
   }
 }
 
+// ====================== ADD ITEM WITH AUTO TRANSLATION ======================
 async function addNewMenuItem() {
   const nameEn = document.getElementById("newItemName").value.trim();
   const price = parseFloat(document.getElementById("newItemPrice").value);
 
   if (!nameEn || isNaN(price) || price <= 0) {
-    return alert("Please enter item name and price");
+    return alert("Please enter item name and valid price");
   }
 
+  // Check if item already exists
   const existingIndex = items.findIndex(i => i.name_en && i.name_en.toLowerCase() === nameEn.toLowerCase());
 
   let nameHi = nameEn;
   let nameOr = nameEn;
 
+  // Auto translate only for new items
   if (existingIndex === -1) {
-    // Automatic translation
     nameHi = await translateText(nameEn, 'hi');
     nameOr = await translateText(nameEn, 'or');
   }
@@ -276,12 +253,26 @@ async function addNewMenuItem() {
       name_or: nameOr,
       price: price
     });
-    alert(`✅ Item "${nameEn}" added and automatically translated to Hindi & Odia`);
+    alert(`✅ Item "${nameEn}" added successfully!\nHindi: ${nameHi}\nOdia: ${nameOr}`);
   }
 
   saveMenu();
   document.getElementById("newItemName").value = "";
   document.getElementById("newItemPrice").value = "";
+}
+
+function saveMenu() {
+  const menuObj = {};
+  items.forEach((item, i) => menuObj[i] = item);
+  db.ref('menu').set(menuObj);
+}
+
+function renderStaffMenu() {
+  const select = document.getElementById("item");
+  select.innerHTML = '<option value="">-- Select Item --</option>';
+  items.forEach((item, idx) => {
+    select.innerHTML += `<option value="${idx}">${item.name_en} - ₹${item.price}</option>`;
+  });
 }
 
 // ====================== CUSTOMER MENU ======================
@@ -356,7 +347,7 @@ function generateDynamicPhonePeQR() {
   container.style.display = "block";
 }
 
-// ====================== JOIN TABLE ======================
+// Join Table
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim();
@@ -373,7 +364,7 @@ function joinTable() {
   renderCustomerOrder();
 }
 
-// ====================== OTHER ======================
+// Other functions
 function voiceAdd() { alert("Voice Add coming soon..."); }
 function exportExcel() { alert("Export ready"); }
 function sendWhatsApp() { alert("WhatsApp ready"); }
@@ -394,7 +385,7 @@ function generateQRCode() {
   `;
 }
 
-// ====================== INITIALIZE ======================
+// Initialize
 function initializeApp() {
   const urlParams = new URLSearchParams(window.location.search);
   const mode = urlParams.get('mode');
