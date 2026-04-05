@@ -71,7 +71,6 @@
         <input id="qrTableNum" type="number" placeholder="Table Number">
         <button onclick="generateQRCode()" style="background:#ff9800;">📱 Generate Table QR</button>
         <div id="qrContainer" style="text-align:center;margin:15px 0;"></div>
-        <div id="ordersPanel" style="display:none;"></div>
     </div>
 
     <!-- CUSTOMER VIEW -->
@@ -129,7 +128,6 @@
 </div>
 
 <div id="notificationContainer" class="notification-container"></div>
-<div id="successToast" class="success-toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -177,7 +175,9 @@ function changeLanguage(lang) {
     document.getElementById('upiTitle').textContent = t.upiTitle;
     document.getElementById('paidBtn').textContent = t.iHavePaid;
     document.getElementById('clearCartBtn').textContent = t.clearCart;
-    if (document.getElementById("menuSection").style.display !== "none") loadCustomerMenu();
+    if (document.getElementById("menuSection") && document.getElementById("menuSection").style.display !== "none") {
+        loadCustomerMenu();
+    }
 }
 
 // ====================== FIREBASE ======================
@@ -194,7 +194,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // ====================== GLOBAL VARIABLES ======================
-let items = []; // { name_en, name_hi, name_or, price }
+let items = []; // {name_en, name_hi, name_or, price}
 let bill = [];
 let currentTable = '';
 let customerOrder = [];
@@ -207,7 +207,9 @@ function loadAndListenMenu() {
     const data = snapshot.val();
     items = data ? Object.values(data) : [];
     renderStaffMenu();
-    if (document.getElementById("menuSection")?.style.display !== "none") loadCustomerMenu();
+    if (document.getElementById("menuSection") && document.getElementById("menuSection").style.display !== "none") {
+      loadCustomerMenu();
+    }
   });
 }
 
@@ -230,11 +232,10 @@ function addNewMenuItem() {
   const price = parseFloat(document.getElementById("newItemPrice").value);
   if (!nameEn || isNaN(price) || price <= 0) return alert("Please enter item name and price");
 
-  // Auto-fill Hindi & Odia (for now same as English - replace with real translation later if needed)
-  const nameHi = nameEn;
+  const nameHi = nameEn; // Replace with real translation later if needed
   const nameOr = nameEn;
 
-  const existingIndex = items.findIndex(i => i.name_en.toLowerCase() === nameEn.toLowerCase());
+  const existingIndex = items.findIndex(i => i.name_en && i.name_en.toLowerCase() === nameEn.toLowerCase());
   if (existingIndex !== -1) {
     items[existingIndex].price = price;
     alert(`Price updated for "${nameEn}"`);
@@ -253,12 +254,12 @@ function showCurrentMenu() {
   alert(msg);
 }
 
-// Customer Menu in Selected Language
+// Customer Menu - Language Aware
 function loadCustomerMenu() {
   let html = '';
   items.forEach((item, idx) => {
-    const displayName = currentLang === 'hi' ? item.name_hi : 
-                        currentLang === 'or' ? item.name_or : item.name_en;
+    const displayName = currentLang === 'hi' ? (item.name_hi || item.name_en) : 
+                        currentLang === 'or' ? (item.name_or || item.name_en) : item.name_en;
     html += `<div class="menu-item">
       <span><strong>${displayName}</strong> <small>₹${item.price}</small></span>
       <button onclick="addCustomerItem(${idx})" style="background:#2e7d32;padding:8px 16px;border-radius:6px;">+ Add</button>
@@ -297,7 +298,6 @@ function clearCustomerOrder() {
 // ====================== PLACE ORDER ======================
 function placeCustomerOrder() {
   if (customerOrder.length === 0) return alert("Cart is empty!");
-
   const total = parseFloat(document.getElementById("custTotal").innerText);
   const orderId = Date.now();
   const orderData = {
@@ -309,10 +309,8 @@ function placeCustomerOrder() {
     timestamp: new Date().toLocaleString(),
     status: "pending"
   };
-
   db.ref('tableOrders/' + orderId).set(orderData);
   db.ref('newOrders/' + orderId).set(orderData);
-
   alert(`✅ Order Placed Successfully for Table ${currentTable}`);
 }
 
@@ -350,7 +348,7 @@ function markAsPaid() {
   renderCustomerOrder();
 }
 
-// ====================== THERMAL PRINT & AUTO SAVE ======================
+// ====================== THERMAL PRINT + AUTO SAVE ======================
 function printThermalBill(itemsList, invoiceNo, customerName, tableNo = '') {
   let subtotal = 0;
   let itemsHtml = '';
@@ -359,7 +357,6 @@ function printThermalBill(itemsList, invoiceNo, customerName, tableNo = '') {
     subtotal += amt;
     itemsHtml += `<tr><td>${item.name_en}</td><td>${item.qty}</td><td class="amount">₹${amt.toFixed(0)}</td></tr>`;
   });
-
   const grandTotal = (subtotal * 1.05).toFixed(0);
 
   const receiptHTML = `
@@ -381,7 +378,15 @@ function printThermalBill(itemsList, invoiceNo, customerName, tableNo = '') {
   `;
 
   const printWin = window.open('', '_blank');
-  printWin.document.write(`<!DOCTYPE html><html><head><title>Thermal Receipt</title><style>${document.querySelector('style').innerHTML}</style></head><body>${receiptHTML}<script>window.print();setTimeout(()=>window.close(),1500);</script></body></html>`);
+  printWin.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head><title>Thermal Receipt</title><style>${document.querySelector('style').innerHTML}</style></head>
+    <body>${receiptHTML}
+    <script>window.print(); setTimeout(() => window.close(), 1500);</script>
+    </body>
+    </html>
+  `);
   printWin.document.close();
 }
 
@@ -424,7 +429,9 @@ function openBillInNewTab(order) {
   });
   const grandTotal = (subtotal * 1.05).toFixed(0);
 
-  const billHTML = `<!DOCTYPE html><html><head><title>Bill - ${invoiceNo}</title><style>body{font-family:Arial;max-width:380px;margin:20px auto;padding:15px;}table{width:100%;border-collapse:collapse;margin:15px 0;}th,td{padding:8px;border-bottom:1px dotted #ccc;}.amount{text-align:right;}.total{font-size:20px;font-weight:bold;text-align:center;margin:20px 0;border-top:2px dashed #d84315;padding-top:10px;}button{width:100%;padding:14px;margin:8px 0;font-size:16px;border:none;border-radius:8px;cursor:pointer;}.thermal-btn{background:#d84315;color:white;}.normal-btn{background:#2e7d32;color:white;}.whatsapp-btn{background:#25D366;color:white;}</style></head><body>
+  const billHTML = `<!DOCTYPE html><html><head><title>Bill - ${invoiceNo}</title>
+  <style>body{font-family:Arial;max-width:380px;margin:20px auto;padding:15px;}table{width:100%;border-collapse:collapse;margin:15px 0;}th,td{padding:8px;border-bottom:1px dotted #ccc;}.amount{text-align:right;}.total{font-size:20px;font-weight:bold;text-align:center;margin:20px 0;border-top:2px dashed #d84315;padding-top:10px;}button{width:100%;padding:14px;margin:8px 0;font-size:16px;border:none;border-radius:8px;cursor:pointer;}.thermal-btn{background:#d84315;color:white;}.normal-btn{background:#2e7d32;color:white;}.whatsapp-btn{background:#25D366;color:white;}</style></head>
+  <body>
   <img src="./logo_180x90.jpg" style="width:110px;display:block;margin:0 auto 10px auto;">
   <h2 style="text-align:center;color:#d84315;">Shree & Shriyan Dhaba</h2>
   <p style="text-align:center;font-size:13px;">At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)<br>📞 +91 7077088311</p>
@@ -481,7 +488,7 @@ function joinTable() {
   listenForAcceptedOrders();
 }
 
-// ====================== NOTIFICATIONS & OTHER FUNCTIONS ======================
+// ====================== NOTIFICATIONS ======================
 function listenForNewOrders() {
   db.ref('newOrders').on('child_added', (snapshot) => {
     const order = snapshot.val();
@@ -520,6 +527,7 @@ function listenForPayments() {
   });
 }
 
+// ====================== HELPER ======================
 function exportExcel() { alert("Export ready"); }
 function sendWhatsApp() { alert("WhatsApp ready"); }
 function dailyReport() { alert("Check Firebase"); }
@@ -530,13 +538,6 @@ function generateQRCode() {
   const orderLink = `${hostedUrl}?mode=customer&table=${tableNo}`;
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(orderLink)}`;
   document.getElementById("qrContainer").innerHTML = `<img src="${qrSrc}" style="width:250px;border:8px solid #d84315;border-radius:12px;"><p>Table ${tableNo} QR Code</p>`;
-}
-
-function showSuccess(msg) {
-  const toast = document.getElementById("successToast");
-  toast.textContent = msg;
-  toast.style.display = "block";
-  setTimeout(() => { toast.style.display = "none"; }, 3000);
 }
 
 // ====================== INITIALIZE ======================
