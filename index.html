@@ -208,7 +208,7 @@ let customerOrder = [];
 let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
 
-// ====================== AUTO TRANSLATION FUNCTION ======================
+// ====================== MENU + AUTO TRANSLATION ======================
 async function translateText(text, targetLang) {
   if (!text) return text;
   try {
@@ -218,26 +218,21 @@ async function translateText(text, targetLang) {
     return data[0][0][0] || text;
   } catch (err) {
     console.error("Translation error:", err);
-    return text; // fallback to English
+    return text;
   }
 }
 
-// ====================== ADD ITEM WITH AUTO TRANSLATION ======================
 async function addNewMenuItem() {
   const nameEn = document.getElementById("newItemName").value.trim();
   const price = parseFloat(document.getElementById("newItemPrice").value);
 
-  if (!nameEn || isNaN(price) || price <= 0) {
-    return alert("Please enter item name and valid price");
-  }
+  if (!nameEn || isNaN(price) || price <= 0) return alert("Please enter item name and price");
 
-  // Check if item already exists
   const existingIndex = items.findIndex(i => i.name_en && i.name_en.toLowerCase() === nameEn.toLowerCase());
 
   let nameHi = nameEn;
   let nameOr = nameEn;
 
-  // Auto translate only for new items
   if (existingIndex === -1) {
     nameHi = await translateText(nameEn, 'hi');
     nameOr = await translateText(nameEn, 'or');
@@ -253,7 +248,7 @@ async function addNewMenuItem() {
       name_or: nameOr,
       price: price
     });
-    alert(`✅ Item "${nameEn}" added successfully!\nHindi: ${nameHi}\nOdia: ${nameOr}`);
+    alert(`✅ "${nameEn}" added!\nHindi: ${nameHi}\nOdia: ${nameOr}`);
   }
 
   saveMenu();
@@ -347,7 +342,7 @@ function generateDynamicPhonePeQR() {
   container.style.display = "block";
 }
 
-// Join Table
+// ====================== JOIN TABLE ======================
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim();
@@ -364,13 +359,7 @@ function joinTable() {
   renderCustomerOrder();
 }
 
-// Other functions
-function voiceAdd() { alert("Voice Add coming soon..."); }
-function exportExcel() { alert("Export ready"); }
-function sendWhatsApp() { alert("WhatsApp ready"); }
-function dailyReport() { alert("Check Firebase"); }
-function showTableOrders() { alert("Live Table Orders - Check Firebase"); }
-
+// ====================== TABLE QR CODE (FIXED) ======================
 function generateQRCode() {
   const tableNo = document.getElementById("qrTableNum").value.trim();
   if (!tableNo) return alert("Please enter Table Number");
@@ -385,7 +374,14 @@ function generateQRCode() {
   `;
 }
 
-// Initialize
+// ====================== OTHER ======================
+function voiceAdd() { alert("Voice Add coming soon..."); }
+function exportExcel() { alert("Export ready"); }
+function sendWhatsApp() { alert("WhatsApp ready"); }
+function dailyReport() { alert("Check Firebase"); }
+function showTableOrders() { alert("Live Table Orders - Check Firebase"); }
+
+// ====================== INITIALIZE ======================
 function initializeApp() {
   const urlParams = new URLSearchParams(window.location.search);
   const mode = urlParams.get('mode');
@@ -394,7 +390,13 @@ function initializeApp() {
   if (mode === 'customer') {
     document.getElementById('staffView').style.display = 'none';
     document.getElementById('customerView').style.display = 'block';
-    if (currentTable) document.getElementById('custTable').value = currentTable;
+    if (currentTable) {
+      document.getElementById('custTable').value = currentTable;
+      // Auto start ordering if table is provided via QR
+      setTimeout(() => {
+        if (currentTable) joinTable();
+      }, 800);
+    }
   } else {
     document.getElementById('staffView').style.display = 'block';
   }
