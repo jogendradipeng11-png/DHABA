@@ -356,7 +356,6 @@ function placeCustomerOrder() {
   alert(`✅ Order Placed Successfully for Table ${currentTable}`);
 }
 
-// Pay by Cash
 function payByCash() {
   if (customerOrder.length === 0) return alert("Cart is empty!");
   const orderId = Date.now();
@@ -373,11 +372,10 @@ function payByCash() {
   db.ref('tableOrders/' + orderId).set(orderData);
   db.ref('newOrders/' + orderId).set(orderData);
 
-  document.getElementById("paymentSuccessMsg").innerHTML = `✅ Cash Payment Requested!<br><span style="font-size:16px;">Staff has been notified. Please pay at counter.</span>`;
+  document.getElementById("paymentSuccessMsg").innerHTML = `✅ Cash Payment Requested!<br><span style="font-size:16px;">Staff has been notified.</span>`;
   document.getElementById("paymentSuccessMsg").style.display = "block";
 }
 
-// Mark as Paid
 function markAsPaid() {
   const paidAmt = parseFloat(document.getElementById("paidAmount").value);
   const total = parseFloat(document.getElementById("custTotal").innerText);
@@ -407,7 +405,23 @@ function generateDynamicPhonePeQR() {
   container.style.display = "block";
 }
 
-// ====================== NOTIFICATIONS & ACCEPT ORDER ======================
+function joinTable() {
+  currentTable = document.getElementById("custTable").value.trim();
+  currentName = document.getElementById("custName").value.trim();
+  if (!currentTable) return alert("Please enter your Table Number");
+  if (!currentName) return alert("Please enter your Name (required)");
+
+  document.getElementById("signInSection").style.display = "none";
+  document.getElementById("menuSection").style.display = "block";
+
+  document.getElementById("displayTable").innerText = currentTable;
+  document.getElementById("displayName").innerText = currentName;
+
+  loadCustomerMenu();
+  renderCustomerOrder();
+}
+
+// ====================== REALTIME NOTIFICATION (FIXED) ======================
 function listenForNewOrders() {
   db.ref('newOrders').on('child_added', (snapshot) => {
     const order = snapshot.val();
@@ -435,12 +449,8 @@ function acceptOrder(orderId) {
     const ord = snapshot.val();
     if (!ord) return alert("Order not found");
 
-    // Print bill
     printThermalBill(ord.items, "INV" + Date.now().toString().slice(-6), ord.name, ord.table, ord.paymentMode || "");
-
-    // Mark as accepted
     db.ref('tableOrders/' + orderId).update({ status: "accepted" });
-
     alert(`Order from Table ${ord.table} accepted and printed!`);
   });
 }
@@ -500,7 +510,7 @@ function initializeApp() {
     if (currentTable) document.getElementById('custTable').value = currentTable;
   } else {
     document.getElementById('staffView').style.display = 'block';
-    listenForNewOrders();
+    listenForNewOrders();   // Fixed realtime notification listener
   }
 
   document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
