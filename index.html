@@ -214,7 +214,6 @@ function loadAndListenMenu() {
     const data = snapshot.val();
     items = data ? Object.values(data) : [];
     renderStaffMenu();
-    // Refresh customer menu if visible
     if (document.getElementById("menuSection") && document.getElementById("menuSection").style.display !== "none") {
       loadCustomerMenu();
     }
@@ -295,7 +294,7 @@ function joinTable() {
 function loadCustomerMenu() {
   let html = '';
   if (items.length === 0) {
-    document.getElementById("menuItems").innerHTML = "<p style='text-align:center;color:#999;'>Loading menu... or no items yet</p>";
+    document.getElementById("menuItems").innerHTML = "<p style='text-align:center;color:#999;'>Loading menu...</p>";
     return;
   }
   items.forEach((item, idx) => {
@@ -415,6 +414,22 @@ function generateDynamicPhonePeQR() {
   container.style.display = "block";
 }
 
+function joinTable() {
+  currentTable = document.getElementById("custTable").value.trim();
+  currentName = document.getElementById("custName").value.trim();
+  if (!currentTable) return alert("Please enter your Table Number");
+  if (!currentName) return alert("Please enter your Name (required)");
+
+  document.getElementById("signInSection").style.display = "none";
+  document.getElementById("menuSection").style.display = "block";
+
+  document.getElementById("displayTable").innerText = currentTable;
+  document.getElementById("displayName").innerText = currentName;
+
+  loadCustomerMenu();
+  renderCustomerOrder();
+}
+
 // ====================== TABLE QR ======================
 function generateQRCode() {
   const tableNo = document.getElementById("qrTableNum").value.trim();
@@ -430,7 +445,7 @@ function generateQRCode() {
   `;
 }
 
-// ====================== NOTIFICATION ======================
+// ====================== NOTIFICATION & PRINT POPUP ======================
 function listenForNewOrders() {
   db.ref('newOrders').on('child_added', (snapshot) => {
     const order = snapshot.val();
@@ -452,15 +467,65 @@ function listenForNewOrders() {
 }
 
 function acceptOrder(orderId) {
-  if (!confirm("Accept this order and print bill?")) return;
+  if (!confirm("Accept this order?")) return;
 
   db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
     const ord = snapshot.val();
     if (!ord) return alert("Order not found");
 
+    // Show Print Popup with 3 options
+    showPrintOptions(ord);
+  });
+}
+
+function showPrintOptions(order) {
+  const printWin = window.open('', '_blank');
+  printWin.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Print Options - Table ${order.table}</title>
+      <style>
+        body { font-family: Arial; text-align: center; padding: 30px; }
+        h2 { color: #d84315; }
+        button { width: 280px; padding: 15px; margin: 10px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; }
+        .normal { background: #2e7d32; color: white; }
+        .thermal { background: #d84315; color: white; }
+        .cancel { background: #666; color: white; }
+      </style>
+    </head>
+    <body>
+      <h2>Print Bill - Table ${order.table}</h2>
+      <p><strong>Customer:</strong> ${order.name}<br>
+         <strong>Total:</strong> ₹${order.total}</p>
+      <hr>
+      <button class="normal" onclick="window.opener.printNormalBill(${order.id}); window.close();">🧾 Normal Print</button><br>
+      <button class="thermal" onclick="window.opener.printThermalBillFromOrder(${order.id}); window.close();">🖨️ Thermal Print + Auto Cut</button><br>
+      <button class="cancel" onclick="window.close();">Cancel</button>
+    </body>
+    </html>
+  `);
+  printWin.document.close();
+}
+
+// Normal Print (called from popup)
+function printNormalBill(orderId) {
+  db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
+    const ord = snapshot.val();
+    if (!ord) return;
+    alert(`Normal Print triggered for Table ${ord.table}`);
+    // You can expand this later if needed
+  });
+}
+
+// Thermal Print (called from popup)
+function printThermalBillFromOrder(orderId) {
+  db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
+    const ord = snapshot.val();
+    if (!ord) return;
+
     printThermalBill(ord.items, "INV" + Date.now().toString().slice(-6), ord.name, ord.table, ord.paymentMode || "");
     db.ref('tableOrders/' + orderId).update({ status: "accepted" });
-    alert(`Order from Table ${ord.table} accepted and printed!`);
   });
 }
 
@@ -518,10 +583,7 @@ function initializeApp() {
     document.getElementById('customerView').style.display = 'block';
     if (currentTable) {
       document.getElementById('custTable').value = currentTable;
-      // Small delay to allow menu listener to load data
-      setTimeout(() => {
-        joinTable();
-      }, 800);
+      setTimeout(() => joinTable(), 800);
     }
   } else {
     document.getElementById('staffView').style.display = 'block';
