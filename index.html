@@ -356,7 +356,8 @@ function placeCustomerOrder() {
     items: JSON.parse(JSON.stringify(customerOrder)),
     total: total,
     timestamp: new Date().toLocaleString(),
-    status: "pending"
+    status: "pending",
+    lang: currentLang
   };
 
   db.ref('tableOrders/' + orderId).set(orderData);
@@ -376,7 +377,8 @@ function payByCash() {
     total: parseFloat(document.getElementById("custTotal").innerText),
     timestamp: new Date().toLocaleString(),
     status: "pending",
-    paymentMode: "Cash"
+    paymentMode: "Cash",
+    lang: currentLang
   };
   db.ref('tableOrders/' + orderId).set(orderData);
   db.ref('newOrders/' + orderId).set(orderData);
@@ -445,7 +447,7 @@ function generateQRCode() {
   `;
 }
 
-// ====================== NOTIFICATION & PRINT POPUP ======================
+// ====================== NOTIFICATION & PRINT POPUP (UPDATED) ======================
 function listenForNewOrders() {
   db.ref('newOrders').on('child_added', (snapshot) => {
     const order = snapshot.val();
@@ -472,58 +474,85 @@ function acceptOrder(orderId) {
   db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
     const ord = snapshot.val();
     if (!ord) return alert("Order not found");
-
-    // Show Print Popup with 3 options
-    showPrintOptions(ord);
+    showPrintPopup(ord);
   });
 }
 
-function showPrintOptions(order) {
+function showPrintPopup(order) {
   const printWin = window.open('', '_blank');
+  let itemsHtml = '';
+  let subtotal = 0;
+
+  order.items.forEach(item => {
+    const amt = item.qty * item.price;
+    subtotal += amt;
+    let itemName = item.name_en;
+    if (order.lang === 'hi' && item.name_hi) itemName = item.name_hi;
+    if (order.lang === 'or' && item.name_or) itemName = item.name_or;
+    itemsHtml += `<tr><td>${itemName}</td><td style="text-align:center">${item.qty}</td><td style="text-align:right">₹${amt}</td></tr>`;
+  });
+
+  const gst = document.getElementById("gst") ? (document.getElementById("gst").checked ? Math.round(subtotal * 0.05) : 0) : Math.round(subtotal * 0.05);
+  const grandTotal = subtotal + gst;
+
+  const receiptHTML = `
+    <div style="max-width:380px; margin:0 auto; padding:15px; font-family:Arial; font-size:14px; line-height:1.4;">
+      <img src="./logo_180x90.jpg" style="width:100px; display:block; margin:0 auto 8px auto;">
+      <h2 style="text-align:center; color:#d84315; margin:5px 0;">Shree & Shriyan Dhaba</h2>
+      <p style="text-align:center; font-size:12px;">At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)</p>
+      <p style="text-align:center; font-size:12px;">📞 +91 7077088311</p>
+      <hr style="border:1px dashed #ddd;">
+      <p><strong>Invoice No:</strong> INV${Date.now().toString().slice(-6)}</p>
+      <p><strong>Table No:</strong> ${order.table}</p>
+      <p><strong>Customer:</strong> ${order.name}</p>
+      <p><strong>Date & Time:</strong> ${new Date().toLocaleString('en-IN')}</p>
+      ${order.paymentMode ? `<p><strong>Payment Mode:</strong> ${order.paymentMode}</p>` : ''}
+      <hr style="border:1px dashed #ddd;">
+      <table style="width:100%; border-collapse:collapse; margin:10px 0;">
+        <thead><tr><th style="text-align:left">Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Amount</th></tr></thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+      <hr style="border:1px dashed #ddd;">
+      <p style="text-align:right">Subtotal: ₹${subtotal}</p>
+      ${gst > 0 ? `<p style="text-align:right">GST (5%): ₹${gst}</p>` : ''}
+      <h3 style="text-align:right; color:#d84315; margin:10px 0;">Grand Total: ₹${grandTotal}</h3>
+      <p style="text-align:center; margin-top:20px; font-size:14px;">Thank You! Visit Again 😊</p>
+    </div>
+  `;
+
   printWin.document.write(`
     <!DOCTYPE html>
     <html>
-    <head>
-      <title>Print Options - Table ${order.table}</title>
-      <style>
-        body { font-family: Arial; text-align: center; padding: 30px; }
-        h2 { color: #d84315; }
-        button { width: 280px; padding: 15px; margin: 10px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; }
-        .normal { background: #2e7d32; color: white; }
-        .thermal { background: #d84315; color: white; }
-        .cancel { background: #666; color: white; }
-      </style>
+    <head><title>Bill - Table ${order.table}</title>
+    <style>body{font-family:Arial;text-align:center;padding:20px;} button{width:90%;padding:14px;margin:8px 0;font-size:17px;border:none;border-radius:8px;cursor:pointer;}</style>
     </head>
     <body>
-      <h2>Print Bill - Table ${order.table}</h2>
-      <p><strong>Customer:</strong> ${order.name}<br>
-         <strong>Total:</strong> ₹${order.total}</p>
+      ${receiptHTML}
       <hr>
-      <button class="normal" onclick="window.opener.printNormalBill(${order.id}); window.close();">🧾 Normal Print</button><br>
-      <button class="thermal" onclick="window.opener.printThermalBillFromOrder(${order.id}); window.close();">🖨️ Thermal Print + Auto Cut</button><br>
-      <button class="cancel" onclick="window.close();">Cancel</button>
+      <button style="background:#2e7d32;color:white;" onclick="window.opener.printNormalAndClear(${order.id}); window.close();">🧾 Normal Print & Clear</button><br>
+      <button style="background:#d84315;color:white;" onclick="window.opener.printThermalAndCut(${order.id}); window.close();">🖨️ Print Thermal + Auto Cut</button><br>
+      <button style="background:#666;color:white;" onclick="window.close();">Cancel</button>
     </body>
     </html>
   `);
   printWin.document.close();
 }
 
-// Normal Print (called from popup)
-function printNormalBill(orderId) {
+// Called from popup
+function printNormalAndClear(orderId) {
   db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
     const ord = snapshot.val();
-    if (!ord) return;
-    alert(`Normal Print triggered for Table ${ord.table}`);
-    // You can expand this later if needed
+    if (ord) {
+      alert(`✅ Normal Print & Clear done for Table ${ord.table}`);
+      // You can add bill clearing logic here later if needed
+    }
   });
 }
 
-// Thermal Print (called from popup)
-function printThermalBillFromOrder(orderId) {
+function printThermalAndCut(orderId) {
   db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
     const ord = snapshot.val();
     if (!ord) return;
-
     printThermalBill(ord.items, "INV" + Date.now().toString().slice(-6), ord.name, ord.table, ord.paymentMode || "");
     db.ref('tableOrders/' + orderId).update({ status: "accepted" });
   });
