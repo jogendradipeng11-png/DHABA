@@ -156,27 +156,9 @@
 <script>
 // ====================== LANGUAGE DATA ======================
 const langData = {
-    en: {
-        staffTitle: "Shree & Shriyan Dhaba", staffPosLabel: "STAFF POS",
-        welcomeText: "Welcome!", custTitle: "Shree & Shriyan Dhaba", custLabel: "TABLE ORDERING",
-        startOrdering: "✅ Start Ordering", placeOrderKitchen: "✅ Place Order for Kitchen",
-        paymentTitle: "💰 Payment Options", iHavePaid: "✅ I Have Paid - Get Receipt on WhatsApp",
-        clearCart: "🗑️ Clear Cart"
-    },
-    hi: {
-        staffTitle: "श्री एंड श्रियान ढाबा", staffPosLabel: "स्टाफ POS",
-        welcomeText: "स्वागत है!", custTitle: "श्री एंड श्रियान ढाबा", custLabel: "टेबल ऑर्डरिंग",
-        startOrdering: "✅ ऑर्डरिंग शुरू करें", placeOrderKitchen: "✅ किचन के लिए ऑर्डर प्लेस करें",
-        paymentTitle: "💰 भुगतान विकल्प", iHavePaid: "✅ मैंने भुगतान कर दिया - व्हाट्सएप पर रसीद प्राप्त करें",
-        clearCart: "🗑️ कार्ट साफ करें"
-    },
-    or: {
-        staffTitle: "ଶ୍ରୀ ଏଣ୍ଡ ଶ୍ରୀୟାନ ଢାବା", staffPosLabel: "ଷ୍ଟାଫ POS",
-        welcomeText: "ସ୍ୱାଗତ!", custTitle: "ଶ୍ରୀ ଏଣ୍ଡ ଶ୍ରୀୟାନ ଢାବା", custLabel: "ଟେବୁଲ ଅର୍ଡରିଂ",
-        startOrdering: "✅ ଅର୍ଡରିଂ ଆରମ୍ଭ କରନ୍ତୁ", placeOrderKitchen: "✅ କିଚେନ୍ ପାଇଁ ଅର୍ଡର ପ୍ଲେସ୍ କରନ୍ତୁ",
-        paymentTitle: "💰 ପେମେଣ୍ଟ ବିକଳ୍ପ", iHavePaid: "✅ ମୁଁ ପେମେଣ୍ଟ କରିଛି - ୱାଟ୍ସଆପ୍ ରେ ରସିଦ ପାଆନ୍ତୁ",
-        clearCart: "🗑️ କାର୍ଟ ଖାଲି କରନ୍ତୁ"
-    }
+    en: { staffTitle: "Shree & Shriyan Dhaba", staffPosLabel: "STAFF POS", welcomeText: "Welcome!", custTitle: "Shree & Shriyan Dhaba", custLabel: "TABLE ORDERING", startOrdering: "✅ Start Ordering", placeOrderKitchen: "✅ Place Order for Kitchen", paymentTitle: "💰 Payment Options", iHavePaid: "✅ I Have Paid - Get Receipt on WhatsApp", clearCart: "🗑️ Clear Cart" },
+    hi: { staffTitle: "श्री एंड श्रियान ढाबा", staffPosLabel: "स्टाफ POS", welcomeText: "स्वागत है!", custTitle: "श्री एंड श्रियान ढाबा", custLabel: "टेबल ऑर्डरिंग", startOrdering: "✅ ऑर्डरिंग शुरू करें", placeOrderKitchen: "✅ किचन के लिए ऑर्डर प्लेस करें", paymentTitle: "💰 भुगतान विकल्प", iHavePaid: "✅ मैंने भुगतान कर दिया - व्हाट्सएप पर रसीद प्राप्त करें", clearCart: "🗑️ कार्ट साफ करें" },
+    or: { staffTitle: "ଶ୍ରୀ ଏଣ୍ଡ ଶ୍ରୀୟାନ ଢାବା", staffPosLabel: "ଷ୍ଟାଫ POS", welcomeText: "ସ୍ୱାଗତ!", custTitle: "ଶ୍ରୀ ଏଣ୍ଡ ଶ୍ରୀୟାନ ଢାବା", custLabel: "ଟେବୁଲ ଅର୍ଡରିଂ", startOrdering: "✅ ଅର୍ଡରିଂ ଆରମ୍ଭ କରନ୍ତୁ", placeOrderKitchen: "✅ କିଚେନ୍ ପାଇଁ ଅର୍ଡର ପ୍ଲେସ୍ କରନ୍ତୁ", paymentTitle: "💰 ପେମେଣ୍ଟ ବିକଳ୍ପ", iHavePaid: "✅ ମୁଁ ପେମେଣ୍ଟ କରିଛି - ୱାଟ୍ସଆପ୍ ରେ ରସିଦ ପାଆନ୍ତୁ", clearCart: "🗑️ କାର୍ଟ ଖାଲି କରନ୍ତୁ" }
 };
 
 let currentLang = 'en';
@@ -219,7 +201,7 @@ const db = firebase.database();
 const MERCHANT_UPI = "8847810037jp@ybl";
 const MERCHANT_NAME = "Shree & Shriyan Dhaba";
 
-let items = []; // {name_en, name_hi, name_or, price}
+let items = [];
 let bill = [];
 let currentTable = '';
 let customerOrder = [];
@@ -309,33 +291,19 @@ function renderBill() {
 
 function del(i) { bill.splice(i, 1); renderBill(); }
 
-// ====================== CUSTOMER JOIN & MENU ======================
-function joinTable() {
-  currentTable = document.getElementById("custTable").value.trim();
-  currentName = document.getElementById("custName").value.trim() || "Guest";
-
-  if (!currentTable) {
-    alert("Please enter your Table Number");
-    return;
-  }
-
-  // Hide sign-in and show menu section
-  document.getElementById("signInSection").style.display = "none";
-  document.getElementById("menuSection").style.display = "block";
-
-  document.getElementById("displayTable").innerText = currentTable;
-  document.getElementById("displayName").innerText = currentName;
-
-  loadCustomerMenu();
-  renderCustomerOrder();
-}
-
+// ====================== CUSTOMER MENU - FIXED LANGUAGE DISPLAY ======================
 function loadCustomerMenu() {
   let html = '';
   items.forEach((item, idx) => {
-    let displayName = item.name_en || "Unknown Item";
-    if (currentLang === 'hi' && item.name_hi) displayName = item.name_hi;
-    if (currentLang === 'or' && item.name_or) displayName = item.name_or;
+    let displayName = "Unknown Item";
+    
+    if (currentLang === 'hi' && item.name_hi) {
+      displayName = item.name_hi;
+    } else if (currentLang === 'or' && item.name_or) {
+      displayName = item.name_or;
+    } else if (item.name_en) {
+      displayName = item.name_en;
+    }
 
     html += `<div class="menu-item">
       <span><strong>${displayName}</strong> <small>₹${item.price}</small></span>
@@ -405,7 +373,7 @@ function generateDynamicPhonePeQR() {
   container.style.display = "block";
 }
 
-// ====================== OTHER ======================
+// ====================== OTHER FUNCTIONS ======================
 function voiceAdd() { alert("Voice Add coming soon..."); }
 function exportExcel() { alert("Export ready"); }
 function sendWhatsApp() { alert("WhatsApp ready"); }
@@ -426,6 +394,26 @@ function generateQRCode() {
   `;
 }
 
+// ====================== JOIN TABLE ======================
+function joinTable() {
+  currentTable = document.getElementById("custTable").value.trim();
+  currentName = document.getElementById("custName").value.trim() || "Guest";
+
+  if (!currentTable) {
+    alert("Please enter your Table Number");
+    return;
+  }
+
+  document.getElementById("signInSection").style.display = "none";
+  document.getElementById("menuSection").style.display = "block";
+
+  document.getElementById("displayTable").innerText = currentTable;
+  document.getElementById("displayName").innerText = currentName;
+
+  loadCustomerMenu();
+  renderCustomerOrder();
+}
+
 // ====================== INITIALIZE ======================
 function initializeApp() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -435,11 +423,7 @@ function initializeApp() {
   if (mode === 'customer') {
     document.getElementById('staffView').style.display = 'none';
     document.getElementById('customerView').style.display = 'block';
-    if (currentTable) {
-      document.getElementById('custTable').value = currentTable;
-      // Auto join if table is provided in URL
-      setTimeout(joinTable, 500);
-    }
+    if (currentTable) document.getElementById('custTable').value = currentTable;
   } else {
     document.getElementById('staffView').style.display = 'block';
   }
