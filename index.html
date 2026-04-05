@@ -154,8 +154,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
 <script>
-// ====================== LANGUAGE & FIREBASE (UNCHANGED) ======================
-const langData = { /* same as before */ 
+// ====================== LANGUAGE DATA ======================
+const langData = {
     en: { staffTitle: "Shree & Shriyan Dhaba", staffPosLabel: "STAFF POS", welcomeText: "Welcome!", custTitle: "Shree & Shriyan Dhaba", custLabel: "TABLE ORDERING", startOrdering: "✅ Start Ordering", placeOrderKitchen: "✅ Place Order for Kitchen", paymentTitle: "💰 Payment Options", iHavePaid: "✅ I Have Paid - Get Receipt on WhatsApp", clearCart: "🗑️ Clear Cart" },
     hi: { staffTitle: "श्री एंड श्रियान ढाबा", staffPosLabel: "स्टाफ POS", welcomeText: "स्वागत है!", custTitle: "श्री एंड श्रियान ढाबा", custLabel: "टेबल ऑर्डरिंग", startOrdering: "✅ ऑर्डरिंग शुरू करें", placeOrderKitchen: "✅ किचन के लिए ऑर्डर प्लेस करें", paymentTitle: "💰 भुगतान विकल्प", iHavePaid: "✅ मैंने भुगतान कर दिया - व्हाट्सएप पर रसीद प्राप्त करें", clearCart: "🗑️ कार्ट साफ करें" },
     or: { staffTitle: "ଶ୍ରୀ ଏଣ୍ଡ ଶ୍ରୀୟାନ ଢାବା", staffPosLabel: "ଷ୍ଟାଫ POS", welcomeText: "ସ୍ୱାଗତ!", custTitle: "ଶ୍ରୀ ଏଣ୍ଡ ଶ୍ରୀୟାନ ଢାବା", custLabel: "ଟେବୁଲ ଅର୍ଡରିଂ", startOrdering: "✅ ଅର୍ଡରିଂ ଆରମ୍ଭ କରନ୍ତୁ", placeOrderKitchen: "✅ କିଚେନ୍ ପାଇଁ ଅର୍ଡର ପ୍ଲେସ୍ କରନ୍ତୁ", paymentTitle: "💰 ପେମେଣ୍ଟ ବିକଳ୍ପ", iHavePaid: "✅ ମୁଁ ପେମେଣ୍ଟ କରିଛି - ୱାଟ୍ସଆପ୍ ରେ ରସିଦ ପାଆନ୍ତୁ", clearCart: "🗑️ କାର୍ଟ ଖାଲି କରନ୍ତୁ" }
@@ -185,7 +185,8 @@ function changeLanguage(lang) {
     }
 }
 
-const firebaseConfig = { /* your firebase config */ 
+// ====================== FIREBASE ======================
+const firebaseConfig = {
   apiKey: "AIzaSyCOtpaUWrVF6yAsHv9b-gj_OA0p5_hWAQ4",
   authDomain: "dhaba-bills.firebaseapp.com",
   databaseURL: "https://dhaba-bills-default-rtdb.firebaseio.com",
@@ -207,7 +208,7 @@ let customerOrder = [];
 let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
 
-// ====================== MENU (UNCHANGED) ======================
+// ====================== MENU ======================
 function loadAndListenMenu() {
   db.ref('menu').on('value', (snapshot) => {
     const data = snapshot.val();
@@ -271,7 +272,7 @@ async function translateText(text, targetLang) {
   } catch (e) { return text; }
 }
 
-// ====================== CUSTOMER SIDE (UNCHANGED) ======================
+// ====================== CUSTOMER SIDE ======================
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim();
@@ -443,7 +444,7 @@ function generateQRCode() {
   `;
 }
 
-// ====================== PRINT POPUP & AUTO SAVE (UPDATED) ======================
+// ====================== NOTIFICATION & PRINT POPUP ======================
 function listenForNewOrders() {
   db.ref('newOrders').on('child_added', (snapshot) => {
     const order = snapshot.val();
@@ -472,9 +473,8 @@ function acceptOrder(orderId) {
   });
 }
 
-// Staff manual bill print (from staff POS buttons)
+// Staff manual bill print
 function printBill() {
-  // Create temporary order object from current bill
   const tempOrder = {
     table: document.getElementById("customerName").value || "Walk-in",
     name: document.getElementById("customerName").value || "Guest",
@@ -487,7 +487,7 @@ function printBill() {
 }
 
 function printThermalBill() {
-  printBill(); // Reuse same popup
+  printBill();
 }
 
 function showPrintPopup(order) {
@@ -558,10 +558,8 @@ function showPrintPopup(order) {
   printWin.document.close();
 }
 
-// Auto save functions
 function printThermalAndCutFromPopup(fileName) {
   alert(`✅ Thermal Print executed.\nFile saved as: ${fileName}`);
-  // Browser will show print dialog and save as PDF with the name
 }
 
 function printNormalAndClearFromPopup(fileName) {
