@@ -255,7 +255,7 @@ function addNewMenuItem() {
     alert(`Price updated for "${nameEn}"`);
   } else {
     items.push({ name_en: nameEn, name_hi: nameEn, name_or: nameEn, price: price });
-    alert(`New item "${nameEn}" added`);
+    alert(`New item "${nameEn}" added in 3 languages`);
   }
   saveMenu();
   document.getElementById("newItemName").value = "";
@@ -286,19 +286,13 @@ function renderBill() {
 
 function del(i) { bill.splice(i, 1); renderBill(); }
 
-// ====================== CUSTOMER JOIN (Name Required) ======================
+// ====================== CUSTOMER JOIN & MENU ======================
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim();
 
-  if (!currentTable) {
-    alert("Please enter your Table Number");
-    return;
-  }
-  if (!currentName) {
-    alert("Please enter your Name (required)");
-    return;
-  }
+  if (!currentTable) return alert("Please enter your Table Number");
+  if (!currentName) return alert("Please enter your Name (required)");
 
   document.getElementById("signInSection").style.display = "none";
   document.getElementById("menuSection").style.display = "block";
@@ -310,15 +304,12 @@ function joinTable() {
   renderCustomerOrder();
 }
 
-// ====================== CUSTOMER MENU - FIXED LANGUAGE ======================
 function loadCustomerMenu() {
   let html = '';
   items.forEach((item, idx) => {
     let displayName = item.name_en || "Unknown Item";
-    
     if (currentLang === 'hi' && item.name_hi) displayName = item.name_hi;
-    else if (currentLang === 'or' && item.name_or) displayName = item.name_or;
-    else if (item.name_en) displayName = item.name_en;
+    if (currentLang === 'or' && item.name_or) displayName = item.name_or;
 
     html += `<div class="menu-item">
       <span><strong>${displayName}</strong> <small>₹${item.price}</small></span>
@@ -364,6 +355,23 @@ function clearCustomerOrder() {
 
 function placeCustomerOrder() {
   if (customerOrder.length === 0) return alert("Cart is empty!");
+
+  const total = parseFloat(document.getElementById("custTotal").innerText);
+  const orderId = Date.now();
+
+  const orderData = {
+    id: orderId,
+    table: currentTable,
+    name: currentName,
+    items: JSON.parse(JSON.stringify(customerOrder)),
+    total: total,
+    timestamp: new Date().toLocaleString(),
+    status: "pending"
+  };
+
+  db.ref('tableOrders/' + orderId).set(orderData);
+  db.ref('newOrders/' + orderId).set(orderData);
+
   alert(`✅ Order Placed Successfully for Table ${currentTable}`);
 }
 
@@ -388,7 +396,37 @@ function generateDynamicPhonePeQR() {
   container.style.display = "block";
 }
 
-// ====================== OTHER ======================
+// ====================== NOTIFICATIONS (Live Orders) ======================
+function listenForNewOrders() {
+  db.ref('newOrders').on('child_added', (snapshot) => {
+    const order = snapshot.val();
+    if (!order) return;
+
+    const n = document.createElement("div");
+    n.className = "order-notification";
+    n.innerHTML = `
+      <button onclick="this.parentElement.remove()" style="float:right;">×</button>
+      <h4>🛎️ New Order Received!</h4>
+      <p><strong>Table ${order.table}</strong> • ${order.name}</p>
+      <p>Total: ₹${order.total}</p>
+      <button onclick="acceptOrder(${order.id}); this.parentElement.remove()" style="background:#2e7d32;padding:8px 16px;margin-top:8px;">✅ Accept Order</button>
+    `;
+    document.getElementById("notificationContainer").appendChild(n);
+    setTimeout(() => n.remove(), 25000);
+  });
+}
+
+function acceptOrder(orderId) {
+  if (!confirm("Accept this order?")) return;
+  db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
+    const ord = snapshot.val();
+    if (!ord) return alert("Order not found");
+    alert(`Order from Table ${ord.table} accepted`);
+    db.ref('tableOrders/' + orderId).update({ status: "accepted" });
+  });
+}
+
+// ====================== OTHER FUNCTIONS ======================
 function voiceAdd() { alert("Voice Add coming soon..."); }
 function exportExcel() { alert("Export ready"); }
 function sendWhatsApp() { alert("WhatsApp ready"); }
@@ -421,6 +459,7 @@ function initializeApp() {
     if (currentTable) document.getElementById('custTable').value = currentTable;
   } else {
     document.getElementById('staffView').style.display = 'block';
+    listenForNewOrders();   // Live order notifications
   }
 
   document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
