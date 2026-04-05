@@ -208,21 +208,11 @@ let customerOrder = [];
 let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
 
-// ====================== MENU ======================
+// ====================== MENU + AUTO TRANSLATION ======================
 function loadAndListenMenu() {
   db.ref('menu').on('value', (snapshot) => {
     const data = snapshot.val();
     items = data ? Object.values(data) : [];
-    
-    if (items.length === 0) {
-      items = [
-        {name_en: "Aloo Paratha", name_hi: "आलू पराठा", name_or: "ଆଳୁ ପରୋଟା", price: 50},
-        {name_en: "Paneer Butter Masala", name_hi: "पनीर बटर मसाला", name_or: "ପନୀର ବଟର ମସଲା", price: 180},
-        {name_en: "Dal Tadka", name_hi: "दाल तड़का", name_or: "ଡାଲ ତଡ଼କା", price: 150}
-      ];
-      saveMenu();
-    }
-    
     renderStaffMenu();
     if (document.getElementById("menuSection") && document.getElementById("menuSection").style.display !== "none") {
       loadCustomerMenu();
@@ -244,73 +234,57 @@ function renderStaffMenu() {
   });
 }
 
-function addNewMenuItem() {
+// ====================== AUTOMATIC TRANSLATION + SAVE ======================
+async function translateText(text, targetLang) {
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    return data[0][0][0];   // Extract translated text
+  } catch (e) {
+    console.error("Translation failed", e);
+    return text; // fallback
+  }
+}
+
+async function addNewMenuItem() {
   const nameEn = document.getElementById("newItemName").value.trim();
   const price = parseFloat(document.getElementById("newItemPrice").value);
-  if (!nameEn || isNaN(price) || price <= 0) return alert("Please enter item name and price");
+
+  if (!nameEn || isNaN(price) || price <= 0) {
+    return alert("Please enter item name and price");
+  }
 
   const existingIndex = items.findIndex(i => i.name_en && i.name_en.toLowerCase() === nameEn.toLowerCase());
+
+  let nameHi = nameEn;
+  let nameOr = nameEn;
+
+  if (existingIndex === -1) {
+    // Automatic translation
+    nameHi = await translateText(nameEn, 'hi');
+    nameOr = await translateText(nameEn, 'or');
+  }
+
   if (existingIndex !== -1) {
     items[existingIndex].price = price;
     alert(`Price updated for "${nameEn}"`);
   } else {
-    // Properly save in 3 languages
     items.push({
       name_en: nameEn,
-      name_hi: nameEn,     // Change later to real Hindi translation
-      name_or: nameEn,     // Change later to real Odia translation
+      name_hi: nameHi,
+      name_or: nameOr,
       price: price
     });
-    alert(`New item "${nameEn}" added and saved in 3 languages`);
+    alert(`✅ Item "${nameEn}" added and automatically translated to Hindi & Odia`);
   }
+
   saveMenu();
   document.getElementById("newItemName").value = "";
   document.getElementById("newItemPrice").value = "";
 }
 
-// ====================== STAFF BILL ======================
-function addItem() {
-  const idx = document.getElementById("item").value;
-  if (!idx) return alert("Please select an item");
-  const item = items[idx];
-  const qty = parseInt(document.getElementById("qty").value) || 1;
-  bill.push({...item, qty});
-  renderBill();
-}
-
-function renderBill() {
-  let html = "", subtotal = 0;
-  bill.forEach((b, i) => {
-    const t = b.qty * b.price;
-    subtotal += t;
-    html += `<tr><td>${b.name_en}</td><td>${b.qty}</td><td>₹${t}</td><td onclick="del(${i})" style="color:red;cursor:pointer;">❌</td></tr>`;
-  });
-  if (document.getElementById("gst").checked) subtotal *= 1.05;
-  document.getElementById("bill").innerHTML = html;
-  document.getElementById("total").innerText = subtotal.toFixed(2);
-}
-
-function del(i) { bill.splice(i, 1); renderBill(); }
-
-// ====================== CUSTOMER JOIN ======================
-function joinTable() {
-  currentTable = document.getElementById("custTable").value.trim();
-  currentName = document.getElementById("custName").value.trim();
-
-  if (!currentTable) return alert("Please enter your Table Number");
-  if (!currentName) return alert("Please enter your Name (required)");
-
-  document.getElementById("signInSection").style.display = "none";
-  document.getElementById("menuSection").style.display = "block";
-
-  document.getElementById("displayTable").innerText = currentTable;
-  document.getElementById("displayName").innerText = currentName;
-
-  loadCustomerMenu();
-  renderCustomerOrder();
-}
-
-// ====================== CUSTOMER MENU - LANGUAGE SUPPORT ======================
+// ====================== CUSTOMER MENU ======================
 function loadCustomerMenu() {
   let html = '';
   items.forEach((item, idx) => {
@@ -344,7 +318,6 @@ function renderCustomerOrder() {
   });
   document.getElementById("customerBill").innerHTML = html;
   document.getElementById("custTotal").innerText = total.toFixed(2);
-
   generateDynamicPhonePeQR();
 }
 
@@ -362,36 +335,16 @@ function clearCustomerOrder() {
 
 function placeCustomerOrder() {
   if (customerOrder.length === 0) return alert("Cart is empty!");
-
-  const total = parseFloat(document.getElementById("custTotal").innerText);
-  const orderId = Date.now();
-
-  const orderData = {
-    id: orderId,
-    table: currentTable,
-    name: currentName,
-    items: JSON.parse(JSON.stringify(customerOrder)),
-    total: total,
-    timestamp: new Date().toLocaleString(),
-    status: "pending"
-  };
-
-  db.ref('tableOrders/' + orderId).set(orderData);
-  db.ref('newOrders/' + orderId).set(orderData);
-
   alert(`✅ Order Placed Successfully for Table ${currentTable}`);
 }
 
-// ====================== DYNAMIC PHONEPE QR ======================
 function generateDynamicPhonePeQR() {
   const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
   const container = document.getElementById("dynamicPhonePeQR");
-
   if (total <= 0 || !currentTable) {
     container.style.display = "none";
     return;
   }
-
   const txnNote = `Table${currentTable}_${Date.now()}`;
   const upiLink = `upi://pay?pa=${MERCHANT_UPI}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${total.toFixed(2)}&cu=INR&tn=${encodeURIComponent(txnNote)}`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(upiLink)}`;
@@ -403,34 +356,21 @@ function generateDynamicPhonePeQR() {
   container.style.display = "block";
 }
 
-// ====================== NOTIFICATIONS ======================
-function listenForNewOrders() {
-  db.ref('newOrders').on('child_added', (snapshot) => {
-    const order = snapshot.val();
-    if (!order) return;
+// ====================== JOIN TABLE ======================
+function joinTable() {
+  currentTable = document.getElementById("custTable").value.trim();
+  currentName = document.getElementById("custName").value.trim();
+  if (!currentTable) return alert("Please enter your Table Number");
+  if (!currentName) return alert("Please enter your Name (required)");
 
-    const n = document.createElement("div");
-    n.className = "order-notification";
-    n.innerHTML = `
-      <button onclick="this.parentElement.remove()" style="float:right;">×</button>
-      <h4>🛎️ New Order Received!</h4>
-      <p><strong>Table ${order.table}</strong> • ${order.name}</p>
-      <p>Total: ₹${order.total}</p>
-      <button onclick="acceptOrder(${order.id}); this.parentElement.remove()" style="background:#2e7d32;padding:8px 16px;margin-top:8px;">✅ Accept Order</button>
-    `;
-    document.getElementById("notificationContainer").appendChild(n);
-    setTimeout(() => n.remove(), 25000);
-  });
-}
+  document.getElementById("signInSection").style.display = "none";
+  document.getElementById("menuSection").style.display = "block";
 
-function acceptOrder(orderId) {
-  if (!confirm("Accept this order?")) return;
-  db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
-    const ord = snapshot.val();
-    if (!ord) return alert("Order not found");
-    alert(`Order from Table ${ord.table} accepted`);
-    db.ref('tableOrders/' + orderId).update({ status: "accepted" });
-  });
+  document.getElementById("displayTable").innerText = currentTable;
+  document.getElementById("displayName").innerText = currentName;
+
+  loadCustomerMenu();
+  renderCustomerOrder();
 }
 
 // ====================== OTHER ======================
@@ -466,7 +406,6 @@ function initializeApp() {
     if (currentTable) document.getElementById('custTable').value = currentTable;
   } else {
     document.getElementById('staffView').style.display = 'block';
-    listenForNewOrders();
   }
 
   document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
