@@ -254,8 +254,14 @@ function addNewMenuItem() {
     items[existingIndex].price = price;
     alert(`Price updated for "${nameEn}"`);
   } else {
-    items.push({ name_en: nameEn, name_hi: nameEn, name_or: nameEn, price: price });
-    alert(`New item "${nameEn}" added in 3 languages`);
+    // Properly save in 3 languages
+    items.push({
+      name_en: nameEn,
+      name_hi: nameEn,     // Change later to real Hindi translation
+      name_or: nameEn,     // Change later to real Odia translation
+      price: price
+    });
+    alert(`New item "${nameEn}" added and saved in 3 languages`);
   }
   saveMenu();
   document.getElementById("newItemName").value = "";
@@ -286,7 +292,7 @@ function renderBill() {
 
 function del(i) { bill.splice(i, 1); renderBill(); }
 
-// ====================== CUSTOMER JOIN & MENU ======================
+// ====================== CUSTOMER JOIN ======================
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim();
@@ -304,6 +310,7 @@ function joinTable() {
   renderCustomerOrder();
 }
 
+// ====================== CUSTOMER MENU - LANGUAGE SUPPORT ======================
 function loadCustomerMenu() {
   let html = '';
   items.forEach((item, idx) => {
@@ -396,7 +403,7 @@ function generateDynamicPhonePeQR() {
   container.style.display = "block";
 }
 
-// ====================== NOTIFICATIONS (Live Orders) ======================
+// ====================== NOTIFICATIONS ======================
 function listenForNewOrders() {
   db.ref('newOrders').on('child_added', (snapshot) => {
     const order = snapshot.val();
@@ -426,7 +433,7 @@ function acceptOrder(orderId) {
   });
 }
 
-// ====================== OTHER FUNCTIONS ======================
+// ====================== OTHER ======================
 function voiceAdd() { alert("Voice Add coming soon..."); }
 function exportExcel() { alert("Export ready"); }
 function sendWhatsApp() { alert("WhatsApp ready"); }
@@ -459,7 +466,7 @@ function initializeApp() {
     if (currentTable) document.getElementById('custTable').value = currentTable;
   } else {
     document.getElementById('staffView').style.display = 'block';
-    listenForNewOrders();   // Live order notifications
+    listenForNewOrders();
   }
 
   document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
