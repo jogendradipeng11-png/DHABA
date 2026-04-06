@@ -549,9 +549,9 @@ function showPrintPopup(order) {
           URL.revokeObjectURL(url);
           window.opener && window.opener.clearStaffBill && window.opener.clearStaffBill();
         }
-function sendViaWhatsApp() {
-
-          const message = encodeURIComponent(`🧾 *Shree & Shriyan Dhaba Bill*\\n\\nTable: ${order.table || 'Walk-in'}\\nCustomer  : ${order.name || 'Guest'}\\n\\nTime : ${new Date().toLocaleString('en-IN')}\\n─── ITEMS ───\\n${itemsList}\\n\\n────────────────────\\n\\nSubtotal: ₹${subtotal}\\nGST (5%): ₹${gst}\\n\\nGrand Total : ₹${grandTotal}\\n────────────────────\\n✅ Thank You! Visit Again 😊`);
+        function sendViaWhatsApp() {
+          const message = encodeURIComponent(\`🧾 *Shree & Shriyan Dhaba Bill*\\n\\nTable: ${order.table || 'Walk-in'}\\nCustomer: ${order.name || 'Guest'}\\nTotal: ₹${grandTotal}\\nThank You!\`);
+          window.open(\`https://web.whatsapp.com/send?text=\${message}\`, '_blank');
         }
         window.onload = () => setTimeout(() => window.print(), 600);
       <\/script>
