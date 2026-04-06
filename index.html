@@ -570,9 +570,20 @@ function printThermalBill() {
 
 window.sendWhatsApp = function() {
   const total = parseFloat(document.getElementById("total").innerText) || 0;
-  const name = document.getElementById("customerName").value || "Customer";
-  const message = `Shree & Shriyan Dhaba - Payment Receipt%0A%0ATable: Walk-in%0ACustomer: ${name}%0A%0ATotal: ₹${total}%0A%0AThank You! Come Again 😊`;
-  window.open(`https://wa.me/?text=${message}`, '_blank');
+  const name = document.getElementById("customerName").value || "Guest";
+
+  let msg = `Shree & Shriyan Dhaba - Payment Receipt%0A%0A`;
+  msg += `Table: Walk-in%0A`;
+  msg += `Customer: ${name}%0A%0A`;
+
+  bill.forEach(item => {
+    msg += `${item.name} x${item.qty} = ₹${item.qty * item.price}%0A`;
+  });
+
+  msg += `%0APaid: ₹${total}%0A`;
+  msg += `Thank You! Come Again 😊`;
+
+  window.open(`https://wa.me/?text=${msg}`, '_blank');
 };
 
 // ====================== CUSTOMER SIDE ======================
@@ -679,7 +690,7 @@ function payByCash() {
   document.getElementById("paymentSuccessMsg").style.display = "block";
 }
 
-// ====================== FIXED: EXACT FORMAT FOR BOTH STAFF & CUSTOMER WHATSAPP ======================
+// ====================== CUSTOMER PAID - EXACT FORMAT ======================
 function markAsPaid() {
   const paidAmt = parseFloat(document.getElementById("paidAmount").value);
   const total = parseFloat(document.getElementById("custTotal").innerText);
