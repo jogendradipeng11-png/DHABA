@@ -282,42 +282,43 @@ function voiceAdd() {
   alert("🎤 Voice Add feature coming soon. Please use 'Add Item' for now.");
 }
 
-// ====================== EXPORT EXCEL FEATURE (Only New Addition) ======================
+// ====================== EXPORT EXCEL (Added) ======================
 function exportExcel() {
   if (bill.length === 0) {
-    alert("No items in bill to export!");
+    alert("No items in the bill to export!");
     return;
   }
 
   let csvContent = "data:text/csv;charset=utf-8,";
-  csvContent += "Item,Quantity,Price,Amount\n";
+  csvContent += "Item,Quantity,Rate,Amount\n";
 
-  let total = 0;
+  let subtotal = 0;
   bill.forEach(item => {
     const amount = item.qty * item.price;
-    total += amount;
-    csvContent += `"${item.name}",${item.qty},${item.price},${amount}\n`;
+    subtotal += amount;
+    csvContent += `"${item.name.replace(/"/g, '""')}",${item.qty},${item.price},${amount}\n`;
   });
 
-  const gst = Math.round(total * 0.05);
-  const grandTotal = total + gst;
+  const gst = Math.round(subtotal * 0.05);
+  const grandTotal = subtotal + gst;
 
-  csvContent += `\n,,,Subtotal,${total}\n`;
-  csvContent += `,,,GST 5%,${gst}\n`;
-  csvContent += `,,,Grand Total,${grandTotal}\n`;
+  csvContent += "\n";
+  csvContent += ",,,Subtotal," + subtotal + "\n";
+  csvContent += ",,,GST (5%)," + gst + "\n";
+  csvContent += ",,,Grand Total," + grandTotal + "\n";
 
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
   link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `Bill_INV${Date.now().toString().slice(-6)}.csv`);
+  link.setAttribute("download", "Shree_Shriyan_Bill_" + new Date().toISOString().slice(0,10).replace(/-/g,'') + ".csv");
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 
-  alert("✅ Bill exported as Excel (CSV) successfully!");
+  alert("✅ Bill exported successfully as Excel (CSV) file!");
 }
 
-// ====================== CUSTOMER SIDE ======================
+// ====================== CUSTOMER SIDE ====================== 
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim();
