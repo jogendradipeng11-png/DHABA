@@ -25,7 +25,7 @@
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
     .logo img { width: 140px; display: block; margin: 0 auto 8px auto; border-radius: 8px; }
-    #liveOrdersTable { margin-top: 15px; }
+    #liveOrdersSection { margin-top: 20px; border: 2px solid #d84315; border-radius: 10px; padding: 10px; }
 </style>
 </head>
 <body>
@@ -80,15 +80,18 @@
 
         <!-- Live Table Orders Section -->
         <div id="liveOrdersSection" style="display:none; margin-top:20px;">
-            <h4>📋 Live Table Orders</h4>
-            <table id="liveOrdersTable" border="1">
-                <thead><tr><th>Table</th><th>Customer</th><th>Total</th><th>Time</th><th>Status</th><th>Action</th></tr></thead>
-                <tbody id="liveOrdersBody"></tbody>
-            </table>
+            <h4 style="color:#d84315;">📋 Live Table Orders (Real-time)</h4>
+            <div id="liveOrdersContainer" style="max-height:400px; overflow-y:auto;">
+                <table id="liveOrdersTable" border="1" style="width:100%;">
+                    <thead><tr><th>Table</th><th>Customer</th><th>Total ₹</th><th>Time</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody id="liveOrdersBody"></tbody>
+                </table>
+            </div>
+            <button onclick="showTableOrders()" style="margin-top:10px;background:#666;">Close Live Orders</button>
         </div>
     </div>
 
-    <!-- CUSTOMER VIEW -->
+    <!-- CUSTOMER VIEW (unchanged) -->
     <div id="customerView" style="display:none;">
         <div class="logo">
             <img src="./logo_180x90.jpg" alt="Logo" style="width:130px;">
@@ -147,7 +150,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
-// ====================== LANGUAGE DATA ======================
+// ====================== LANGUAGE DATA ====================== (unchanged)
 const langData = {
     en: { staffTitle: "Shree & Shriyan Dhaba", staffPosLabel: "STAFF POS", welcomeText: "Welcome!", custTitle: "Shree & Shriyan Dhaba", custLabel: "TABLE ORDERING", startOrdering: "✅ Start Ordering", placeOrderKitchen: "✅ Place Order for Kitchen", paymentTitle: "💰 Payment Options", iHavePaid: "✅ I Have Paid - Get Receipt on WhatsApp", clearCart: "🗑️ Clear Cart" },
     hi: { staffTitle: "श्री एंड श्रियान ढाबा", staffPosLabel: "स्टाफ POS", welcomeText: "स्वागत है!", custTitle: "श्री एंड श्रियान ढाबा", custLabel: "टेबल ऑर्डरिंग", startOrdering: "✅ ऑर्डरिंग शुरू करें", placeOrderKitchen: "✅ किचन के लिए ऑर्डर प्लेस करें", paymentTitle: "💰 भुगतान विकल्प", iHavePaid: "✅ मैंने भुगतान कर दिया - व्हाट्सएप पर रसीद प्राप्त करें", clearCart: "🗑️ कार्ट साफ करें" },
@@ -175,7 +178,7 @@ function changeLanguage(lang) {
     }
 }
 
-// ====================== FIREBASE ======================
+// ====================== FIREBASE ====================== (unchanged)
 const firebaseConfig = {
   apiKey: "AIzaSyCOtpaUWrVF6yAsHv9b-gj_OA0p5_hWAQ4",
   authDomain: "dhaba-bills.firebaseapp.com",
@@ -197,7 +200,7 @@ let customerOrder = [];
 let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
 
-// ====================== MENU ======================
+// ====================== MENU ====================== (unchanged)
 function loadAndListenMenu() {
   db.ref('menu').on('value', (snapshot) => {
     const data = snapshot.val();
@@ -252,7 +255,7 @@ async function translateText(text, targetLang) {
   } catch (e) { return text; }
 }
 
-// ====================== STAFF BILL FUNCTIONS ======================
+// ====================== STAFF BILL FUNCTIONS ====================== (unchanged)
 function addItem() {
   const idx = document.getElementById("item").value;
   if (!idx) return alert("Please select an item");
@@ -307,10 +310,7 @@ function exportExcel() {
   });
   const gst = Math.round(subtotal * 0.05);
   const grandTotal = subtotal + gst;
-  csvContent += "\n";
-  csvContent += ",,,Subtotal," + subtotal + "\n";
-  csvContent += ",,,GST (5%)," + gst + "\n";
-  csvContent += ",,,Grand Total," + grandTotal + "\n";
+  csvContent += "\n,,,Subtotal," + subtotal + "\n,,,GST (5%)," + gst + "\n,,,Grand Total," + grandTotal + "\n";
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
   link.setAttribute("href", encodedUri);
@@ -321,67 +321,232 @@ function exportExcel() {
   alert("✅ Bill exported successfully as Excel (CSV) file!");
 }
 
-// ====================== LIVE TABLE ORDERS (New Implementation) ======================
-let liveOrdersListener = null;
-
+// ====================== LIVE TABLE ORDERS - FIXED ======================
 function showTableOrders() {
   const section = document.getElementById("liveOrdersSection");
-  section.style.display = section.style.display === "none" ? "block" : "none";
-
   if (section.style.display === "block") {
-    loadLiveOrders();
+    section.style.display = "none";
+    return;
   }
+  section.style.display = "block";
+  loadLiveOrdersRealTime();
 }
 
-function loadLiveOrders() {
+let liveOrdersRef = null;
+
+function loadLiveOrdersRealTime() {
   const tbody = document.getElementById("liveOrdersBody");
-  tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;'>Loading live orders...</td></tr>";
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">Loading live orders...</td></tr>';
 
-  if (liveOrdersListener) liveOrdersListener.off();
+  // Remove previous listener if exists
+  if (liveOrdersRef) {
+    liveOrdersRef.off();
+  }
 
-  liveOrdersListener = db.ref('tableOrders').on('value', (snapshot) => {
+  liveOrdersRef = db.ref('tableOrders');
+
+  liveOrdersRef.on('value', (snapshot) => {
     const data = snapshot.val();
     tbody.innerHTML = "";
 
-    if (!data) {
-      tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;color:#999;'>No live orders at the moment.</td></tr>";
+    if (!data || Object.keys(data).length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">No pending table orders at the moment.</td></tr>';
       return;
     }
 
-    Object.keys(data).forEach(key => {
+    let hasOrders = false;
+    Object.keys(data).forEach((key) => {
       const order = data[key];
       if (!order || order.status === "completed") return;
 
+      hasOrders = true;
       const row = document.createElement("tr");
       row.innerHTML = `
-        <td><strong>${order.table}</strong></td>
+        <td><strong>Table ${order.table}</strong></td>
         <td>${order.name || 'Guest'}</td>
-        <td>₹${order.total}</td>
-        <td>${order.timestamp ? order.timestamp.split(',')[1] || order.timestamp : 'N/A'}</td>
-        <td><span style="color:${order.status === 'pending' ? 'orange' : 'green'};">${order.status || 'pending'}</span></td>
+        <td style="font-weight:bold;">₹${order.total || 0}</td>
+        <td>${order.timestamp ? order.timestamp.split(',')[0] : 'N/A'}</td>
+        <td><span style="color: ${order.status === 'pending' ? '#f57c00' : '#2e7d32'};">${order.status || 'pending'}</span></td>
         <td>
-          <button onclick="acceptLiveOrder('${key}')" style="background:#2e7d32;padding:4px 8px;font-size:12px;">Accept & Print</button>
+          <button onclick="acceptLiveOrder('${key}')" style="background:#2e7d32; color:white; padding:5px 10px; border:none; border-radius:4px; cursor:pointer;">Accept & Print</button>
         </td>
       `;
       tbody.appendChild(row);
     });
+
+    if (!hasOrders) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">No pending table orders at the moment.</td></tr>';
+    }
   });
 }
 
 function acceptLiveOrder(orderId) {
-  if (!confirm("Accept this order and print bill?")) return;
+  if (!confirm("Accept this order and print the bill?")) return;
 
   db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
     const order = snapshot.val();
     if (order) {
       showPrintPopup(order);
-      // Optionally mark as accepted
+      // Mark as accepted
       db.ref('tableOrders/' + orderId + '/status').set("accepted");
     }
   });
 }
 
-// ====================== CUSTOMER SIDE ======================
+// ====================== NOTIFICATIONS (unchanged) ======================
+function listenForNewOrders() {
+  db.ref('newOrders').on('child_added', (snapshot) => {
+    const order = snapshot.val();
+    if (!order) return;
+    const n = document.createElement("div");
+    n.className = "order-notification";
+    n.innerHTML = `
+      <button onclick="this.parentElement.remove()" style="float:right;">×</button>
+      <h4>🛎️ New Order Received!</h4>
+      <p><strong>Table ${order.table}</strong> • ${order.name}</p>
+      <p>Total: ₹${order.total}</p>
+      ${order.paymentMode ? `<p><strong>Payment:</strong> ${order.paymentMode}</p>` : ''}
+      <button onclick="acceptOrder(${order.id}); this.parentElement.remove()" style="background:#2e7d32;padding:8px 16px;margin-top:8px;">✅ Accept & Print</button>
+    `;
+    document.getElementById("notificationContainer").appendChild(n);
+    setTimeout(() => n.remove(), 30000);
+  });
+}
+
+function acceptOrder(orderId) {
+  if (!confirm("Accept this order?")) return;
+  db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
+    const ord = snapshot.val();
+    if (ord) showPrintPopup(ord);
+  });
+}
+
+// ====================== PRINT POPUP (unchanged) ======================
+function showPrintPopup(order) {
+  const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const timeStr = new Date().toTimeString().slice(0,8).replace(/:/g,'');
+  const customerName = (order.name || 'Guest').replace(/[^a-zA-Z0-9]/g, '_');
+  const tableInfo = order.table ? `Table${order.table}` : 'Walkin';
+  const fileName = `${customerName}_${tableInfo}_${dateStr}_${timeStr}.html`;
+
+  const printWin = window.open('', '_blank', 'width=800,height=700');
+
+  let itemsHtml = '';
+  let subtotal = 0;
+  (order.items || []).forEach(item => {
+    const amt = item.qty * (item.price || 0);
+    subtotal += amt;
+    let itemName = item.name_en || item.name;
+    if (order.lang === 'hi' && item.name_hi) itemName = item.name_hi;
+    if (order.lang === 'or' && item.name_or) itemName = item.name_or;
+    itemsHtml += `<tr><td>${itemName}</td><td style="text-align:center">${item.qty}</td><td style="text-align:right">₹${amt}</td></tr>`;
+  });
+
+  const gstAmount = Math.round(subtotal * 0.05);
+  const grandTotal = subtotal + gstAmount;
+
+  const billContent = `
+    <div style="max-width:400px; margin:0 auto; padding:15px; font-family:Arial; background:white; font-size:14px;">
+      <div style="text-align:center;">
+        <img src="./logo_180x90.jpg" style="width:90px; margin-bottom:8px;">
+        <h2 style="color:#d84315; margin:5px 0;">Shree & Shriyan Dhaba</h2>
+        <p style="font-size:13px; margin:5px 0;">At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)</p>
+        <p style="font-size:13px;">📞 +91 7077088311 | ✉ jogendra.dipeng11@gmail.com</p>
+      </div>
+      <hr>
+      <p><strong>Invoice:</strong> INV${Date.now().toString().slice(-6)}</p>
+      <p><strong>Table:</strong> ${order.table || 'Walk-in'}</p>
+      <p><strong>Customer:</strong> ${order.name || 'Guest'}</p>
+      <p><strong>Date & Time:</strong> ${new Date().toLocaleString('en-IN')}</p>
+      ${order.paymentMode ? `<p><strong>Payment Mode:</strong> ${order.paymentMode}</p>` : ''}
+      <hr>
+      <table style="width:100%; border-collapse:collapse; margin:10px 0;">
+        <thead><tr><th style="text-align:left">Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Amount</th></tr></thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+      <hr>
+      <p style="text-align:right">Subtotal: ₹${subtotal}</p>
+      <p style="text-align:right">GST 5%: ₹${gstAmount}</p>
+      <h3 style="text-align:right; color:#d84315;">Grand Total: ₹${grandTotal}</h3>
+      <p style="text-align:center; margin-top:20px; font-size:14px;">Thank You! Visit Again 😊</p>
+    </div>
+  `;
+
+  printWin.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head><title>Bill - ${fileName}</title>
+    <style>body { margin:0; padding:20px; background:#f9f9f9; font-family:Arial; }</style>
+    </head>
+    <body>
+      ${billContent}
+      <div style="text-align:center; margin-top:30px;">
+        <h4>Choose Action</h4>
+        <button onclick="printNormal()" style="background:#27ae60;color:white;">🧾 Normal Print & Clear</button>
+        <button onclick="printThermal()" style="background:#e74c3c;color:white;">🖨️ Print Thermal + Auto Cut</button>
+        <button onclick="sendViaWhatsApp()" style="background:#25D366;color:white;">📲 Send Bill on WhatsApp</button>
+        <button onclick="window.close()" style="background:#1abc9c;color:white;">Close</button>
+      </div>
+
+      <script>
+        const fileName = "${fileName}";
+        const billContent = \`${billContent}\`;
+
+        function printNormal() { window.print(); setTimeout(saveLocalCopy, 800); }
+        function printThermal() { window.print(); setTimeout(saveLocalCopy, 800); }
+        function saveLocalCopy() {
+          const blob = new Blob([billContent], {type: 'text/html'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = fileName; a.click();
+          URL.revokeObjectURL(url);
+          window.opener && window.opener.clearStaffBill && window.opener.clearStaffBill();
+        }
+        function sendViaWhatsApp() {
+          const message = encodeURIComponent(\`🧾 *Shree & Shriyan Dhaba Bill*\\n\\nTable: ${order.table || 'Walk-in'}\\nCustomer: ${order.name || 'Guest'}\\nTotal: ₹${grandTotal}\\nThank You!\`);
+          window.open(\`https://web.whatsapp.com/send?text=\${message}\`, '_blank');
+        }
+        window.onload = () => setTimeout(() => window.print(), 600);
+      <\/script>
+    </body>
+    </html>
+  `);
+  printWin.document.close();
+}
+
+window.clearStaffBill = function() {
+  bill = [];
+  document.getElementById("bill").innerHTML = "";
+  document.getElementById("total").innerText = "0";
+  count++;
+  document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
+  localStorage.setItem("inv", count);
+};
+
+function printBill() {
+  const tempOrder = {
+    table: document.getElementById("customerName").value || "Walk-in",
+    name: document.getElementById("customerName").value || "Guest",
+    items: bill.map(item => ({name_en: item.name, qty: item.qty, price: item.price})),
+    total: parseFloat(document.getElementById("total").innerText) || 0,
+    lang: currentLang,
+    timestamp: new Date().toLocaleString()
+  };
+  showPrintPopup(tempOrder);
+}
+
+function printThermalBill() {
+  printBill();
+}
+
+window.sendWhatsApp = function() {
+  const total = parseFloat(document.getElementById("total").innerText) || 0;
+  const name = document.getElementById("customerName").value || "Customer";
+  const message = encodeURIComponent(`🧾 *Shree & Shriyan Dhaba Bill*\\n\\nCustomer: ${name}\\nTotal: ₹${total}\\nThank You!`);
+  window.open(`https://web.whatsapp.com/send?text=${message}`, '_blank');
+};
+
+// ====================== CUSTOMER SIDE (unchanged) ======================
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim();
@@ -523,170 +688,6 @@ function generateQRCode() {
     <p style="margin-top:10px; font-weight:bold; color:#d84315;">Table ${tableNo} - Scan to Start Ordering</p>
   `;
 }
-
-// ====================== NOTIFICATIONS & PRINT ======================
-function listenForNewOrders() {
-  db.ref('newOrders').on('child_added', (snapshot) => {
-    const order = snapshot.val();
-    if (!order) return;
-    const n = document.createElement("div");
-    n.className = "order-notification";
-    n.innerHTML = `
-      <button onclick="this.parentElement.remove()" style="float:right;">×</button>
-      <h4>🛎️ New Order Received!</h4>
-      <p><strong>Table ${order.table}</strong> • ${order.name}</p>
-      <p>Total: ₹${order.total}</p>
-      ${order.paymentMode ? `<p><strong>Payment:</strong> ${order.paymentMode}</p>` : ''}
-      <button onclick="acceptOrder(${order.id}); this.parentElement.remove()" style="background:#2e7d32;padding:8px 16px;margin-top:8px;">✅ Accept & Print</button>
-    `;
-    document.getElementById("notificationContainer").appendChild(n);
-    setTimeout(() => n.remove(), 30000);
-  });
-}
-
-function acceptOrder(orderId) {
-  if (!confirm("Accept this order?")) return;
-  db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
-    const ord = snapshot.val();
-    if (ord) showPrintPopup(ord);
-  });
-}
-
-function showPrintPopup(order) {
-  const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,'');
-  const timeStr = new Date().toTimeString().slice(0,8).replace(/:/g,'');
-  const customerName = (order.name || 'Guest').replace(/[^a-zA-Z0-9]/g, '_');
-  const tableInfo = order.table ? `Table${order.table}` : 'Walkin';
-  const fileName = `${customerName}_${tableInfo}_${dateStr}_${timeStr}.html`;
-
-  const printWin = window.open('', '_blank', 'width=800,height=700');
-
-  let itemsHtml = '';
-  let subtotal = 0;
-  (order.items || []).forEach(item => {
-    const amt = item.qty * (item.price || 0);
-    subtotal += amt;
-    let itemName = item.name_en || item.name;
-    if (order.lang === 'hi' && item.name_hi) itemName = item.name_hi;
-    if (order.lang === 'or' && item.name_or) itemName = item.name_or;
-    itemsHtml += `<tr><td>${itemName}</td><td style="text-align:center">${item.qty}</td><td style="text-align:right">₹${amt}</td></tr>`;
-  });
-
-  const gstAmount = Math.round(subtotal * 0.05);
-  const grandTotal = subtotal + gstAmount;
-
-  const billContent = `
-    <div style="max-width:400px; margin:0 auto; padding:15px; font-family:Arial; background:white; font-size:14px;">
-      <div style="text-align:center;">
-        <img src="./logo_180x90.jpg" style="width:90px; margin-bottom:8px;">
-        <h2 style="color:#d84315; margin:5px 0;">Shree & Shriyan Dhaba</h2>
-        <p style="font-size:13px; margin:5px 0;">At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)</p>
-        <p style="font-size:13px;">📞 +91 7077088311 | ✉ jogendra.dipeng11@gmail.com</p>
-      </div>
-      <hr>
-      <p><strong>Invoice:</strong> INV${Date.now().toString().slice(-6)}</p>
-      <p><strong>Table:</strong> ${order.table || 'Walk-in'}</p>
-      <p><strong>Customer:</strong> ${order.name || 'Guest'}</p>
-      <p><strong>Date & Time:</strong> ${new Date().toLocaleString('en-IN')}</p>
-      ${order.paymentMode ? `<p><strong>Payment Mode:</strong> ${order.paymentMode}</p>` : ''}
-      <hr>
-      <table style="width:100%; border-collapse:collapse; margin:10px 0;">
-        <thead><tr><th style="text-align:left">Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Amount</th></tr></thead>
-        <tbody>${itemsHtml}</tbody>
-      </table>
-      <hr>
-      <p style="text-align:right">Subtotal: ₹${subtotal}</p>
-      <p style="text-align:right">GST 5%: ₹${gstAmount}</p>
-      <h3 style="text-align:right; color:#d84315;">Grand Total: ₹${grandTotal}</h3>
-      <p style="text-align:center; margin-top:20px; font-size:14px;">Thank You! Visit Again 😊</p>
-    </div>
-  `;
-
-  printWin.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head><title>Bill - ${fileName}</title>
-    <style>body { margin:0; padding:20px; background:#f9f9f9; font-family:Arial; }</style>
-    </head>
-    <body>
-      ${billContent}
-      <div style="text-align:center; margin-top:30px;">
-        <h4>Choose Action</h4>
-        <button onclick="printNormal()" style="background:#27ae60;color:white;">🧾 Normal Print & Clear</button>
-        <button onclick="printThermal()" style="background:#e74c3c;color:white;">🖨️ Print Thermal + Auto Cut</button>
-        <button onclick="sendViaWhatsApp()" style="background:#25D366;color:white;">📲 Send Bill on WhatsApp</button>
-        <button onclick="window.close()" style="background:#1abc9c;color:white;">Close</button>
-      </div>
-
-      <script>
-        const fileName = "${fileName}";
-        const billContent = \`${billContent}\`;
-
-        function printNormal() {
-          window.print();
-          setTimeout(saveLocalCopy, 800);
-        }
-
-        function printThermal() {
-          window.print();
-          setTimeout(saveLocalCopy, 800);
-        }
-
-        function saveLocalCopy() {
-          const blob = new Blob([billContent], {type: 'text/html'});
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = fileName;
-          a.click();
-          URL.revokeObjectURL(url);
-          window.opener && window.opener.clearStaffBill && window.opener.clearStaffBill();
-        }
-
-        function sendViaWhatsApp() {
-          const message = encodeURIComponent(\`🧾 *Shree & Shriyan Dhaba Bill*\\n\\nTable: ${order.table || 'Walk-in'}\\nCustomer: ${order.name || 'Guest'}\\nTotal: ₹${grandTotal}\\nThank You!\`);
-          window.open(\`https://web.whatsapp.com/send?text=\${message}\`, '_blank');
-        }
-
-        window.onload = () => setTimeout(() => window.print(), 600);
-      <\/script>
-    </body>
-    </html>
-  `);
-  printWin.document.close();
-}
-
-window.clearStaffBill = function() {
-  bill = [];
-  document.getElementById("bill").innerHTML = "";
-  document.getElementById("total").innerText = "0";
-  count++;
-  document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
-  localStorage.setItem("inv", count);
-};
-
-function printBill() {
-  const tempOrder = {
-    table: document.getElementById("customerName").value || "Walk-in",
-    name: document.getElementById("customerName").value || "Guest",
-    items: bill.map(item => ({name_en: item.name, qty: item.qty, price: item.price})),
-    total: parseFloat(document.getElementById("total").innerText) || 0,
-    lang: currentLang,
-    timestamp: new Date().toLocaleString()
-  };
-  showPrintPopup(tempOrder);
-}
-
-function printThermalBill() {
-  printBill();
-}
-
-window.sendWhatsApp = function() {
-  const total = parseFloat(document.getElementById("total").innerText) || 0;
-  const name = document.getElementById("customerName").value || "Customer";
-  const message = encodeURIComponent(`🧾 *Shree & Shriyan Dhaba Bill*\\n\\nCustomer: ${name}\\nTotal: ₹${total}\\nThank You!`);
-  window.open(`https://web.whatsapp.com/send?text=${message}`, '_blank');
-};
 
 // ====================== INITIALIZE ======================
 function initializeApp() {
