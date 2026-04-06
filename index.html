@@ -568,129 +568,34 @@ function printThermalBill() {
   printBill();
 }
 
+// ====================== STAFF WHATSAPP - FULL BILL WITH GST ======================
 window.sendWhatsApp = function() {
-  const total = parseFloat(document.getElementById("total").innerText) || 0;
-  const name = document.getElementById("customerName").value || "Guest";
+  let subtotal = 0;
+  let itemsList = "";
+
+  bill.forEach(item => {
+    const amt = item.qty * item.price;
+    subtotal += amt;
+    itemsList += `${item.name} x${item.qty} = ₹${amt}%0A`;
+  });
+
+  const gst = Math.round(subtotal * 0.05);
+  const grandTotal = subtotal + gst;
 
   let msg = `Shree & Shriyan Dhaba - Payment Receipt%0A%0A`;
   msg += `Table: Walk-in%0A`;
-  msg += `Customer: ${name}%0A%0A`;
-
-  bill.forEach(item => {
-    msg += `${item.name} x${item.qty} = ₹${item.qty * item.price}%0A`;
-  });
-
-  msg += `%0APaid: ₹${total}%0A`;
+  msg += `Customer: ${document.getElementById("customerName").value || "Guest"}%0A%0A`;
+  msg += itemsList;
+  msg += `%0ASubtotal: ₹${subtotal}%0A`;
+  msg += `GST 5%: ₹${gst}%0A`;
+  msg += `Grand Total: ₹${grandTotal}%0A`;
+  msg += `Paid: ₹${grandTotal}%0A%0A`;
   msg += `Thank You! Come Again 😊`;
 
   window.open(`https://wa.me/?text=${msg}`, '_blank');
 };
 
-// ====================== CUSTOMER SIDE ======================
-function joinTable() {
-  currentTable = document.getElementById("custTable").value.trim();
-  currentName = document.getElementById("custName").value.trim();
-  if (!currentTable) return alert("Please enter your Table Number");
-  if (!currentName) return alert("Please enter your Name (required)");
-  document.getElementById("signInSection").style.display = "none";
-  document.getElementById("menuSection").style.display = "block";
-  document.getElementById("displayTable").innerText = currentTable;
-  document.getElementById("displayName").innerText = currentName;
-  loadCustomerMenu();
-  renderCustomerOrder();
-}
-
-function loadCustomerMenu() {
-  let html = '';
-  if (items.length === 0) {
-    document.getElementById("menuItems").innerHTML = "<p style='text-align:center;color:#999;'>Loading menu...</p>";
-    return;
-  }
-  items.forEach((item, idx) => {
-    let displayName = item.name_en || "Unknown Item";
-    if (currentLang === 'hi' && item.name_hi) displayName = item.name_hi;
-    if (currentLang === 'or' && item.name_or) displayName = item.name_or;
-    html += `<div class="menu-item">
-      <span><strong>${displayName}</strong> <small>₹${item.price}</small></span>
-      <button onclick="addCustomerItem(${idx})" style="background:#2e7d32;padding:8px 16px;border-radius:6px;">+ Add</button>
-    </div>`;
-  });
-  document.getElementById("menuItems").innerHTML = html;
-}
-
-function addCustomerItem(idx) {
-  if (!items[idx]) return;
-  const item = items[idx];
-  let existing = customerOrder.find(o => o.name_en === item.name_en);
-  if (existing) existing.qty += 1;
-  else customerOrder.push({...item, qty: 1});
-  renderCustomerOrder();
-}
-
-function renderCustomerOrder() {
-  let html = "", total = 0;
-  customerOrder.forEach((b, i) => {
-    const t = b.qty * b.price;
-    total += t;
-    html += `<tr><td>${b.name_en}</td><td>${b.qty}</td><td>₹${t}</td><td onclick="delCustomerItem(${i})" style="color:red;cursor:pointer;">❌</td></tr>`;
-  });
-  document.getElementById("customerBill").innerHTML = html;
-  document.getElementById("custTotal").innerText = total.toFixed(2);
-  generateDynamicPhonePeQR();
-}
-
-function delCustomerItem(i) {
-  customerOrder.splice(i, 1);
-  renderCustomerOrder();
-}
-
-function clearCustomerOrder() {
-  if (confirm("Clear cart?")) {
-    customerOrder = [];
-    renderCustomerOrder();
-  }
-}
-
-function placeCustomerOrder() {
-  if (customerOrder.length === 0) return alert("Cart is empty!");
-  const total = parseFloat(document.getElementById("custTotal").innerText);
-  const orderId = Date.now();
-  const orderData = {
-    id: orderId,
-    table: currentTable,
-    name: currentName,
-    items: JSON.parse(JSON.stringify(customerOrder)),
-    total: total,
-    timestamp: new Date().toLocaleString(),
-    status: "pending",
-    lang: currentLang
-  };
-  db.ref('tableOrders/' + orderId).set(orderData);
-  db.ref('newOrders/' + orderId).set(orderData);
-  alert(`✅ Order Placed Successfully for Table ${currentTable}`);
-}
-
-function payByCash() {
-  if (customerOrder.length === 0) return alert("Cart is empty!");
-  const orderId = Date.now();
-  const orderData = {
-    id: orderId,
-    table: currentTable,
-    name: currentName,
-    items: JSON.parse(JSON.stringify(customerOrder)),
-    total: parseFloat(document.getElementById("custTotal").innerText),
-    timestamp: new Date().toLocaleString(),
-    status: "pending",
-    paymentMode: "Cash",
-    lang: currentLang
-  };
-  db.ref('tableOrders/' + orderId).set(orderData);
-  db.ref('newOrders/' + orderId).set(orderData);
-  document.getElementById("paymentSuccessMsg").innerHTML = `✅ Cash Payment Requested!<br><span style="font-size:16px;">Staff has been notified.</span>`;
-  document.getElementById("paymentSuccessMsg").style.display = "block";
-}
-
-// ====================== CUSTOMER PAID - EXACT FORMAT ======================
+// ====================== CUSTOMER PAID - FULL BILL WITH GST ======================
 function markAsPaid() {
   const paidAmt = parseFloat(document.getElementById("paidAmount").value);
   const total = parseFloat(document.getElementById("custTotal").innerText);
@@ -699,15 +604,26 @@ function markAsPaid() {
   if (!paidAmt || paidAmt < total) return alert("Please enter correct paid amount");
   if (!whatsappNum || whatsappNum.length !== 10) return alert("Please enter valid 10-digit WhatsApp number");
 
+  let subtotal = 0;
+  let itemsList = "";
+
+  customerOrder.forEach(item => {
+    const amt = item.qty * item.price;
+    subtotal += amt;
+    itemsList += `${item.name_en} x${item.qty} = ₹${amt}%0A`;
+  });
+
+  const gst = Math.round(subtotal * 0.05);
+  const grandTotal = subtotal + gst;
+
   let billMsg = `Shree & Shriyan Dhaba - Payment Receipt%0A%0A`;
   billMsg += `Table: ${currentTable}%0A`;
   billMsg += `Customer: ${currentName}%0A%0A`;
-
-  customerOrder.forEach(item => {
-    billMsg += `${item.name_en} x${item.qty} = ₹${item.qty * item.price}%0A`;
-  });
-
-  billMsg += `%0APaid: ₹${paidAmt}%0A`;
+  billMsg += itemsList;
+  billMsg += `%0ASubtotal: ₹${subtotal}%0A`;
+  billMsg += `GST 5%: ₹${gst}%0A`;
+  billMsg += `Grand Total: ₹${grandTotal}%0A`;
+  billMsg += `Paid: ₹${paidAmt}%0A%0A`;
   billMsg += `Thank You! Come Again 😊`;
 
   const whatsappUrl = `https://wa.me/91${whatsappNum}?text=${billMsg}`;
