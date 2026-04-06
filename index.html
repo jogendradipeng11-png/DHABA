@@ -760,10 +760,8 @@ function markAsPaid() {
 
     const encodedMsg = encodeURIComponent(billMsg);
 
-    // This opens WhatsApp MOBILE APP directly on phones
-    const whatsappUrl = `whatsapp://send?phone=91${whatsappNum}&text=${encodedMsg}`;
-
-    window.open(whatsappUrl, '_blank');
+    // This line opens WhatsApp app directly on mobile
+    const whatsappUrl = `https://wa.me/91${whatsappNum}?text=${encodedMsg}`;
 
     document.getElementById("paymentSuccessMsg").style.display = "block";
     alert("✅ Payment Confirmed! Bill sent to WhatsApp App.");
