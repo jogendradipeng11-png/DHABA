@@ -309,11 +309,8 @@ function addItem() {
   const item = items[idx];
   const qty = parseInt(document.getElementById("qty").value) || 1;
   let existing = bill.find(b => b.name === item.name_en);
-  if (existing) {
-    existing.qty += qty;
-  } else {
-    bill.push({name: item.name_en, qty: qty, price: item.price});
-  }
+  if (existing) existing.qty += qty;
+  else bill.push({name: item.name_en, qty: qty, price: item.price});
   renderBill();
 }
 
@@ -322,12 +319,7 @@ function renderBill() {
   bill.forEach((b, i) => {
     const amt = b.qty * b.price;
     total += amt;
-    html += `<tr>
-      <td>${b.name}</td>
-      <td>${b.qty}</td>
-      <td>₹${amt}</td>
-      <td onclick="removeItem(${i})" style="color:red;cursor:pointer;">❌</td>
-    </tr>`;
+    html += `<tr><td>${b.name}</td><td>${b.qty}</td><td>₹${amt}</td><td onclick="removeItem(${i})" style="color:red;cursor:pointer;">❌</td></tr>`;
   });
   document.getElementById("bill").innerHTML = html;
   document.getElementById("total").innerText = total.toFixed(2);
@@ -687,37 +679,38 @@ function payByCash() {
   document.getElementById("paymentSuccessMsg").style.display = "block";
 }
 
-// ====================== FIXED: MARK AS PAID WITH WHATSAPP ======================
+// ====================== FIXED: DIRECT BILL SEND ON WHATSAPP ======================
 function markAsPaid() {
   const paidAmt = parseFloat(document.getElementById("paidAmount").value);
   const total = parseFloat(document.getElementById("custTotal").innerText);
   const whatsappNum = document.getElementById("custWhatsApp").value.trim();
 
-  if (!paidAmt || paidAmt < total) {
-    return alert("Please enter correct paid amount (must be equal or more than total)");
-  }
-  if (!whatsappNum || whatsappNum.length < 10) {
-    return alert("Please enter valid WhatsApp number (10 digits)");
-  }
+  if (!paidAmt || paidAmt < total) return alert("Please enter correct paid amount");
+  if (!whatsappNum || whatsappNum.length !== 10) return alert("Please enter valid 10-digit WhatsApp number");
 
-  // Show success message
-  document.getElementById("paymentSuccessMsg").style.display = "block";
+  // Prepare full bill message
+  let billMsg = `✅ *Payment Received - Shree & Shriyan Dhaba*%0A%0A`;
+  billMsg += `Table: ${currentTable}%0A`;
+  billMsg += `Customer: ${currentName}%0A%0A`;
+  billMsg += `*Items*%0A`;
 
-  // Prepare bill message
-  let message = `✅ *Payment Received - Shree & Shriyan Dhaba*%0A%0A`;
-  message += `Table: ${currentTable}%0A`;
-  message += `Customer: ${currentName}%0A`;
-  message += `Total Bill: ₹${total}%0A`;
-  message += `Paid Amount: ₹${paidAmt}%0A`;
-  message += `Thank You! Visit Again 😊`;
+  customerOrder.forEach(item => {
+    billMsg += `${item.name_en} × ${item.qty} = ₹${item.qty * item.price}%0A`;
+  });
 
-  // Open WhatsApp with the entered number
-  const whatsappUrl = `https://web.whatsapp.com/send?phone=91${whatsappNum}&text=${message}`;
+  billMsg += `%0A*Total Bill:* ₹${total}%0A`;
+  billMsg += `*Paid Amount:* ₹${paidAmt}%0A`;
+  billMsg += `Thank You! Visit Again 😊`;
+
+  // Open WhatsApp directly with bill
+  const whatsappUrl = `https://web.whatsapp.com/send?phone=91${whatsappNum}&text=${billMsg}`;
   window.open(whatsappUrl, '_blank');
 
-  alert("✅ Payment Confirmed! Receipt sent to WhatsApp.");
+  // Show success
+  document.getElementById("paymentSuccessMsg").style.display = "block";
+  alert("✅ Payment Confirmed! Bill sent to WhatsApp.");
 
-  // Clear order
+  // Clear cart
   customerOrder = [];
   renderCustomerOrder();
 }
