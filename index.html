@@ -736,7 +736,7 @@ function markAsPaid() {
     const gst = Math.round(subtotal * 0.05);
     const grandTotal = subtotal + gst;
 
-    // Printed Bill Style Format
+    // Clean Printed Bill Style
     let billMsg = 
         `🧾 *SHREE & SHRIYAN DHABA*%0A` +
         `Durlaga, Jharsuguda (Odisha)%0A` +
@@ -760,11 +760,15 @@ function markAsPaid() {
 
     const encodedMsg = encodeURIComponent(billMsg);
 
-    // This line opens WhatsApp app directly on mobile
-    const whatsappUrl = `https://wa.me/91${whatsappNum}?text=${encodedMsg}`;
+    // ✅ This opens WhatsApp mobile app directly
+    const whatsappUrl = `whatsapp://send?phone=91${whatsappNum}&text=${encodedMsg}`;
 
+    // Open WhatsApp
+    window.open(whatsappUrl, '_blank');
+
+    // Show success UI
     document.getElementById("paymentSuccessMsg").style.display = "block";
-    alert("✅ Payment Confirmed! Bill sent to WhatsApp App.");
+    alert("✅ Payment Confirmed! Detailed bill sent to WhatsApp App.");
 
     // Clear cart
     customerOrder = [];
