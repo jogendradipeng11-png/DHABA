@@ -679,7 +679,7 @@ function payByCash() {
   document.getElementById("paymentSuccessMsg").style.display = "block";
 }
 
-// ====================== FIXED: CLEAN BILL SEND VIA WHATSAPP ======================
+// ====================== FIXED: CLEAN BILL SEND VIA WHATSAPP (wa.me) ======================
 function markAsPaid() {
   const paidAmt = parseFloat(document.getElementById("paidAmount").value);
   const total = parseFloat(document.getElementById("custTotal").innerText);
@@ -688,7 +688,7 @@ function markAsPaid() {
   if (!paidAmt || paidAmt < total) return alert("Please enter correct paid amount");
   if (!whatsappNum || whatsappNum.length !== 10) return alert("Please enter valid 10-digit WhatsApp number");
 
-  // Build clean bill message
+  // Build clean bill message exactly as requested
   let billMsg = `Shree & Shriyan Dhaba - Payment Receipt%0A%0A`;
   billMsg += `Table: ${currentTable}%0A`;
   billMsg += `Customer: ${currentName}%0A%0A`;
@@ -700,11 +700,11 @@ function markAsPaid() {
   billMsg += `%0APaid: ₹${paidAmt}%0A`;
   billMsg += `Thank You! Come Again 😊`;
 
-  // Open WhatsApp app directly with bill
-  const whatsappUrl = `whatsapp://send?phone=91${whatsappNum}&text=${billMsg}`;
-  window.location.href = whatsappUrl;
+  // Use wa.me for reliable mobile WhatsApp opening
+  const whatsappUrl = `https://wa.me/91${whatsappNum}?text=${billMsg}`;
+  window.open(whatsappUrl, '_blank');
 
-  // Show success message
+  // Show success
   document.getElementById("paymentSuccessMsg").style.display = "block";
   alert("✅ Payment Confirmed! Bill sent to WhatsApp.");
 
