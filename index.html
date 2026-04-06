@@ -25,6 +25,7 @@
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
     .logo img { width: 140px; display: block; margin: 0 auto 8px auto; border-radius: 8px; }
+    #liveOrdersTable { margin-top: 15px; }
 </style>
 </head>
 <body>
@@ -76,6 +77,15 @@
         <input id="qrTableNum" type="number" placeholder="Table Number">
         <button onclick="generateQRCode()" style="background:#ff9800;">📱 Generate Table QR</button>
         <div id="qrContainer" style="text-align:center;margin:15px 0;"></div>
+
+        <!-- Live Table Orders Section -->
+        <div id="liveOrdersSection" style="display:none; margin-top:20px;">
+            <h4>📋 Live Table Orders</h4>
+            <table id="liveOrdersTable" border="1">
+                <thead><tr><th>Table</th><th>Customer</th><th>Total</th><th>Time</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="liveOrdersBody"></tbody>
+            </table>
+        </div>
     </div>
 
     <!-- CUSTOMER VIEW -->
@@ -282,31 +292,25 @@ function voiceAdd() {
   alert("🎤 Voice Add feature coming soon. Please use 'Add Item' for now.");
 }
 
-// ====================== EXPORT EXCEL (Added) ======================
 function exportExcel() {
   if (bill.length === 0) {
     alert("No items in the bill to export!");
     return;
   }
-
   let csvContent = "data:text/csv;charset=utf-8,";
   csvContent += "Item,Quantity,Rate,Amount\n";
-
   let subtotal = 0;
   bill.forEach(item => {
     const amount = item.qty * item.price;
     subtotal += amount;
     csvContent += `"${item.name.replace(/"/g, '""')}",${item.qty},${item.price},${amount}\n`;
   });
-
   const gst = Math.round(subtotal * 0.05);
   const grandTotal = subtotal + gst;
-
   csvContent += "\n";
   csvContent += ",,,Subtotal," + subtotal + "\n";
   csvContent += ",,,GST (5%)," + gst + "\n";
   csvContent += ",,,Grand Total," + grandTotal + "\n";
-
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
   link.setAttribute("href", encodedUri);
@@ -314,11 +318,70 @@ function exportExcel() {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-
   alert("✅ Bill exported successfully as Excel (CSV) file!");
 }
 
-// ====================== CUSTOMER SIDE ====================== 
+// ====================== LIVE TABLE ORDERS (New Implementation) ======================
+let liveOrdersListener = null;
+
+function showTableOrders() {
+  const section = document.getElementById("liveOrdersSection");
+  section.style.display = section.style.display === "none" ? "block" : "none";
+
+  if (section.style.display === "block") {
+    loadLiveOrders();
+  }
+}
+
+function loadLiveOrders() {
+  const tbody = document.getElementById("liveOrdersBody");
+  tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;'>Loading live orders...</td></tr>";
+
+  if (liveOrdersListener) liveOrdersListener.off();
+
+  liveOrdersListener = db.ref('tableOrders').on('value', (snapshot) => {
+    const data = snapshot.val();
+    tbody.innerHTML = "";
+
+    if (!data) {
+      tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;color:#999;'>No live orders at the moment.</td></tr>";
+      return;
+    }
+
+    Object.keys(data).forEach(key => {
+      const order = data[key];
+      if (!order || order.status === "completed") return;
+
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td><strong>${order.table}</strong></td>
+        <td>${order.name || 'Guest'}</td>
+        <td>₹${order.total}</td>
+        <td>${order.timestamp ? order.timestamp.split(',')[1] || order.timestamp : 'N/A'}</td>
+        <td><span style="color:${order.status === 'pending' ? 'orange' : 'green'};">${order.status || 'pending'}</span></td>
+        <td>
+          <button onclick="acceptLiveOrder('${key}')" style="background:#2e7d32;padding:4px 8px;font-size:12px;">Accept & Print</button>
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+  });
+}
+
+function acceptLiveOrder(orderId) {
+  if (!confirm("Accept this order and print bill?")) return;
+
+  db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
+    const order = snapshot.val();
+    if (order) {
+      showPrintPopup(order);
+      // Optionally mark as accepted
+      db.ref('tableOrders/' + orderId + '/status').set("accepted");
+    }
+  });
+}
+
+// ====================== CUSTOMER SIDE ======================
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim();
