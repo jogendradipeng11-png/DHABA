@@ -681,54 +681,60 @@ function payByCash() {
 
 // ====================== FIXED: DIRECT BILL SEND ON WHATSAPP ======================
 function markAsPaid() {
-  const paidAmt = parseFloat(document.getElementById("paidAmount").value);
-  const total = parseFloat(document.getElementById("custTotal").innerText);
+  const paidAmt = parseFloat(document.getElementById("paidAmount").value) || 0;
+  const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
   const whatsappNum = document.getElementById("custWhatsApp").value.trim();
 
-  if (!paidAmt || paidAmt < total) {
-    return alert("Please enter correct paid amount (must be >= total bill)");
+  if (paidAmt < total) {
+    return alert("❌ Paid amount must be equal or greater than the bill");
   }
   if (!whatsappNum || whatsappNum.length !== 10) {
-    return alert("Please enter valid 10-digit WhatsApp number");
+    return alert("❌ Please enter valid 10-digit WhatsApp number");
   }
 
-  // Build the full bill message
-  let billMsg = `✅ *Payment Received - Shree & Shriyan Dhaba*\n\n`;
-  billMsg += `📍 Table: ${currentTable}\n`;
-  billMsg += `👤 Customer: ${currentName}\n`;
-  billMsg += `🕒 Time: ${new Date().toLocaleString('en-IN')}\n\n`;
-  billMsg += `*─── Items ───*\n`;
+  // === Beautiful WhatsApp Message ===
+  let billMsg = `✅ *Payment Received Successfully*\n\n`;
+  billMsg += `🏠 *Shree & Shriyan Dhaba*\n`;
+  billMsg += `📍 Durlaga, Jharsuguda (Odisha)\n`;
+  billMsg += `🕒 ${new Date().toLocaleString('en-IN')}\n\n`;
+
+  billMsg += `👤 *Customer:* ${currentName}\n`;
+  billMsg += `🪑 *Table:* ${currentTable}\n\n`;
+
+  billMsg += `*─── ORDER ITEMS ───*\n\n`;
 
   customerOrder.forEach(item => {
-    const itemTotal = item.qty * item.price;
-    billMsg += `• ${item.name_en} × ${item.qty} = ₹${itemTotal}\n`;
+    const itemAmt = item.qty * item.price;
+    billMsg += `• ${item.name_en}\n`;
+    billMsg += `   Qty: ${item.qty} × ₹${item.price} = ₹${itemAmt}\n\n`;
   });
 
   const subtotal = total;
   const gst = Math.round(subtotal * 0.05);
   const grandTotal = subtotal + gst;
 
-  billMsg += `\n*Subtotal:* ₹${subtotal}\n`;
-  billMsg += `*GST (5%):* ₹${gst}\n`;
-  billMsg += `*────────────────*\n`;
-  billMsg += `*Grand Total:* ₹${grandTotal}\n`;
-  billMsg += `*Paid Amount:* ₹${paidAmt}\n\n`;
-  billMsg += `✅ Payment Received Successfully!\n`;
-  billMsg += `Thank You! Visit Again 😊`;
+  billMsg += `*────────────────────*\n`;
+  billMsg += `*Subtotal :* ₹${subtotal}\n`;
+  billMsg += `*GST (5%) :* ₹${gst}\n`;
+  billMsg += `*Grand Total :* ₹${grandTotal}\n`;
+  billMsg += `*Paid Amount :* ₹${paidAmt}\n`;
+  billMsg += `*────────────────────*\n\n`;
 
-  // Encode the message properly
+  billMsg += `✅ *Payment Confirmed!*\n`;
+  billMsg += `Thank you for visiting 😊\n`;
+  billMsg += `Visit Again Soon!`;
+
+  // Open WhatsApp on Mobile (most reliable way)
   const encodedMsg = encodeURIComponent(billMsg);
-
-  // Open WhatsApp using the more reliable API endpoint
   const waUrl = `https://api.whatsapp.com/send?phone=91${whatsappNum}&text=${encodedMsg}`;
+
   window.open(waUrl, '_blank');
 
-  // Show success in the app
+  // Success feedback
   document.getElementById("paymentSuccessMsg").style.display = "block";
+  alert("✅ Full beautiful bill sent to WhatsApp!\n\nIt will open automatically.");
 
-  alert("✅ Payment Confirmed! Full bill should now open in WhatsApp.");
-
-  // Clear the cart
+  // Clear cart
   customerOrder = [];
   renderCustomerOrder();
 }
