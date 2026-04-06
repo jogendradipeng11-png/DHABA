@@ -568,7 +568,7 @@ function printThermalBill() {
   printBill();
 }
 
-// ====================== STAFF WHATSAPP - FULL BILL WITH GST ======================
+// ====================== STAFF WHATSAPP - FULL BILL ======================
 window.sendWhatsApp = function() {
   let subtotal = 0;
   let itemsList = "";
@@ -595,7 +595,7 @@ window.sendWhatsApp = function() {
   window.open(`https://wa.me/?text=${msg}`, '_blank');
 };
 
-// ====================== CUSTOMER PAID - FULL BILL WITH GST ======================
+// ====================== CUSTOMER PAID - FULL BILL ======================
 function markAsPaid() {
   const paidAmt = parseFloat(document.getElementById("paidAmount").value);
   const total = parseFloat(document.getElementById("custTotal").innerText);
@@ -634,6 +634,141 @@ function markAsPaid() {
 
   customerOrder = [];
   renderCustomerOrder();
+}
+
+function generateDynamicPhonePeQR() {
+  const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
+  const container = document.getElementById("dynamicPhonePeQR");
+  if (total <= 0 || !currentTable) {
+    container.style.display = "none";
+    return;
+  }
+  const txnNote = `Table${currentTable}_${Date.now()}`;
+  const upiLink = `upi://pay?pa=${MERCHANT_UPI}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${total.toFixed(2)}&cu=INR&tn=${encodeURIComponent(txnNote)}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(upiLink)}`;
+  container.innerHTML = `
+    <img src="${qrUrl}" onclick="window.location.href='${upiLink}'" alt="PhonePe QR">
+    <p style="margin:12px 0 0 0; font-weight:bold; color:#6739B7;">₹${total.toFixed(2)} — Tap QR to open PhonePe</p>
+  `;
+  container.style.display = "block";
+}
+
+function generateQRCode() {
+  const tableNo = document.getElementById("qrTableNum").value.trim();
+  if (!tableNo) return alert("Please enter Table Number");
+  const baseUrl = window.location.href.split('?')[0];
+  const orderLink = `${baseUrl}?mode=customer&table=${tableNo}`;
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(orderLink)}`;
+  document.getElementById("qrContainer").innerHTML = `
+    <img src="${qrSrc}" style="width:250px; border:8px solid #d84315; border-radius:12px;" alt="Table QR">
+    <p style="margin-top:10px; font-weight:bold; color:#d84315;">Table ${tableNo} - Scan to Start Ordering</p>
+  `;
+}
+
+// ====================== CUSTOMER START ORDERING FIXED ======================
+function joinTable() {
+  currentTable = document.getElementById("custTable").value.trim();
+  currentName = document.getElementById("custName").value.trim();
+  if (!currentTable) return alert("Please enter your Table Number");
+  if (!currentName) return alert("Please enter your Name (required)");
+
+  document.getElementById("signInSection").style.display = "none";
+  document.getElementById("menuSection").style.display = "block";
+  document.getElementById("displayTable").innerText = currentTable;
+  document.getElementById("displayName").innerText = currentName;
+  loadCustomerMenu();
+  renderCustomerOrder();
+}
+
+// ====================== CUSTOMER SIDE ======================
+function loadCustomerMenu() {
+  let html = '';
+  if (items.length === 0) {
+    document.getElementById("menuItems").innerHTML = "<p style='text-align:center;color:#999;'>Loading menu...</p>";
+    return;
+  }
+  items.forEach((item, idx) => {
+    let displayName = item.name_en || "Unknown Item";
+    if (currentLang === 'hi' && item.name_hi) displayName = item.name_hi;
+    if (currentLang === 'or' && item.name_or) displayName = item.name_or;
+    html += `<div class="menu-item">
+      <span><strong>${displayName}</strong> <small>₹${item.price}</small></span>
+      <button onclick="addCustomerItem(${idx})" style="background:#2e7d32;padding:8px 16px;border-radius:6px;">+ Add</button>
+    </div>`;
+  });
+  document.getElementById("menuItems").innerHTML = html;
+}
+
+function addCustomerItem(idx) {
+  if (!items[idx]) return;
+  const item = items[idx];
+  let existing = customerOrder.find(o => o.name_en === item.name_en);
+  if (existing) existing.qty += 1;
+  else customerOrder.push({...item, qty: 1});
+  renderCustomerOrder();
+}
+
+function renderCustomerOrder() {
+  let html = "", total = 0;
+  customerOrder.forEach((b, i) => {
+    const t = b.qty * b.price;
+    total += t;
+    html += `<tr><td>${b.name_en}</td><td>${b.qty}</td><td>₹${t}</td><td onclick="delCustomerItem(${i})" style="color:red;cursor:pointer;">❌</td></tr>`;
+  });
+  document.getElementById("customerBill").innerHTML = html;
+  document.getElementById("custTotal").innerText = total.toFixed(2);
+  generateDynamicPhonePeQR();
+}
+
+function delCustomerItem(i) {
+  customerOrder.splice(i, 1);
+  renderCustomerOrder();
+}
+
+function clearCustomerOrder() {
+  if (confirm("Clear cart?")) {
+    customerOrder = [];
+    renderCustomerOrder();
+  }
+}
+
+function placeCustomerOrder() {
+  if (customerOrder.length === 0) return alert("Cart is empty!");
+  const total = parseFloat(document.getElementById("custTotal").innerText);
+  const orderId = Date.now();
+  const orderData = {
+    id: orderId,
+    table: currentTable,
+    name: currentName,
+    items: JSON.parse(JSON.stringify(customerOrder)),
+    total: total,
+    timestamp: new Date().toLocaleString(),
+    status: "pending",
+    lang: currentLang
+  };
+  db.ref('tableOrders/' + orderId).set(orderData);
+  db.ref('newOrders/' + orderId).set(orderData);
+  alert(`✅ Order Placed Successfully for Table ${currentTable}`);
+}
+
+function payByCash() {
+  if (customerOrder.length === 0) return alert("Cart is empty!");
+  const orderId = Date.now();
+  const orderData = {
+    id: orderId,
+    table: currentTable,
+    name: currentName,
+    items: JSON.parse(JSON.stringify(customerOrder)),
+    total: parseFloat(document.getElementById("custTotal").innerText),
+    timestamp: new Date().toLocaleString(),
+    status: "pending",
+    paymentMode: "Cash",
+    lang: currentLang
+  };
+  db.ref('tableOrders/' + orderId).set(orderData);
+  db.ref('newOrders/' + orderId).set(orderData);
+  document.getElementById("paymentSuccessMsg").innerHTML = `✅ Cash Payment Requested!<br><span style="font-size:16px;">Staff has been notified.</span>`;
+  document.getElementById("paymentSuccessMsg").style.display = "block";
 }
 
 function generateDynamicPhonePeQR() {
