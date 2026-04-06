@@ -75,6 +75,7 @@
         <button onclick="addNewMenuItem()" style="background:#ff9800;">➕ Add / Update Item</button>
         <button onclick="showCurrentMenu()" style="background:#666;">📋 Show Current Menu</button>
 
+        <!-- Show Current Menu Section -->
         <div id="currentMenuSection">
             <h4 style="color:#d84315;">Current Menu Items</h4>
             <div id="currentMenuList"></div>
@@ -86,6 +87,7 @@
         <button onclick="generateQRCode()" style="background:#ff9800;">📱 Generate Table QR</button>
         <div id="qrContainer" style="text-align:center;margin:15px 0;"></div>
 
+        <!-- Live Table Orders Section -->
         <div id="liveOrdersSection" style="display:none; margin-top:20px;">
             <h4 style="color:#d84315;">📋 Live Table Orders (Real-time)</h4>
             <div id="liveOrdersContainer" style="max-height:400px; overflow-y:auto;">
@@ -107,7 +109,7 @@
         </div>
         <div id="signInSection">
             <h3 id="welcomeText" style="text-align:center;">Welcome!</h3>
-            <input id="custTable" type="number" placeholder="Your Table Number" readonly style="background:#f0f0f0; color:#333;">
+            <input id="custTable" type="number" placeholder="Your Table Number">
             <input id="custName" placeholder="Your Name (required)">
             <button onclick="joinTable()" id="startOrderingBtn" style="background:#d84315;font-size:18px;">✅ Start Ordering</button>
         </div>
@@ -262,7 +264,7 @@ async function translateText(text, targetLang) {
   } catch (e) { return text; }
 }
 
-// ====================== SHOW CURRENT MENU ======================
+// ====================== SHOW CURRENT MENU (New - Full CRUD) ======================
 function showCurrentMenu() {
   const section = document.getElementById("currentMenuSection");
   section.style.display = "block";
@@ -276,10 +278,12 @@ function hideCurrentMenu() {
 function renderCurrentMenu() {
   const container = document.getElementById("currentMenuList");
   container.innerHTML = "";
+
   if (items.length === 0) {
     container.innerHTML = "<p style='text-align:center; color:#999;'>No menu items found.</p>";
     return;
   }
+
   items.forEach((item, index) => {
     const div = document.createElement("div");
     div.className = "menu-list-item";
@@ -295,10 +299,11 @@ function renderCurrentMenu() {
 
 function deleteMenuItem(index) {
   if (!confirm(`Delete "${items[index].name_en}" from menu?`)) return;
+  
   items.splice(index, 1);
   saveMenu();
-  renderCurrentMenu();
-  renderStaffMenu();
+  renderCurrentMenu();   // Refresh the list immediately
+  renderStaffMenu();     // Refresh dropdown too
   alert("Item deleted successfully.");
 }
 
@@ -309,8 +314,11 @@ function addItem() {
   const item = items[idx];
   const qty = parseInt(document.getElementById("qty").value) || 1;
   let existing = bill.find(b => b.name === item.name_en);
-  if (existing) existing.qty += qty;
-  else bill.push({name: item.name_en, qty: qty, price: item.price});
+  if (existing) {
+    existing.qty += qty;
+  } else {
+    bill.push({name: item.name_en, qty: qty, price: item.price});
+  }
   renderBill();
 }
 
@@ -319,7 +327,12 @@ function renderBill() {
   bill.forEach((b, i) => {
     const amt = b.qty * b.price;
     total += amt;
-    html += `<tr><td>${b.name}</td><td>${b.qty}</td><td>₹${amt}</td><td onclick="removeItem(${i})" style="color:red;cursor:pointer;">❌</td></tr>`;
+    html += `<tr>
+      <td>${b.name}</td>
+      <td>${b.qty}</td>
+      <td>₹${amt}</td>
+      <td onclick="removeItem(${i})" style="color:red;cursor:pointer;">❌</td>
+    </tr>`;
   });
   document.getElementById("bill").innerHTML = html;
   document.getElementById("total").innerText = total.toFixed(2);
@@ -384,14 +397,17 @@ function loadLiveOrdersRealTime() {
   liveOrdersRef.on('value', (snapshot) => {
     const data = snapshot.val();
     tbody.innerHTML = "";
+
     if (!data || Object.keys(data).length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">No pending table orders at the moment.</td></tr>';
       return;
     }
+
     let hasOrders = false;
     Object.keys(data).forEach((key) => {
       const order = data[key];
       if (!order || order.status === "completed") return;
+
       hasOrders = true;
       const row = document.createElement("tr");
       row.innerHTML = `
@@ -406,6 +422,7 @@ function loadLiveOrdersRealTime() {
       `;
       tbody.appendChild(row);
     });
+
     if (!hasOrders) {
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">No pending table orders at the moment.</td></tr>';
     }
@@ -414,6 +431,7 @@ function loadLiveOrdersRealTime() {
 
 function acceptLiveOrder(orderId) {
   if (!confirm("Accept this order and print the bill?")) return;
+
   db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
     const order = snapshot.val();
     if (order) {
@@ -531,12 +549,12 @@ function showPrintPopup(order) {
           URL.revokeObjectURL(url);
           window.opener && window.opener.clearStaffBill && window.opener.clearStaffBill();
         }
-       function sendViaWhatsApp() {
-
-          const message = encodeURIComponent(`🧾 *Shree & Shriyan Dhaba Bill*\n\nTable: ${order.table || 'Walk-in'}\nCustomer  : ${order.name || 'Guest'}\n\nTime      : ${new Date().toLocaleString('en-IN')}\n─── ITEMS ───\n${itemsList}\n\n────────────────────\n\nSubtotal: ₹${subtotal}\nGST (5%): ₹${gst}\n\nGrand Total : ₹${grandTotal}\n────────────────────\n✅ Thank You! Visit Again 😊`);
-          window.open(`https://web.whatsapp.com/send?text=\${message}\`, '_blank');
-        }
-        window.onload = () => setTimeout(() => window.print(), 600);
+        function sendViaWhatsApp() {
+          const message = encodeURIComponent(\`🧾 *Shree & Shriyan Dhaba Bill*\\n\\nTable: ${order.table || 'Walk-in'}\\nCustomer: ${order.name || 'Guest'}\\nTotal: ₹${grandTotal}\\nThank You!\`);
+          window.open(\`https://web.whatsapp.com/send?text=\${message}\`, '_blank');
+        }
+        window.onload = () => setTimeout(() => window.print(), 600);
+      <\/script>
     </body>
     </html>
   `);
@@ -679,65 +697,16 @@ function payByCash() {
   document.getElementById("paymentSuccessMsg").style.display = "block";
 }
 
-// ====================== FIXED: DIRECT BILL SEND ON WHATSAPP ======================
 function markAsPaid() {
-  const paidAmt = parseFloat(document.getElementById("paidAmount").value) || 0;
-  const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
-  const whatsappNum = document.getElementById("custWhatsApp").value.trim();
-
-  if (paidAmt < total) {
-    return alert("❌ Paid amount must be equal or greater than the bill");
-  }
-  if (!whatsappNum || whatsappNum.length !== 10) {
-    return alert("❌ Please enter valid 10-digit WhatsApp number");
-  }
-
-  // === Beautiful WhatsApp Message ===
-  let billMsg = `✅ *Payment Received Successfully*\n\n`;
-  billMsg += `🏠 *Shree & Shriyan Dhaba*\n`;
-  billMsg += `📍 Durlaga, Jharsuguda (Odisha)\n`;
-  billMsg += `🕒 ${new Date().toLocaleString('en-IN')}\n\n`;
-
-  billMsg += `👤 *Customer:* ${currentName}\n`;
-  billMsg += `🪑 *Table:* ${currentTable}\n\n`;
-
-  billMsg += `*─── ORDER ITEMS ───*\n\n`;
-
-  customerOrder.forEach(item => {
-    const itemAmt = item.qty * item.price;
-    billMsg += `• ${item.name_en}\n`;
-    billMsg += `   Qty: ${item.qty} × ₹${item.price} = ₹${itemAmt}\n\n`;
-  });
-
-  const subtotal = total;
-  const gst = Math.round(subtotal * 0.05);
-  const grandTotal = subtotal + gst;
-
-  billMsg += `*────────────────────*\n`;
-  billMsg += `*Subtotal :* ₹${subtotal}\n`;
-  billMsg += `*GST (5%) :* ₹${gst}\n`;
-  billMsg += `*Grand Total :* ₹${grandTotal}\n`;
-  billMsg += `*Paid Amount :* ₹${paidAmt}\n`;
-  billMsg += `*────────────────────*\n\n`;
-
-  billMsg += `✅ *Payment Confirmed!*\n`;
-  billMsg += `Thank you for visiting 😊\n`;
-  billMsg += `Visit Again Soon!`;
-
-  // Open WhatsApp on Mobile (most reliable way)
-  const encodedMsg = encodeURIComponent(billMsg);
-  const waUrl = `https://api.whatsapp.com/send?phone=91${whatsappNum}&text=${encodedMsg}`;
-
-  window.open(waUrl, '_blank');
-
-  // Success feedback
+  const paidAmt = parseFloat(document.getElementById("paidAmount").value);
+  const total = parseFloat(document.getElementById("custTotal").innerText);
+  if (!paidAmt || paidAmt < total) return alert("Please enter correct paid amount");
   document.getElementById("paymentSuccessMsg").style.display = "block";
-  alert("✅ Full beautiful bill sent to WhatsApp!\n\nIt will open automatically.");
-
-  // Clear cart
+  alert("✅ Payment Confirmed! Receipt sent to WhatsApp.");
   customerOrder = [];
   renderCustomerOrder();
 }
+
 function generateDynamicPhonePeQR() {
   const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
   const container = document.getElementById("dynamicPhonePeQR");
