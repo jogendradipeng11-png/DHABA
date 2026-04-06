@@ -107,7 +107,6 @@
         </div>
         <div id="signInSection">
             <h3 id="welcomeText" style="text-align:center;">Welcome!</h3>
-            <!-- Table Number is READ-ONLY -->
             <input id="custTable" type="number" placeholder="Your Table Number" readonly style="background:#f0f0f0; color:#333;">
             <input id="custName" placeholder="Your Name (required)">
             <button onclick="joinTable()" id="startOrderingBtn" style="background:#d84315;font-size:18px;">✅ Start Ordering</button>
@@ -688,12 +687,37 @@ function payByCash() {
   document.getElementById("paymentSuccessMsg").style.display = "block";
 }
 
+// ====================== FIXED: MARK AS PAID WITH WHATSAPP ======================
 function markAsPaid() {
   const paidAmt = parseFloat(document.getElementById("paidAmount").value);
   const total = parseFloat(document.getElementById("custTotal").innerText);
-  if (!paidAmt || paidAmt < total) return alert("Please enter correct paid amount");
+  const whatsappNum = document.getElementById("custWhatsApp").value.trim();
+
+  if (!paidAmt || paidAmt < total) {
+    return alert("Please enter correct paid amount (must be equal or more than total)");
+  }
+  if (!whatsappNum || whatsappNum.length < 10) {
+    return alert("Please enter valid WhatsApp number (10 digits)");
+  }
+
+  // Show success message
   document.getElementById("paymentSuccessMsg").style.display = "block";
+
+  // Prepare bill message
+  let message = `✅ *Payment Received - Shree & Shriyan Dhaba*%0A%0A`;
+  message += `Table: ${currentTable}%0A`;
+  message += `Customer: ${currentName}%0A`;
+  message += `Total Bill: ₹${total}%0A`;
+  message += `Paid Amount: ₹${paidAmt}%0A`;
+  message += `Thank You! Visit Again 😊`;
+
+  // Open WhatsApp with the entered number
+  const whatsappUrl = `https://web.whatsapp.com/send?phone=91${whatsappNum}&text=${message}`;
+  window.open(whatsappUrl, '_blank');
+
   alert("✅ Payment Confirmed! Receipt sent to WhatsApp.");
+
+  // Clear order
   customerOrder = [];
   renderCustomerOrder();
 }
