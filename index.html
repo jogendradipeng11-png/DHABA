@@ -710,6 +710,7 @@ function payByCash() {
 }
 
 // ====================== FIXED: DIRECT BILL SEND ON WHATSAPP ======================
+// ====================== FIXED: DIRECT BILL SEND ON WHATSAPP (Mobile App + Printed Bill Style) ======================
 function markAsPaid() {
     const paidAmt = parseFloat(document.getElementById("paidAmount").value);
     const total = parseFloat(document.getElementById("custTotal").innerText);
@@ -722,46 +723,52 @@ function markAsPaid() {
         return alert("Please enter valid 10-digit WhatsApp number");
     }
 
-    // Calculate proper breakdown
+    // Calculate breakdown
     let subtotal = 0;
     let itemsList = "";
 
     customerOrder.forEach(item => {
         const amt = item.qty * item.price;
         subtotal += amt;
-        itemsList += `${item.name_en} × ${item.qty} = ₹${amt}%0A`;
+        itemsList += `${item.name_en} × ${item.qty}   ₹${amt}%0A`;
     });
 
     const gst = Math.round(subtotal * 0.05);
     const grandTotal = subtotal + gst;
 
-    // Build clean WhatsApp message with proper line breaks
+    // Printed Bill Style Format
     let billMsg = 
-        `✅ *Payment Received - Shree & Shriyan Dhaba*%0A%0A` +
-        `🪑 Table      : ${currentTable}%0A` +
-        `👤 Customer   : ${currentName}%0A%0A` +
-        `*Items*%0A` +
+        `🧾 *SHREE & SHRIYAN DHABA*%0A` +
+        `Durlaga, Jharsuguda (Odisha)%0A` +
+        `📞 +91 7077088311%0A` +
+        `────────────────────%0A%0A` +
+        `Customer : ${currentName}%0A` +
+        `Table    : ${currentTable}%0A` +
+        `Date     : ${new Date().toLocaleDateString('en-IN')}%0A` +
+        `Time     : ${new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})}%0A%0A` +
+        `*ITEMS*%0A` +
         itemsList +
         `────────────────────%0A` +
-        `Subtotal      : ₹${subtotal}%0A` +
-        `GST (5%)      : ₹${gst}%0A` +
-        `Grand Total   : ₹${grandTotal}%0A` +
-        `Paid Amount   : ₹${paidAmt}%0A` +
+        `Subtotal      ₹${subtotal}%0A` +
+        `GST (5%)      ₹${gst}%0A` +
+        `────────────────────%0A` +
+        `Grand Total   ₹${grandTotal}%0A` +
+        `Paid Amount   ₹${paidAmt}%0A` +
         `────────────────────%0A%0A` +
-        `🙏 Thank You! Visit Again 😊`;
+        `Thank You! Visit Again 😊%0A` +
+        `🙏 Have a Great Day!`;
 
-    // ✅ CRITICAL FIX: Properly encode the message
     const encodedMsg = encodeURIComponent(billMsg);
 
-    // Open WhatsApp
-    const whatsappUrl = `https://web.whatsapp.com/send?phone=91${whatsappNum}&text=${encodedMsg}`;
+    // This opens WhatsApp MOBILE APP directly on phones
+    const whatsappUrl = `whatsapp://send?phone=91${whatsappNum}&text=${encodedMsg}`;
+
     window.open(whatsappUrl, '_blank');
 
-    // Show success message
     document.getElementById("paymentSuccessMsg").style.display = "block";
-    alert("✅ Payment Confirmed! Detailed bill sent to WhatsApp.");
+    alert("✅ Payment Confirmed! Bill sent to WhatsApp App.");
 
-    // Clear cart after sending
+    // Clear cart
     customerOrder = [];
     renderCustomerOrder();
 }
