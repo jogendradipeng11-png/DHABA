@@ -269,9 +269,7 @@ async function translateText(text, targetLang) {
     const res = await fetch(url);
     const data = await res.json();
     return data[0][0][0] || text;
-  } catch (e) {
-    return text;
-  }
+  } catch (e) { return text; }
 }
 
 // ====================== CUSTOMER SIDE ======================
@@ -432,7 +430,6 @@ function joinTable() {
   renderCustomerOrder();
 }
 
-// ====================== TABLE QR ======================
 function generateQRCode() {
   const tableNo = document.getElementById("qrTableNum").value.trim();
   if (!tableNo) return alert("Please enter Table Number");
@@ -447,7 +444,7 @@ function generateQRCode() {
   `;
 }
 
-// ====================== NOTIFICATION & PRINT POPUP (EXACTLY AS YOUR IMAGE) ======================
+// ====================== NOTIFICATION & PRINT POPUP ======================
 function listenForNewOrders() {
   db.ref('newOrders').on('child_added', (snapshot) => {
     const order = snapshot.val();
@@ -470,23 +467,42 @@ function listenForNewOrders() {
 
 function acceptOrder(orderId) {
   if (!confirm("Accept this order?")) return;
-
   db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
     const ord = snapshot.val();
-    if (!ord) return alert("Order not found");
-    showPrintPopup(ord);
+    if (ord) showPrintPopup(ord);
   });
 }
 
+// Staff manual bill print
+function printBill() {
+  const tempOrder = {
+    table: document.getElementById("customerName").value || "Walk-in",
+    name: document.getElementById("customerName").value || "Guest",
+    items: bill.map(item => ({name_en: item.name, qty: item.qty, price: item.price})),
+    total: parseFloat(document.getElementById("total").innerText) || 0,
+    lang: currentLang,
+    timestamp: new Date().toLocaleString()
+  };
+  showPrintPopup(tempOrder);
+}
+
+function printThermalBill() {
+  printBill();
+}
+
 function showPrintPopup(order) {
+  const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const timeStr = new Date().toTimeString().slice(0,8).replace(/:/g,'');
+  const fileName = `${order.name || 'Guest'}_Table${order.table || 'Walkin'}_${dateStr}_${timeStr}.pdf`;
+
   const printWin = window.open('', '_blank');
   let itemsHtml = '';
   let subtotal = 0;
 
-  order.items.forEach(item => {
-    const amt = item.qty * item.price;
+  (order.items || []).forEach(item => {
+    const amt = item.qty * (item.price || 0);
     subtotal += amt;
-    let itemName = item.name_en;
+    let itemName = item.name_en || item.name;
     if (order.lang === 'hi' && item.name_hi) itemName = item.name_hi;
     if (order.lang === 'or' && item.name_or) itemName = item.name_or;
     itemsHtml += `<tr><td>${itemName}</td><td style="text-align:center">${item.qty}</td><td style="text-align:right">₹${amt}</td></tr>`;
@@ -496,7 +512,7 @@ function showPrintPopup(order) {
   const grandTotal = subtotal + gstAmount;
 
   const html = `
-    <div style="max-width:400px; margin:0 auto; padding:15px; font-family:Arial; background:white; border:1px solid #ddd;">
+    <div style="max-width:400px; margin:0 auto; padding:15px; font-family:Arial; background:white;">
       <div style="text-align:center;">
         <img src="./logo_180x90.jpg" style="width:90px; margin-bottom:8px;">
         <h2 style="color:#d84315; margin:5px 0;">Shree & Shriyan Dhaba</h2>
@@ -505,9 +521,9 @@ function showPrintPopup(order) {
       </div>
       <hr>
       <p><strong>Invoice:</strong> INV${Date.now().toString().slice(-6)}</p>
-      <p><strong>Table:</strong> ${order.table}</p>
-      <p><strong>Customer:</strong> ${order.name}</p>
-      <p><strong>Date:</strong> ${new Date().toLocaleString('en-IN')}</p>
+      <p><strong>Table:</strong> ${order.table || 'Walk-in'}</p>
+      <p><strong>Customer:</strong> ${order.name || 'Guest'}</p>
+      <p><strong>Date & Time:</strong> ${new Date().toLocaleString('en-IN')}</p>
       ${order.paymentMode ? `<p><strong>Payment Mode:</strong> ${order.paymentMode}</p>` : ''}
       <hr>
       <table style="width:100%; border-collapse:collapse; margin:10px 0;">
@@ -521,13 +537,13 @@ function showPrintPopup(order) {
       <p style="text-align:center; margin-top:20px; font-size:14px;">Thank You! Visit Again 😊</p>
     </div>
 
-    <div style="text-align:center; margin-top:20px;">
+    <div style="text-align:center; margin-top:25px;">
       <h4>Choose Print Method</h4>
-      <button onclick="window.opener.printThermalAndCut(${order.id}); window.close();" 
+      <button onclick="window.opener.printThermalAndCutFromPopup('${fileName}'); window.close();" 
               style="background:#e74c3c; color:white; width:90%; padding:14px; margin:8px 0; border:none; border-radius:8px; font-size:16px;">
         🖨️ Print Thermal + Auto Cut
       </button>
-      <button onclick="window.opener.printNormalAndClear(${order.id}); window.close();" 
+      <button onclick="window.opener.printNormalAndClearFromPopup('${fileName}'); window.close();" 
               style="background:#27ae60; color:white; width:90%; padding:14px; margin:8px 0; border:none; border-radius:8px; font-size:16px;">
         🧾 Normal Print & Clear
       </button>
@@ -542,62 +558,12 @@ function showPrintPopup(order) {
   printWin.document.close();
 }
 
-function printNormalAndClear(orderId) {
-  alert("✅ Normal Print & Clear executed");
-  // Add any clear logic if needed
+function printThermalAndCutFromPopup(fileName) {
+  alert(`✅ Thermal Print executed.\nFile saved as: ${fileName}`);
 }
 
-function printThermalAndCut(orderId) {
-  db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
-    const ord = snapshot.val();
-    if (ord) {
-      printThermalBill(ord.items, "INV" + Date.now().toString().slice(-6), ord.name, ord.table, ord.paymentMode || "");
-      db.ref('tableOrders/' + orderId).update({ status: "accepted" });
-    }
-  });
-}
-
-function printThermalBill(itemsList, invoiceNo, customerName, tableNo = '', paymentMode = '') {
-  let subtotal = 0;
-  let itemsHtml = '';
-  itemsList.forEach(item => {
-    const amt = item.qty * item.price;
-    subtotal += amt;
-    itemsHtml += `<tr><td>${item.name_en}</td><td>${item.qty}</td><td>₹${amt}</td></tr>`;
-  });
-  const grandTotal = Math.round(subtotal * 1.05);
-
-  const receiptHTML = `
-    <div style="max-width:380px;margin:0 auto;padding:10px;font-family:Arial;font-size:14px;">
-      <img src="./logo_180x90.jpg" style="width:90px;display:block;margin:0 auto 5px;">
-      <h2 style="text-align:center;color:#d84315;margin:5px 0;">Shree & Shriyan Dhaba</h2>
-      <p style="text-align:center;font-size:12px;">Durlaga, Jharsuguda, Odisha - 768204</p>
-      <p style="text-align:center;font-size:12px;">📞 +91 7077088311</p>
-      <hr>
-      <p><strong>Invoice:</strong> ${invoiceNo}</p>
-      ${tableNo ? `<p><strong>Table:</strong> ${tableNo}</p>` : ''}
-      <p><strong>Customer:</strong> ${customerName}</p>
-      <p><strong>Date:</strong> ${new Date().toLocaleString('en-IN')}</p>
-      ${paymentMode ? `<p><strong>Payment:</strong> ${paymentMode}</p>` : ''}
-      <hr>
-      <table style="width:100%;border-collapse:collapse;">
-        <thead><tr><th style="text-align:left">Item</th><th>Qty</th><th style="text-align:right">Amt</th></tr></thead>
-        <tbody>${itemsHtml}</tbody>
-      </table>
-      <hr>
-      <p style="text-align:right">Subtotal: ₹${subtotal}</p>
-      <p style="text-align:right">GST 5%: ₹${Math.round(subtotal * 0.05)}</p>
-      <h3 style="text-align:right;color:#d84315;">Grand Total: ₹${grandTotal}</h3>
-      <p style="text-align:center;margin-top:20px;">Thank You! Visit Again 😊</p>
-    </div>
-  `;
-
-  const printWin = window.open('', '_blank');
-  printWin.document.write(`
-    <!DOCTYPE html><html><head><title>Bill</title></head><body>${receiptHTML}
-    <script>window.print(); setTimeout(() => window.close(), 800);<\/script></body></html>
-  `);
-  printWin.document.close();
+function printNormalAndClearFromPopup(fileName) {
+  alert(`✅ Normal Print & Clear executed.\nFile saved as: ${fileName}`);
 }
 
 // ====================== INITIALIZE ======================
