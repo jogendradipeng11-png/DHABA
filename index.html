@@ -549,49 +549,9 @@ function showPrintPopup(order) {
           URL.revokeObjectURL(url);
           window.opener && window.opener.clearStaffBill && window.opener.clearStaffBill();
         }
-        function sendViaWhatsApp() {
-  const whatsappNum = prompt("Enter Customer's 10-digit WhatsApp Number:", "");
-  
-  if (!whatsappNum || whatsappNum.length !== 10) {
-    return alert("❌ Please enter a valid 10-digit WhatsApp number");
-  }
+function sendViaWhatsApp() {
 
-  let subtotal = 0;
-  let itemsList = "";
-
-  (order.items || []).forEach(item => {
-    const itemAmt = (item.qty || 1) * (item.price || 0);
-    subtotal += itemAmt;
-    itemsList += `• ${item.name_en || item.name} × ${item.qty} = ₹${itemAmt}\n`;
-  });
-
-  const gst = Math.round(subtotal * 0.05);
-  const grandTotal = subtotal + gst;
-
-  // All bill information inside encodeURIComponent
-  const message = encodeURIComponent(`🧾 *Shree & Shriyan Dhaba Bill*
-
-Table     : ${order.table || 'Walk-in'}
-Customer  : ${order.name || 'Guest'}
-Time      : ${new Date().toLocaleString('en-IN')}
-
-─── ITEMS ───
-
-${itemsList}
-────────────────────
-Subtotal     : ₹${subtotal}
-GST (5%)     : ₹${gst}
-Grand Total  : ₹${grandTotal}
-────────────────────
-
-✅ Thank You! Visit Again 😊`);
-
-  // Open WhatsApp
-  const waUrl = `https://api.whatsapp.com/send?phone=91${whatsappNum}&text=${message}`;
-  window.open(waUrl, '_blank');
-
-  alert("✅ Full bill sent successfully on WhatsApp!");
-}
+          const message = encodeURIComponent(`🧾 *Shree & Shriyan Dhaba Bill*\\n\\nTable: ${order.table || 'Walk-in'}\\nCustomer  : ${order.name || 'Guest'}\\n\\nTime : ${new Date().toLocaleString('en-IN')}\\n─── ITEMS ───\\n${itemsList}\\n\\n────────────────────\\n\\nSubtotal: ₹${subtotal}\\nGST (5%): ₹${gst}\\n\\nGrand Total : ₹${grandTotal}\\n────────────────────\\n✅ Thank You! Visit Again 😊`);
         }
         window.onload = () => setTimeout(() => window.print(), 600);
       <\/script>
