@@ -532,50 +532,25 @@ function showPrintPopup(order) {
           window.opener && window.opener.clearStaffBill && window.opener.clearStaffBill();
         }
        function sendViaWhatsApp() {
-  const whatsappNum = prompt("Enter Customer's 10-digit WhatsApp Number:", "");
-  
-  if (!whatsappNum || whatsappNum.length !== 10) {
-    return alert("❌ Please enter a valid 10-digit WhatsApp number");
-  }
+          const message = encodeURIComponent(`🧾 *Shree & Shriyan Dhaba Bill*
 
-  // Beautiful formatted bill with GST
-  let billMsg = `🧾 *Shree & Shriyan Dhaba Bill*\n\n`;
-  billMsg += `🏠 Shree & Shriyan Dhaba\n`;
-  billMsg += `📍 Durlaga, Jharsuguda (Odisha)\n`;
-  billMsg += `🕒 ${new Date().toLocaleString('en-IN')}\n\n`;
+Table     : ${order.table || 'Walk-in'}
+Customer  : ${order.name || 'Guest'}
+Time      : ${new Date().toLocaleString('en-IN')}
 
-  billMsg += `👤 Customer: ${order.name || 'Guest'}\n`;
-  billMsg += `🪑 Table: ${order.table || 'Walk-in'}\n\n`;
+─── ITEMS ───
 
-  billMsg += `*─── ORDER ITEMS ───*\n\n`;
+${itemsList}
+────────────────────
+Subtotal     : ₹${subtotal}
+GST (5%)     : ₹${gst}
+Grand Total  : ₹${grandTotal}
+────────────────────
 
-  let subtotal = 0;
-  (order.items || []).forEach(item => {
-    const itemAmt = (item.qty || 1) * (item.price || 0);
-    subtotal += itemAmt;
-    billMsg += `• ${item.name_en || item.name}\n`;
-    billMsg += `   Qty: ${item.qty} × ₹${item.price || 0} = ₹${itemAmt}\n\n`;
-  });
-
-  const gst = Math.round(subtotal * 0.05);
-  const grandTotal = subtotal + gst;
-
-  billMsg += `*────────────────────*\n`;
-  billMsg += `*Subtotal :* ₹${subtotal}\n`;
-  billMsg += `*GST (5%)  :* ₹${gst}\n`;
-  billMsg += `*Grand Total :* ₹${grandTotal}\n`;
-  billMsg += `*────────────────────*\n\n`;
-
-  billMsg += `✅ *Thank You! Visit Again 😊*`;
-
-  // Send via WhatsApp (mobile friendly)
-  const encodedMsg = encodeURIComponent(billMsg);
-  const waUrl = `https://api.whatsapp.com/send?phone=91${whatsappNum}&text=${encodedMsg}`;
-
-  window.open(waUrl, '_blank');
-  
-  alert("✅ Bill sent successfully on WhatsApp with GST details!");
-}
+✅ Thank You! Visit Again 😊`);
+          window.open(`https://web.whatsapp.com/send?text=\${message}\`, '_blank');
+        }
+        window.onload = () => setTimeout(() => window.print(), 600);
     </body>
     </html>
   `);
