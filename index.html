@@ -692,29 +692,40 @@ function markAsPaid() {
     return alert("Please enter valid 10-digit WhatsApp number");
   }
 
-  // Prepare full bill message
+  // Prepare full bill message with all details
   let billMsg = `✅ *Payment Received - Shree & Shriyan Dhaba*%0A%0A`;
-  billMsg += `Table: ${currentTable}%0A`;
-  billMsg += `Customer: ${currentName}%0A%0A`;
-  billMsg += `*Items*%0A`;
+  billMsg += `📍 Table: ${currentTable}%0A`;
+  billMsg += `👤 Customer: ${currentName}%0A`;
+  billMsg += `🕒 Time: ${new Date().toLocaleString('en-IN')}%0A%0A`;
+  billMsg += `*─── Items ───*%0A`;
 
   customerOrder.forEach(item => {
-    billMsg += `${item.name_en} × ${item.qty} = ₹${item.qty * item.price}%0A`;
+    const itemTotal = item.qty * item.price;
+    billMsg += `• ${item.name_en} × ${item.qty} = ₹${itemTotal}%0A`;
   });
 
-  billMsg += `%0A*Total Bill:* ₹${total}%0A`;
+  const subtotal = parseFloat(document.getElementById("custTotal").innerText);
+  const gst = Math.round(subtotal * 0.05);
+  const grandTotal = subtotal + gst;
+
+  billMsg += `%0A*Subtotal:* ₹${subtotal}%0A`;
+  billMsg += `*GST (5%):* ₹${gst}%0A`;
+  billMsg += `*────────────────*%0A`;
+  billMsg += `*Grand Total:* ₹${grandTotal}%0A`;
   billMsg += `*Paid Amount:* ₹${paidAmt}%0A`;
+  billMsg += `%0A✅ Payment Received Successfully!%0A`;
   billMsg += `Thank You! Visit Again 😊`;
 
-  // Open WhatsApp with the customer's number and pre-filled bill
+  // Open WhatsApp with full bill
   const waUrl = `https://wa.me/91${whatsappNum}?text=${billMsg}`;
   window.open(waUrl, '_blank');
 
-  // Show success
+  // Show success message
   document.getElementById("paymentSuccessMsg").style.display = "block";
-  alert("✅ Payment Confirmed! Bill sent to WhatsApp.");
 
-  // Clear cart
+  alert("✅ Payment Confirmed! Full bill sent to WhatsApp.");
+
+  // Clear cart after sending
   customerOrder = [];
   renderCustomerOrder();
 }
