@@ -692,40 +692,43 @@ function markAsPaid() {
     return alert("Please enter valid 10-digit WhatsApp number");
   }
 
-  // Prepare full bill message with all details
-  let billMsg = `✅ *Payment Received - Shree & Shriyan Dhaba*%0A%0A`;
-  billMsg += `📍 Table: ${currentTable}%0A`;
-  billMsg += `👤 Customer: ${currentName}%0A`;
-  billMsg += `🕒 Time: ${new Date().toLocaleString('en-IN')}%0A%0A`;
-  billMsg += `*─── Items ───*%0A`;
+  // Build the full bill message
+  let billMsg = `✅ *Payment Received - Shree & Shriyan Dhaba*\n\n`;
+  billMsg += `📍 Table: ${currentTable}\n`;
+  billMsg += `👤 Customer: ${currentName}\n`;
+  billMsg += `🕒 Time: ${new Date().toLocaleString('en-IN')}\n\n`;
+  billMsg += `*─── Items ───*\n`;
 
   customerOrder.forEach(item => {
     const itemTotal = item.qty * item.price;
-    billMsg += `• ${item.name_en} × ${item.qty} = ₹${itemTotal}%0A`;
+    billMsg += `• ${item.name_en} × ${item.qty} = ₹${itemTotal}\n`;
   });
 
-  const subtotal = parseFloat(document.getElementById("custTotal").innerText);
+  const subtotal = total;
   const gst = Math.round(subtotal * 0.05);
   const grandTotal = subtotal + gst;
 
-  billMsg += `%0A*Subtotal:* ₹${subtotal}%0A`;
-  billMsg += `*GST (5%):* ₹${gst}%0A`;
-  billMsg += `*────────────────*%0A`;
-  billMsg += `*Grand Total:* ₹${grandTotal}%0A`;
-  billMsg += `*Paid Amount:* ₹${paidAmt}%0A`;
-  billMsg += `%0A✅ Payment Received Successfully!%0A`;
+  billMsg += `\n*Subtotal:* ₹${subtotal}\n`;
+  billMsg += `*GST (5%):* ₹${gst}\n`;
+  billMsg += `*────────────────*\n`;
+  billMsg += `*Grand Total:* ₹${grandTotal}\n`;
+  billMsg += `*Paid Amount:* ₹${paidAmt}\n\n`;
+  billMsg += `✅ Payment Received Successfully!\n`;
   billMsg += `Thank You! Visit Again 😊`;
 
-  // Open WhatsApp with full bill
-  const waUrl = `https://wa.me/91${whatsappNum}?text=${billMsg}`;
+  // Encode the message properly
+  const encodedMsg = encodeURIComponent(billMsg);
+
+  // Open WhatsApp using the more reliable API endpoint
+  const waUrl = `https://api.whatsapp.com/send?phone=91${whatsappNum}&text=${encodedMsg}`;
   window.open(waUrl, '_blank');
 
-  // Show success message
+  // Show success in the app
   document.getElementById("paymentSuccessMsg").style.display = "block";
 
-  alert("✅ Payment Confirmed! Full bill sent to WhatsApp.");
+  alert("✅ Payment Confirmed! Full bill should now open in WhatsApp.");
 
-  // Clear cart after sending
+  // Clear the cart
   customerOrder = [];
   renderCustomerOrder();
 }
