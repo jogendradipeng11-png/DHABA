@@ -569,10 +569,40 @@ function printThermalBill() {
 }
 
 window.sendWhatsApp = function() {
-  const total = parseFloat(document.getElementById("total").innerText) || 0;
-  const name = document.getElementById("customerName").value || "Customer";
-  const message = encodeURIComponent(`🧾 *Shree & Shriyan Dhaba Bill*\\n\\nCustomer: ${name}\\nTotal: ₹${total}\\nThank You!`);
-  window.open(`https://web.whatsapp.com/send?text=${message}`, '_blank');
+    if (bill.length === 0) {
+        return alert("No items in the bill to send!");
+    }
+
+    let subtotal = 0;
+    let itemsList = "";
+
+    bill.forEach(item => {
+        const amt = item.qty * item.price;
+        subtotal += amt;
+        itemsList += `${item.name} × ${item.qty} = ₹${amt}\\n`;
+    });
+
+    const gst = Math.round(subtotal * 0.05);
+    const grandTotal = subtotal + gst;
+
+    const name = document.getElementById("customerName").value.trim() || "Customer";
+
+    const message = 
+        `🧾 *Shree & Shriyan Dhaba - Bill*\\n\\n` +
+        `👤 Customer : ${name}\\n` +
+        `🪑 Table     : Walk-in\\n\\n` +
+        itemsList +
+        `────────────────────\\n` +
+        `Subtotal     : ₹${subtotal}\\n` +
+        `GST (5%)     : ₹${gst}\\n` +
+        `Grand Total  : ₹${grandTotal}\\n` +
+        `Paid         : ₹${grandTotal}\\n` +
+        `────────────────────\\n\\n` +
+        `🙏 Thank You! Visit Again 😊`;
+
+    const encodedMessage = encodeURIComponent(message);
+
+    window.open(`https://web.whatsapp.com/send?text=${encodedMessage}`, '_blank');
 };
 
 // ====================== CUSTOMER SIDE ======================
@@ -681,40 +711,60 @@ function payByCash() {
 
 // ====================== FIXED: DIRECT BILL SEND ON WHATSAPP ======================
 function markAsPaid() {
-  const paidAmt = parseFloat(document.getElementById("paidAmount").value);
-  const total = parseFloat(document.getElementById("custTotal").innerText);
-  const whatsappNum = document.getElementById("custWhatsApp").value.trim();
+    const paidAmt = parseFloat(document.getElementById("paidAmount").value);
+    const total = parseFloat(document.getElementById("custTotal").innerText);
+    const whatsappNum = document.getElementById("custWhatsApp").value.trim();
 
-  if (!paidAmt || paidAmt < total) return alert("Please enter correct paid amount");
-  if (!whatsappNum || whatsappNum.length !== 10) return alert("Please enter valid 10-digit WhatsApp number");
+    if (!paidAmt || paidAmt < total) {
+        return alert("Please enter correct paid amount");
+    }
+    if (!whatsappNum || whatsappNum.length !== 10) {
+        return alert("Please enter valid 10-digit WhatsApp number");
+    }
 
-  // Prepare full bill message
-  let billMsg = `✅ *Payment Received - Shree & Shriyan Dhaba*%0A%0A`;
-  billMsg += `Table: ${currentTable}%0A`;
-  billMsg += `Customer: ${currentName}%0A%0A`;
-  billMsg += `*Items*%0A`;
+    // Calculate proper breakdown
+    let subtotal = 0;
+    let itemsList = "";
 
-  customerOrder.forEach(item => {
-    billMsg += `${item.name_en} × ${item.qty} = ₹${item.qty * item.price}%0A`;
-  });
+    customerOrder.forEach(item => {
+        const amt = item.qty * item.price;
+        subtotal += amt;
+        itemsList += `${item.name_en} × ${item.qty} = ₹${amt}%0A`;
+    });
 
-  billMsg += `%0A*Total Bill:* ₹${total}%0A`;
-  billMsg += `*Paid Amount:* ₹${paidAmt}%0A`;
-  billMsg += `Thank You! Visit Again 😊`;
+    const gst = Math.round(subtotal * 0.05);
+    const grandTotal = subtotal + gst;
 
-  // Open WhatsApp directly with bill
-  const whatsappUrl = `https://web.whatsapp.com/send?phone=91${whatsappNum}&text=${billMsg}`;
-  window.open(whatsappUrl, '_blank');
+    // Build clean WhatsApp message with proper line breaks
+    let billMsg = 
+        `✅ *Payment Received - Shree & Shriyan Dhaba*%0A%0A` +
+        `🪑 Table      : ${currentTable}%0A` +
+        `👤 Customer   : ${currentName}%0A%0A` +
+        `*Items*%0A` +
+        itemsList +
+        `────────────────────%0A` +
+        `Subtotal      : ₹${subtotal}%0A` +
+        `GST (5%)      : ₹${gst}%0A` +
+        `Grand Total   : ₹${grandTotal}%0A` +
+        `Paid Amount   : ₹${paidAmt}%0A` +
+        `────────────────────%0A%0A` +
+        `🙏 Thank You! Visit Again 😊`;
 
-  // Show success
-  document.getElementById("paymentSuccessMsg").style.display = "block";
-  alert("✅ Payment Confirmed! Bill sent to WhatsApp.");
+    // ✅ CRITICAL FIX: Properly encode the message
+    const encodedMsg = encodeURIComponent(billMsg);
 
-  // Clear cart
-  customerOrder = [];
-  renderCustomerOrder();
+    // Open WhatsApp
+    const whatsappUrl = `https://web.whatsapp.com/send?phone=91${whatsappNum}&text=${encodedMsg}`;
+    window.open(whatsappUrl, '_blank');
+
+    // Show success message
+    document.getElementById("paymentSuccessMsg").style.display = "block";
+    alert("✅ Payment Confirmed! Detailed bill sent to WhatsApp.");
+
+    // Clear cart after sending
+    customerOrder = [];
+    renderCustomerOrder();
 }
-
 function generateDynamicPhonePeQR() {
   const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
   const container = document.getElementById("dynamicPhonePeQR");
