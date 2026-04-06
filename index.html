@@ -571,8 +571,8 @@ function printThermalBill() {
 window.sendWhatsApp = function() {
   const total = parseFloat(document.getElementById("total").innerText) || 0;
   const name = document.getElementById("customerName").value || "Customer";
-  const message = encodeURIComponent(`🧾 *Shree & Shriyan Dhaba Bill*\\n\\nCustomer: ${name}\\nTotal: ₹${total}\\nThank You!`);
-  window.open(`https://web.whatsapp.com/send?text=${message}`, '_blank');
+  const message = `Shree & Shriyan Dhaba - Payment Receipt%0A%0ATable: Walk-in%0ACustomer: ${name}%0A%0ATotal: ₹${total}%0A%0AThank You! Come Again 😊`;
+  window.open(`https://wa.me/?text=${message}`, '_blank');
 };
 
 // ====================== CUSTOMER SIDE ======================
@@ -679,7 +679,7 @@ function payByCash() {
   document.getElementById("paymentSuccessMsg").style.display = "block";
 }
 
-// ====================== FIXED: CLEAN BILL SEND VIA WHATSAPP (wa.me) ======================
+// ====================== FIXED: EXACT FORMAT FOR BOTH STAFF & CUSTOMER WHATSAPP ======================
 function markAsPaid() {
   const paidAmt = parseFloat(document.getElementById("paidAmount").value);
   const total = parseFloat(document.getElementById("custTotal").innerText);
@@ -688,7 +688,6 @@ function markAsPaid() {
   if (!paidAmt || paidAmt < total) return alert("Please enter correct paid amount");
   if (!whatsappNum || whatsappNum.length !== 10) return alert("Please enter valid 10-digit WhatsApp number");
 
-  // Build clean bill message exactly as requested
   let billMsg = `Shree & Shriyan Dhaba - Payment Receipt%0A%0A`;
   billMsg += `Table: ${currentTable}%0A`;
   billMsg += `Customer: ${currentName}%0A%0A`;
@@ -700,15 +699,12 @@ function markAsPaid() {
   billMsg += `%0APaid: ₹${paidAmt}%0A`;
   billMsg += `Thank You! Come Again 😊`;
 
-  // Use wa.me for reliable mobile WhatsApp opening
   const whatsappUrl = `https://wa.me/91${whatsappNum}?text=${billMsg}`;
   window.open(whatsappUrl, '_blank');
 
-  // Show success
   document.getElementById("paymentSuccessMsg").style.display = "block";
   alert("✅ Payment Confirmed! Bill sent to WhatsApp.");
 
-  // Clear cart
   customerOrder = [];
   renderCustomerOrder();
 }
