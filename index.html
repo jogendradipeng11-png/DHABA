@@ -685,8 +685,12 @@ function markAsPaid() {
   const total = parseFloat(document.getElementById("custTotal").innerText);
   const whatsappNum = document.getElementById("custWhatsApp").value.trim();
 
-  if (!paidAmt || paidAmt < total) return alert("Please enter correct paid amount");
-  if (!whatsappNum || whatsappNum.length !== 10) return alert("Please enter valid 10-digit WhatsApp number");
+  if (!paidAmt || paidAmt < total) {
+    return alert("Please enter correct paid amount (must be >= total bill)");
+  }
+  if (!whatsappNum || whatsappNum.length !== 10) {
+    return alert("Please enter valid 10-digit WhatsApp number");
+  }
 
   // Prepare full bill message
   let billMsg = `✅ *Payment Received - Shree & Shriyan Dhaba*%0A%0A`;
@@ -702,10 +706,9 @@ function markAsPaid() {
   billMsg += `*Paid Amount:* ₹${paidAmt}%0A`;
   billMsg += `Thank You! Visit Again 😊`;
 
-  // Open WhatsApp directly with bill
-  window.open("https://wa.me/?text=" + encodeURIComponent(msg));
-      setTimeout(() => window.close(), 1000);
-
+  // Open WhatsApp with the customer's number and pre-filled bill
+  const waUrl = `https://wa.me/91${whatsappNum}?text=${billMsg}`;
+  window.open(waUrl, '_blank');
 
   // Show success
   document.getElementById("paymentSuccessMsg").style.display = "block";
@@ -715,7 +718,6 @@ function markAsPaid() {
   customerOrder = [];
   renderCustomerOrder();
 }
-
 function generateDynamicPhonePeQR() {
   const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
   const container = document.getElementById("dynamicPhonePeQR");
