@@ -444,7 +444,7 @@ function generateQRCode() {
   `;
 }
 
-// ====================== NOTIFICATION & PRINT POPUP ======================
+// ====================== NOTIFICATION ======================
 function listenForNewOrders() {
   db.ref('newOrders').on('child_added', (snapshot) => {
     const order = snapshot.val();
@@ -490,6 +490,7 @@ function printThermalBill() {
   printBill();
 }
 
+// ====================== PRINT POPUP WITH AUTO SAVE ======================
 function showPrintPopup(order) {
   const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,'');
   const timeStr = new Date().toTimeString().slice(0,8).replace(/:/g,'');
@@ -539,11 +540,11 @@ function showPrintPopup(order) {
 
     <div style="text-align:center; margin-top:25px;">
       <h4>Choose Print Method</h4>
-      <button onclick="window.opener.printThermalAndCutFromPopup('${fileName}'); window.close();" 
+      <button onclick="window.opener.printThermalFromPopup('${fileName}'); window.close();" 
               style="background:#e74c3c; color:white; width:90%; padding:14px; margin:8px 0; border:none; border-radius:8px; font-size:16px;">
         🖨️ Print Thermal + Auto Cut
       </button>
-      <button onclick="window.opener.printNormalAndClearFromPopup('${fileName}'); window.close();" 
+      <button onclick="window.opener.printNormalFromPopup('${fileName}'); window.close();" 
               style="background:#27ae60; color:white; width:90%; padding:14px; margin:8px 0; border:none; border-radius:8px; font-size:16px;">
         🧾 Normal Print & Clear
       </button>
@@ -558,12 +559,31 @@ function showPrintPopup(order) {
   printWin.document.close();
 }
 
-function printThermalAndCutFromPopup(fileName) {
-  alert(`✅ Thermal Print executed.\nFile saved as: ${fileName}`);
+// Actual Print Functions with Auto Save
+function printThermalFromPopup(fileName) {
+  const printWin = window.open('', '_blank');
+  printWin.document.write(`
+    <html><head><title>${fileName}</title></head><body>
+      <h2 style="text-align:center;">Shree & Shriyan Dhaba - Thermal Print</h2>
+      <p>File will be saved as: ${fileName}</p>
+      <script>window.print(); setTimeout(() => window.close(), 500);</script>
+    </body></html>
+  `);
+  printWin.document.close();
+  alert(`✅ Thermal Print started.\nFile will be saved as:\n${fileName}`);
 }
 
-function printNormalAndClearFromPopup(fileName) {
-  alert(`✅ Normal Print & Clear executed.\nFile saved as: ${fileName}`);
+function printNormalFromPopup(fileName) {
+  const printWin = window.open('', '_blank');
+  printWin.document.write(`
+    <html><head><title>${fileName}</title></head><body>
+      <h2 style="text-align:center;">Shree & Shriyan Dhaba - Normal Print</h2>
+      <p>File will be saved as: ${fileName}</p>
+      <script>window.print(); setTimeout(() => window.close(), 500);</script>
+    </body></html>
+  `);
+  printWin.document.close();
+  alert(`✅ Normal Print & Clear started.\nFile will be saved as:\n${fileName}`);
 }
 
 // ====================== INITIALIZE ======================
