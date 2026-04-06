@@ -490,7 +490,7 @@ function printThermalBill() {
   printBill();
 }
 
-// ====================== PRINT POPUP WITH AUTO SAVE ======================
+// ====================== PRINT POPUP (Fixed - No Auto Print) ======================
 function showPrintPopup(order) {
   const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,'');
   const timeStr = new Date().toTimeString().slice(0,8).replace(/:/g,'');
@@ -559,31 +559,31 @@ function showPrintPopup(order) {
   printWin.document.close();
 }
 
-// Actual Print Functions with Auto Save
+// Fixed Print Functions - No auto print on load
 function printThermalFromPopup(fileName) {
+  alert(`✅ Thermal Print started.\nFile will be saved as:\n${fileName}`);
   const printWin = window.open('', '_blank');
   printWin.document.write(`
-    <html><head><title>${fileName}</title></head><body>
-      <h2 style="text-align:center;">Shree & Shriyan Dhaba - Thermal Print</h2>
-      <p>File will be saved as: ${fileName}</p>
-      <script>window.print(); setTimeout(() => window.close(), 500);</script>
+    <html><head><title>${fileName}</title></head><body style="text-align:center;padding:20px;">
+      <h2>Shree & Shriyan Dhaba - Thermal Print</h2>
+      <p>Printing bill for ${fileName}</p>
+      <script>window.print(); setTimeout(() => window.close(), 800);</script>
     </body></html>
   `);
   printWin.document.close();
-  alert(`✅ Thermal Print started.\nFile will be saved as:\n${fileName}`);
 }
 
 function printNormalFromPopup(fileName) {
+  alert(`✅ Normal Print & Clear started.\nFile will be saved as:\n${fileName}`);
   const printWin = window.open('', '_blank');
   printWin.document.write(`
-    <html><head><title>${fileName}</title></head><body>
-      <h2 style="text-align:center;">Shree & Shriyan Dhaba - Normal Print</h2>
-      <p>File will be saved as: ${fileName}</p>
-      <script>window.print(); setTimeout(() => window.close(), 500);</script>
+    <html><head><title>${fileName}</title></head><body style="text-align:center;padding:20px;">
+      <h2>Shree & Shriyan Dhaba - Normal Print</h2>
+      <p>Printing bill for ${fileName}</p>
+      <script>window.print(); setTimeout(() => window.close(), 800);</script>
     </body></html>
   `);
   printWin.document.close();
-  alert(`✅ Normal Print & Clear started.\nFile will be saved as:\n${fileName}`);
 }
 
 // ====================== INITIALIZE ======================
