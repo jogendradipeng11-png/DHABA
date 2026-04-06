@@ -679,7 +679,7 @@ function payByCash() {
   document.getElementById("paymentSuccessMsg").style.display = "block";
 }
 
-// ====================== FIXED: CLEAN BILL SEND VIA WHATSAPP (wa.me) ======================
+// ====================== FIXED: DIRECT BILL SEND ON WHATSAPP ======================
 function markAsPaid() {
   const paidAmt = parseFloat(document.getElementById("paidAmount").value);
   const total = parseFloat(document.getElementById("custTotal").innerText);
@@ -688,20 +688,22 @@ function markAsPaid() {
   if (!paidAmt || paidAmt < total) return alert("Please enter correct paid amount");
   if (!whatsappNum || whatsappNum.length !== 10) return alert("Please enter valid 10-digit WhatsApp number");
 
-  // Build clean bill message exactly as requested
-  let billMsg = `Shree & Shriyan Dhaba - Payment Receipt%0A%0A`;
+  // Prepare full bill message
+  let billMsg = `✅ *Payment Received - Shree & Shriyan Dhaba*%0A%0A`;
   billMsg += `Table: ${currentTable}%0A`;
   billMsg += `Customer: ${currentName}%0A%0A`;
+  billMsg += `*Items*%0A`;
 
   customerOrder.forEach(item => {
-    billMsg += `${item.name_en} x${item.qty} = ₹${item.qty * item.price}%0A`;
+    billMsg += `${item.name_en} × ${item.qty} = ₹${item.qty * item.price}%0A`;
   });
 
-  billMsg += `%0APaid: ₹${paidAmt}%0A`;
-  billMsg += `Thank You! Come Again 😊`;
+  billMsg += `%0A*Total Bill:* ₹${total}%0A`;
+  billMsg += `*Paid Amount:* ₹${paidAmt}%0A`;
+  billMsg += `Thank You! Visit Again 😊`;
 
-  // Use wa.me for reliable mobile WhatsApp opening
-  const whatsappUrl = `https://wa.me/91${whatsappNum}?text=${billMsg}`;
+  // Open WhatsApp directly with bill
+  const whatsappUrl = `https://web.whatsapp.com/send?phone=91${whatsappNum}&text=${billMsg}`;
   window.open(whatsappUrl, '_blank');
 
   // Show success
