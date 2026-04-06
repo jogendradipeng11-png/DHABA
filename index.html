@@ -75,7 +75,6 @@
         <button onclick="addNewMenuItem()" style="background:#ff9800;">➕ Add / Update Item</button>
         <button onclick="showCurrentMenu()" style="background:#666;">📋 Show Current Menu</button>
 
-        <!-- Show Current Menu Section -->
         <div id="currentMenuSection">
             <h4 style="color:#d84315;">Current Menu Items</h4>
             <div id="currentMenuList"></div>
@@ -87,7 +86,6 @@
         <button onclick="generateQRCode()" style="background:#ff9800;">📱 Generate Table QR</button>
         <div id="qrContainer" style="text-align:center;margin:15px 0;"></div>
 
-        <!-- Live Table Orders Section -->
         <div id="liveOrdersSection" style="display:none; margin-top:20px;">
             <h4 style="color:#d84315;">📋 Live Table Orders (Real-time)</h4>
             <div id="liveOrdersContainer" style="max-height:400px; overflow-y:auto;">
@@ -109,7 +107,8 @@
         </div>
         <div id="signInSection">
             <h3 id="welcomeText" style="text-align:center;">Welcome!</h3>
-            <input id="custTable" type="number" placeholder="Your Table Number">
+            <!-- Table Number is now READ-ONLY -->
+            <input id="custTable" type="number" placeholder="Your Table Number" readonly style="background:#f0f0f0;">
             <input id="custName" placeholder="Your Name (required)">
             <button onclick="joinTable()" id="startOrderingBtn" style="background:#d84315;font-size:18px;">✅ Start Ordering</button>
         </div>
@@ -264,7 +263,7 @@ async function translateText(text, targetLang) {
   } catch (e) { return text; }
 }
 
-// ====================== SHOW CURRENT MENU (New - Full CRUD) ======================
+// ====================== SHOW CURRENT MENU ======================
 function showCurrentMenu() {
   const section = document.getElementById("currentMenuSection");
   section.style.display = "block";
@@ -278,12 +277,10 @@ function hideCurrentMenu() {
 function renderCurrentMenu() {
   const container = document.getElementById("currentMenuList");
   container.innerHTML = "";
-
   if (items.length === 0) {
     container.innerHTML = "<p style='text-align:center; color:#999;'>No menu items found.</p>";
     return;
   }
-
   items.forEach((item, index) => {
     const div = document.createElement("div");
     div.className = "menu-list-item";
@@ -299,11 +296,10 @@ function renderCurrentMenu() {
 
 function deleteMenuItem(index) {
   if (!confirm(`Delete "${items[index].name_en}" from menu?`)) return;
-  
   items.splice(index, 1);
   saveMenu();
-  renderCurrentMenu();   // Refresh the list immediately
-  renderStaffMenu();     // Refresh dropdown too
+  renderCurrentMenu();
+  renderStaffMenu();
   alert("Item deleted successfully.");
 }
 
@@ -397,17 +393,14 @@ function loadLiveOrdersRealTime() {
   liveOrdersRef.on('value', (snapshot) => {
     const data = snapshot.val();
     tbody.innerHTML = "";
-
     if (!data || Object.keys(data).length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">No pending table orders at the moment.</td></tr>';
       return;
     }
-
     let hasOrders = false;
     Object.keys(data).forEach((key) => {
       const order = data[key];
       if (!order || order.status === "completed") return;
-
       hasOrders = true;
       const row = document.createElement("tr");
       row.innerHTML = `
@@ -422,7 +415,6 @@ function loadLiveOrdersRealTime() {
       `;
       tbody.appendChild(row);
     });
-
     if (!hasOrders) {
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">No pending table orders at the moment.</td></tr>';
     }
@@ -431,7 +423,6 @@ function loadLiveOrdersRealTime() {
 
 function acceptLiveOrder(orderId) {
   if (!confirm("Accept this order and print the bill?")) return;
-
   db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
     const order = snapshot.val();
     if (order) {
