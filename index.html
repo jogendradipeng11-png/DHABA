@@ -703,8 +703,9 @@ function markAsPaid() {
   billMsg += `Thank You! Visit Again 😊`;
 
   // Open WhatsApp directly with bill
-  const whatsappUrl = `https://web.whatsapp.com/send?phone=91${whatsappNum}&text=${billMsg}`;
-  window.open(whatsappUrl, '_blank');
+  window.open("https://wa.me/?text=" + encodeURIComponent(msg));
+      setTimeout(() => window.close(), 1000);
+
 
   // Show success
   document.getElementById("paymentSuccessMsg").style.display = "block";
