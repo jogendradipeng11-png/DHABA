@@ -282,16 +282,39 @@ function voiceAdd() {
   alert("🎤 Voice Add feature coming soon. Please use 'Add Item' for now.");
 }
 
+// ====================== EXPORT EXCEL FEATURE (Only New Addition) ======================
 function exportExcel() {
-  alert("📊 Export to Excel feature - You can implement CSV download here later.");
-}
+  if (bill.length === 0) {
+    alert("No items in bill to export!");
+    return;
+  }
 
-function dailyReport() {
-  alert("📊 Daily Report - Showing today's summary (implement logic as needed).");
-}
+  let csvContent = "data:text/csv;charset=utf-8,";
+  csvContent += "Item,Quantity,Price,Amount\n";
 
-function showTableOrders() {
-  alert("📋 Live Table Orders - Check Firebase 'tableOrders' node (implement display here).");
+  let total = 0;
+  bill.forEach(item => {
+    const amount = item.qty * item.price;
+    total += amount;
+    csvContent += `"${item.name}",${item.qty},${item.price},${amount}\n`;
+  });
+
+  const gst = Math.round(total * 0.05);
+  const grandTotal = total + gst;
+
+  csvContent += `\n,,,Subtotal,${total}\n`;
+  csvContent += `,,,GST 5%,${gst}\n`;
+  csvContent += `,,,Grand Total,${grandTotal}\n`;
+
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `Bill_INV${Date.now().toString().slice(-6)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  alert("✅ Bill exported as Excel (CSV) successfully!");
 }
 
 // ====================== CUSTOMER SIDE ======================
@@ -437,7 +460,7 @@ function generateQRCode() {
   `;
 }
 
-// ====================== NOTIFICATIONS & PRINT (Fixed) ======================
+// ====================== NOTIFICATIONS & PRINT ======================
 function listenForNewOrders() {
   db.ref('newOrders').on('child_added', (snapshot) => {
     const order = snapshot.val();
