@@ -318,7 +318,7 @@ window.updateOrderStatus = function(orderId, status) {
         if (status === 'ready') {
             if (!confirm("Mark this order as READY to serve?")) return;
             
-            // Customer voice when cook clicks Order Ready
+            // Customer QR page voice
             if (order.lang === 'hi') speak("आपका स्वादिष्ट भोजन तैयार है। कृपया काउंटर से ले लें। धन्यवाद", 'hi');
             else if (order.lang === 'or') speak("ଆପଣଙ୍କର ସ୍ୱାଦିଷ୍ଟ ଖାଦ୍ୟ ପ୍ରସ୍ତୁତ ହୋଇଛି। ଦୟାକରି କାଉଣ୍ଟରରୁ ନିଅନ୍ତୁ। ଧନ୍ୟବାଦ", 'or');
             else speak("Your delicious food is ready. Please collect from the counter. Thank you.");
@@ -330,7 +330,7 @@ window.updateOrderStatus = function(orderId, status) {
     });
 };
 
-// ====================== PLACE CUSTOMER ORDER - KITCHEN VOICE ======================
+// ====================== PLACE CUSTOMER ORDER ======================
 function placeCustomerOrder() {
   if (customerOrder.length === 0) return alert("Cart is empty!");
   const total = parseFloat(document.getElementById("custTotal").innerText);
@@ -349,7 +349,7 @@ function placeCustomerOrder() {
   
   alert(`✅ Order Placed Successfully for Table ${currentTable}`);
   
-  // Kitchen voice when customer places order
+  // Kitchen & Staff sound when customer sends order
   if (currentLang === 'hi') speak(`टेबल ${currentTable} के लिए ग्राहक का ऑर्डर प्राप्त हुआ`, 'hi');
   else if (currentLang === 'or') speak(`ଟେବୁଲ ${currentTable} ପାଇଁ ଗ୍ରାହକଙ୍କ ଅର୍ଡର ପ୍ରାପ୍ତ ହୋଇଛି`, 'or');
   else speak(`Customer order for Table ${currentTable} is received`);
@@ -376,7 +376,7 @@ function listenToCustomerOrderStatus() {
     });
 }
 
-// ====================== ALL ORIGINAL FUNCTIONS (FULLY INCLUDED & CORRECTED) ======================
+// ====================== ALL ORIGINAL FUNCTIONS ======================
 function loadAndListenMenu() {
   db.ref('menu').on('value', (snapshot) => {
     const data = snapshot.val();
@@ -697,8 +697,7 @@ function printThermalBill() {
 }
 
 function showPrintPopup(order) {
-  alert(`Print Bill for Table ${order.table || 'Walk-in'} - Total ₹${order.total}\n\n(Print logic can be expanded with window.print() or jsPDF)`);
-  // Clear bill after print
+  alert(`Print Bill for Table ${order.table || 'Walk-in'} - Total ₹${order.total}\n\n(Print logic can be expanded later)`);
   bill = [];
   renderBill();
 }
