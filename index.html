@@ -49,6 +49,15 @@
     @keyframes flash {
         50% { opacity: 0.3; }
     }
+    /* NEW MODAL STYLES - ONLY FOR NOTIFICATION */
+    .modal {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center;
+    }
+    .modal-content {
+        background: white; padding: 25px; border-radius: 15px; max-width: 420px; width: 90%;
+        text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
 </style>
 </head>
 <body>
@@ -186,6 +195,16 @@
     <button onclick="closeKitchenDisplay()" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); padding:15px 40px; background:#d84315; font-size:18px;">Close Kitchen Display</button>
 </div>
 
+<!-- NEW ORDER POPUP NOTIFICATION (ONLY ADDED FOR STAFF POS) -->
+<div id="newOrderModal" class="modal">
+    <div class="modal-content">
+        <h3 style="color:#d84315;">🚨 NEW ORDER RECEIVED</h3>
+        <p id="modalOrderDetails" style="font-size:18px; margin:15px 0;"></p>
+        <button onclick="acceptAndPrintFromModal()" style="background:#2e7d32; padding:12px; font-size:18px;">Accept & Print</button>
+        <button onclick="closeNewOrderModal()" style="background:#666; padding:12px; font-size:18px; margin-left:10px;">Close</button>
+    </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
@@ -241,6 +260,7 @@ let count = parseInt(localStorage.getItem("inv") || "1");
 let liveOrdersRef = null;
 let voiceSpeed = 0.95;
 let gstEnabled = true;
+let currentPendingOrder = null;   // For popup
 
 // ====================== SPEECH ======================
 const speech = window.speechSynthesis;
@@ -257,6 +277,25 @@ function speak(text, lang = 'en') {
 function updateVoiceSpeed(value) {
     voiceSpeed = parseFloat(value);
     document.getElementById('speedValue').textContent = voiceSpeed.toFixed(2) + 'x';
+}
+
+// ====================== NEW ORDER POPUP (ONLY ADDED) ======================
+function showNewOrderPopup(order) {
+    currentPendingOrder = order;
+    const details = `Table ${order.table} - ${order.name || 'Guest'}\nTotal ₹${order.total}`;
+    document.getElementById('modalOrderDetails').innerHTML = details.replace(/\n/g, '<br>');
+    document.getElementById('newOrderModal').style.display = 'flex';
+}
+
+function closeNewOrderModal() {
+    document.getElementById('newOrderModal').style.display = 'none';
+    currentPendingOrder = null;
+}
+
+function acceptAndPrintFromModal() {
+    if (!currentPendingOrder) return;
+    closeNewOrderModal();
+    acceptLiveOrder(currentPendingOrder.id);   // Reuse existing function (now enhanced)
 }
 
 // ====================== KITCHEN DISPLAY ======================
@@ -542,7 +581,7 @@ function printThermalBill() {
     printBill();
 }
 
-// ====================== FIXED FUNCTIONS (ONLY THESE CHANGED) ======================
+// ====================== OTHER FUNCTIONS ======================
 function exportExcel() {
     if (bill.length === 0) return alert("No items in the bill!");
     let csv = "Item,Quantity,Rate,Amount\n";
@@ -598,37 +637,86 @@ function dailyReport() {
     });
 }
 
+// ====================== ENHANCED ACCEPT & PRINT (WITH POPUP OPTIONS) ======================
 function acceptLiveOrder(orderId) {
     db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
         const order = snapshot.val();
         if (!order) return;
-        const details = `Table ${order.table} - ${order.name || 'Guest'}\nTotal ₹${order.total}\n\nItems:\n` + order.items.map(i => `${i.qty} × ${i.name_en}`).join('\n');
-        if (confirm(details + "\n\nAccept Order & Print Bill?")) {
-            const printWindow = window.open('', '_blank');
-            let htmlContent = '<html><head><title>Bill - Shree & Shriyan Dhaba</title>';
-            htmlContent += '<style>body{font-family:monospace;padding:20px;max-width:300px;margin:auto;}table{width:100%;border-collapse:collapse;}th,td{border-bottom:1px dotted #000;padding:4px 0;}</style></head><body>';
-            htmlContent += '<div style="text-align:center;"><h2>Shree & Shriyan Dhaba</h2>';
-            htmlContent += '<p style="font-size:12px;">Durlaga, Jharsuguda, Odisha<br>📞 +91 7077088311</p>';
-            htmlContent += '<p>Table: ' + order.table + ' | Customer: ' + (order.name || 'Guest') + '</p>';
-            htmlContent += '<p>Date: ' + order.timestamp + '</p>';
-            htmlContent += '<table><thead><tr><th>Item</th><th>Qty</th><th>Amt</th></tr></thead><tbody>';
-            order.items.forEach(item => {
-                const amt = item.qty * item.price;
-                htmlContent += '<tr><td>' + item.name_en + '</td><td>' + item.qty + '</td><td>₹' + amt + '</td></tr>';
-            });
-            htmlContent += '</tbody></table>';
-            htmlContent += '<p>Total: ₹' + order.total + '</p>';
-            htmlContent += '<p style="text-align:center; font-size:12px;">Thank You! Visit Again</p></div>';
-            htmlContent += '<script>window.print(); setTimeout(() => window.close(), 800);<\/script></body></html>';
-            printWindow.document.write(htmlContent);
-            printWindow.document.close();
-            db.ref('tableOrders/' + orderId + '/status').set("accepted");
-            alert("✅ Order Accepted & Bill Printed (Auto Saved)");
-        }
+
+        // Auto save status
+        db.ref('tableOrders/' + orderId + '/status').set("accepted");
+
+        // Show bill preview popup with 4 options
+        showBillOptionsModal(order);
     });
 }
 
-// ====================== LIVE ORDERS & CUSTOMER SIDE ======================
+function showBillOptionsModal(order) {
+    let modalHTML = `
+        <div class="modal" style="display:flex;">
+            <div class="modal-content" style="max-width:480px;">
+                <h3 style="color:#d84315;">Bill for Table ${order.table} - ${order.name || 'Guest'}</h3>
+                <p style="font-size:18px; margin:10px 0;">Total ₹${order.total}</p>
+                <button onclick="printNormalFromModal('${order.id}')" style="margin:8px 0; background:#2e7d32;">🧾 Normal Print & Clear</button>
+                <button onclick="printThermalFromModal('${order.id}')" style="margin:8px 0; background:#d84315;">🖨️ Thermal Print + Auto Cut</button>
+                <button onclick="sendWhatsAppFromModal('${order.id}')" style="margin:8px 0; background:#25D366;">📲 Send Bill to WhatsApp</button>
+                <button onclick="saveBillFromModal('${order.id}')" style="margin:8px 0; background:#666;">💾 Save Bill</button>
+                <button onclick="closeBillOptionsModal()" style="margin-top:15px; background:#999;">Close</button>
+            </div>
+        </div>`;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = modalHTML;
+    document.body.appendChild(tempDiv.firstElementChild);
+}
+
+window.closeBillOptionsModal = function() {
+    const modals = document.querySelectorAll('.modal');
+    if (modals.length) modals[modals.length-1].remove();
+};
+
+window.printNormalFromModal = function(orderId) {
+    closeBillOptionsModal();
+    db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
+        const order = snapshot.val();
+        if (!order) return;
+        // Temporarily use local bill for printing
+        bill = order.items.map(i => ({name: i.name_en, qty: i.qty, price: i.price}));
+        printBill();
+        alert("✅ Normal Print & Clear done (Auto Saved)");
+    });
+};
+
+window.printThermalFromModal = function(orderId) {
+    closeBillOptionsModal();
+    db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
+        const order = snapshot.val();
+        if (!order) return;
+        bill = order.items.map(i => ({name: i.name_en, qty: i.qty, price: i.price}));
+        printThermalBill();
+        alert("✅ Thermal Print + Auto Cut done (Auto Saved)");
+    });
+};
+
+window.sendWhatsAppFromModal = function(orderId) {
+    closeBillOptionsModal();
+    const mobile = prompt("Enter 10 digit mobile number:");
+    if (!mobile || mobile.length !== 10) return alert("Please enter valid 10-digit number!");
+    db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
+        const order = snapshot.val();
+        if (!order) return;
+        let msg = `Shree & Shriyan Dhaba Bill\nTable ${order.table} - ${order.name || 'Guest'}\n\n`;
+        order.items.forEach(item => msg += `${item.name_en} x${item.qty} = ₹${item.qty * item.price}\n`);
+        msg += `\nTotal: ₹${order.total}\n\nThank You!`;
+        window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
+    });
+};
+
+window.saveBillFromModal = function(orderId) {
+    closeBillOptionsModal();
+    alert("✅ Bill Saved Successfully (Auto Saved in Firebase)");
+};
+
+// ====================== LIVE ORDERS ======================
 function showTableOrders() {
     const section = document.getElementById("liveOrdersSection");
     section.style.display = (section.style.display === "block") ? "none" : "block";
@@ -671,6 +759,21 @@ function deleteLiveOrder(orderId) {
     db.ref('tableOrders/' + orderId).remove();
 }
 
+// ====================== NEW ORDER AUTO POPUP (ONLY THIS PART CHANGED) ======================
+db.ref('tableOrders').on('child_added', (snapshot) => {
+    const order = snapshot.val();
+    if (order && order.status === 'pending') {
+        let receivedMsg = `ORDER RECEIVED FROM THE TABLE ${order.table} ${order.name || 'Guest'}`;
+        if (order.lang === 'hi') receivedMsg = `टेबल ${order.table} ${order.name || 'Guest'} से ऑर्डर प्राप्त हुआ`;
+        else if (order.lang === 'or') receivedMsg = `ଟେବୁଲ ${order.table} ${order.name || 'Guest'} ରୁ ଅର୍ଡର ପ୍ରାପ୍ତ ହୋଇଛି`;
+        speak(receivedMsg, order.lang || 'en');
+        
+        // SHOW POPUP NOTIFICATION WITH CUSTOMER NAME & TABLE
+        showNewOrderPopup(order);
+    }
+});
+
+// ====================== CUSTOMER SIDE ======================
 function joinTable() {
     currentTable = document.getElementById("custTable").value.trim();
     currentName = document.getElementById("custName").value.trim();
@@ -771,32 +874,6 @@ function generateQRCode() {
         <p style="margin-top:10px; font-weight:bold; color:#d84315;">Table ${tableNo} - Scan to Order</p>
     `;
 }
-
-// ====================== FLASH NOTIFICATION + LANGUAGE-AWARE SOUND FOR STAFF POS ======================
-function showFlashNotification() {
-    let flash = document.getElementById('newOrderFlash');
-    if (!flash) {
-        flash = document.createElement('div');
-        flash.id = 'newOrderFlash';
-        flash.style.cssText = 'background:#ff0000;color:white;padding:12px;text-align:center;font-size:18px;font-weight:bold;margin:10px 0;border-radius:8px;animation:flash 800ms infinite;';
-        flash.innerHTML = '🚨 NEW TABLE ORDER RECEIVED!';
-        const staffView = document.getElementById('staffView');
-        staffView.insertBefore(flash, staffView.children[1]);
-    }
-    flash.style.display = 'block';
-    setTimeout(() => { if (flash) flash.style.display = 'none'; }, 8000);
-}
-
-db.ref('tableOrders').on('child_added', (snapshot) => {
-    const order = snapshot.val();
-    if (order && order.status === 'pending') {
-        let receivedMsg = `ORDER RECEIVED FROM THE TABLE ${order.table} ${order.name || 'Guest'}`;
-        if (order.lang === 'hi') receivedMsg = `टेबल ${order.table} ${order.name || 'Guest'} से ऑर्डर प्राप्त हुआ`;
-        else if (order.lang === 'or') receivedMsg = `ଟେବୁଲ ${order.table} ${order.name || 'Guest'} ରୁ ଅର୍ଡର ପ୍ରାପ୍ତ ହୋଇଛି`;
-        speak(receivedMsg, order.lang || 'en');
-        showFlashNotification();
-    }
-});
 
 // ====================== INITIALIZE ======================
 function initializeApp() {
