@@ -230,54 +230,56 @@ let customerOrder = [];
 let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
 
-// ====================== AUTO SAVE AS PDF - Matching Print Layout ======================
+// ====================== REFINED PDF THERMAL LAYOUT ======================
 function autoSaveBillAsPDF(order) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({
         orientation: "portrait",
         unit: "mm",
-        format: [80, 297]   // Narrow width like thermal print (80mm)
+        format: [80, 350]   // Thermal paper width (80mm) with enough height
     });
 
     let y = 8;
-    const pageWidth = 80;
+    const center = 40;
 
-    // Header - Matching Print Layout
+    // Header
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text("SHREE & SHRIYAN DHABA", pageWidth/2, y, { align: "center" });
-    y += 6;
+    doc.setFontSize(13);
+    doc.text("SHREE & SHRIYAN DHABA", center, y, { align: "center" });
+    y += 5;
 
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    doc.text("At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)", pageWidth/2, y, { align: "center" });
+    doc.text("Durlaga, Jharsuguda - 768204", center, y, { align: "center" });
     y += 4;
-    doc.text("📞 +91 7077088311", pageWidth/2, y, { align: "center" });
-    y += 4;
-    doc.text("jogendra.dipeng11@gmail.com", pageWidth/2, y, { align: "center" });
+    doc.text("Ph: +91 7077088311", center, y, { align: "center" });
     y += 8;
 
     // Divider
+    doc.setDrawColor(0);
     doc.line(5, y, 75, y);
     y += 6;
 
-    // Bill Info
+    // Bill Details
     doc.setFontSize(9);
     doc.text(`Invoice : INV${Date.now().toString().slice(-6)}`, 5, y);
     y += 5;
-    doc.text(`Table   : ${order.table || 'Walk-in'}`, 5, y);
+    doc.text(`Table   : ${order.table || "Walk-in"}`, 5, y);
     y += 5;
-    doc.text(`Customer: ${order.name || 'Guest'}`, 5, y);
+    doc.text(`Customer: ${order.name || "Guest"}`, 5, y);
     y += 5;
-    doc.text(`Time    : ${new Date().toLocaleString('en-IN')}`, 5, y);
+    doc.text(`Date    : ${new Date().toLocaleDateString('en-IN')}`, 5, y);
+    y += 5;
+    doc.text(`Time    : ${new Date().toLocaleTimeString('en-IN')}`, 5, y);
     y += 8;
 
     doc.line(5, y, 75, y);
-    y += 6;
+    y += 7;
 
     // Items
     doc.setFontSize(9);
     let subtotal = 0;
+
     (order.items || []).forEach(item => {
         const amt = item.qty * (item.price || 0);
         subtotal += amt;
@@ -285,48 +287,56 @@ function autoSaveBillAsPDF(order) {
         if (order.lang === 'hi' && item.name_hi) itemName = item.name_hi;
         if (order.lang === 'or' && item.name_or) itemName = item.name_or;
 
-        doc.text(itemName, 5, y);
-        doc.text(`x${item.qty}`, 45, y);
-        doc.text(`₹${amt}`, 70, y, { align: "right" });
-        y += 6;
+        // Item name (wrap if too long)
+        doc.text(itemName.substring(0, 28), 5, y);
+        doc.text(`x${item.qty}`, 48, y);
+        doc.text(`₹${amt}`, 73, y, { align: "right" });
+        y += 6.5;
     });
 
     const gst = Math.round(subtotal * 0.05);
     const grandTotal = subtotal + gst;
 
-    y += 4;
+    y += 3;
     doc.line(5, y, 75, y);
-    y += 6;
-
-    // Totals
-    doc.text("Subtotal", 5, y);
-    doc.text(`₹${subtotal}`, 70, y, { align: "right" });
-    y += 5;
-    doc.text("GST 5%", 5, y);
-    doc.text(`₹${gst}`, 70, y, { align: "right" });
     y += 7;
 
+    // Totals Section
+    doc.setFontSize(9);
+    doc.text("Subtotal :", 5, y);
+    doc.text(`₹${subtotal}`, 73, y, { align: "right" });
+    y += 6;
+
+    doc.text("GST (5%) :", 5, y);
+    doc.text(`₹${gst}`, 73, y, { align: "right" });
+    y += 8;
+
+    // Grand Total - Prominent
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.text("GRAND TOTAL", 5, y);
-    doc.text(`₹${grandTotal}`, 70, y, { align: "right" });
+    doc.text(`₹${grandTotal}`, 73, y, { align: "right" });
 
-    y += 10;
+    y += 12;
+
+    // Footer
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text("Thank You! Visit Again 😊", pageWidth/2, y, { align: "center" });
+    doc.text("Thank You!", center, y, { align: "center" });
+    y += 5;
+    doc.text("Visit Again 😊", center, y, { align: "center" });
 
-    // Save PDF with thermal-like layout
+    // File Name
     const tableNo = order.table || "Walkin";
     const custName = (order.name || "Guest").replace(/[^a-zA-Z0-9]/g, '_');
     const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, '');
     const fileName = `Table${tableNo}_${custName}_${dateStr}.pdf`;
 
     doc.save(fileName);
-    console.log(`✅ Bill auto-saved as PDF (Print Layout): ${fileName}`);
+    console.log(`✅ Refined Thermal PDF saved: ${fileName}`);
 }
 
-// ====================== PRINT POPUP ======================
+// ====================== PRINT POPUP (Unchanged) ======================
 function showPrintPopup(order) {
   const printWin = window.open('', '_blank', 'width=800,height=700');
   let itemsHtml = '';
@@ -422,7 +432,7 @@ Grand Total : ₹\${grandTotal}
   `);
   printWin.document.close();
 
-  // Auto Save PDF matching print layout
+  // Auto Save Refined Thermal PDF
   setTimeout(() => {
     autoSaveBillAsPDF(order);
   }, 700);
@@ -464,6 +474,8 @@ Grand Total : ₹${grandTotal}
 };
 
 // ====================== All other functions remain unchanged ======================
+// (Menu, Bill, Customer, Live Orders, Initialize, etc.)
+
 function loadAndListenMenu() {
   db.ref('menu').on('value', (snapshot) => {
     const data = snapshot.val();
@@ -673,7 +685,7 @@ function acceptLiveOrder(orderId) {
   });
 }
 
-// ====================== CUSTOMER SIDE FUNCTIONS ======================
+// Customer functions (unchanged)
 function joinTable() {
   currentTable = document.getElementById("custTable").value.trim();
   currentName = document.getElementById("custName").value.trim();
