@@ -314,11 +314,8 @@ window.updateOrderStatus = function(orderId, status) {
         if (!order) return;
         if (status === 'ready') {
             if (!confirm("Mark this order as READY to serve?")) return;
-            
-            // COOK CLICKS "ORDER READY" → SHORT SOUND (STAFF SIDE OK)
             const readyMsg = `ORDER READY FOR TABLE ${order.table} ${order.name || 'Guest'}`;
             speak(readyMsg, order.lang || 'en');
-            
             orderRef.update({ status: "ready", completedAt: new Date().toLocaleString() });
         } else {
             orderRef.update({ status: status });
@@ -361,8 +358,6 @@ function listenToCustomerOrderStatus() {
         if (order.status === 'ready') {
             statusDiv.innerHTML = `🎉 YOUR ORDER IS READY!<br><span style="font-size:18px;">Please collect from the counter.<br>Thank You!</span>`;
             statusDiv.style.display = 'block';
-            
-            // CUSTOMER QR PAGE SOUND (EXACTLY AS REQUESTED)
             const readyMsg = `ORDER READY FOR THE TABLE ${order.table} ${order.name || 'Guest'}, PLEASE COLLECT ORDER FROM THE COUNTER, THANK YOU`;
             speak(readyMsg, order.lang || 'en');
         } else if (order.status === 'preparing') {
@@ -547,7 +542,7 @@ function printThermalBill() {
     printBill();
 }
 
-// ====================== OTHER FUNCTIONS ======================
+// ====================== FIXED FUNCTIONS (ONLY THESE CHANGED) ======================
 function exportExcel() {
     if (bill.length === 0) return alert("No items in the bill!");
     let csv = "Item,Quantity,Rate,Amount\n";
@@ -569,17 +564,68 @@ function exportExcel() {
 
 function sendWhatsApp() {
     if (bill.length === 0) return alert("Bill is empty!");
+    const mobile = prompt("Enter 10 digit mobile number:");
+    if (!mobile || mobile.length !== 10) return alert("Please enter valid 10-digit number!");
     const subtotal = bill.reduce((sum, b) => sum + (b.qty * b.price), 0);
     const gst = gstEnabled ? Math.round(subtotal * 0.05) : 0;
     const total = subtotal + gst;
     let msg = `Shree & Shriyan Dhaba Bill\n\n`;
     bill.forEach(b => msg += `${b.name} x${b.qty} = ₹${b.qty * b.price}\n`);
     msg += `\nSubtotal: ₹${subtotal}\nGST 5%: ₹${gst}\nGrand Total: ₹${total}\n\nThank You!`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
 function dailyReport() {
-    alert("📊 Daily Report\n\nFeature under development.\nYou can later add Firebase queries for total sales.");
+    const today = new Date().toLocaleDateString();
+    db.ref('tableOrders').once('value', (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return alert("No sales today!");
+        let csv = "Date,Table,Customer,Total,Status\n";
+        let totalSales = 0;
+        Object.keys(data).forEach(key => {
+            const order = data[key];
+            if (order.timestamp && order.timestamp.includes(today)) {
+                csv += `${order.timestamp},${order.table || 'Walk-in'},${order.name || 'Guest'},${order.total || 0},${order.status || 'pending'}\n`;
+                totalSales += parseFloat(order.total || 0);
+            }
+        });
+        csv += `\n,,,Total Sales Today,₹${totalSales}\n`;
+        const link = document.createElement("a");
+        link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+        link.download = `Daily_Sales_${today.replace(/\//g,'-')}.csv`;
+        link.click();
+        alert("✅ Daily Sales Report exported as CSV!");
+    });
+}
+
+function acceptLiveOrder(orderId) {
+    db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
+        const order = snapshot.val();
+        if (!order) return;
+        const details = `Table ${order.table} - ${order.name || 'Guest'}\nTotal ₹${order.total}\n\nItems:\n` + order.items.map(i => `${i.qty} × ${i.name_en}`).join('\n');
+        if (confirm(details + "\n\nAccept Order & Print Bill?")) {
+            const printWindow = window.open('', '_blank');
+            let htmlContent = '<html><head><title>Bill - Shree & Shriyan Dhaba</title>';
+            htmlContent += '<style>body{font-family:monospace;padding:20px;max-width:300px;margin:auto;}table{width:100%;border-collapse:collapse;}th,td{border-bottom:1px dotted #000;padding:4px 0;}</style></head><body>';
+            htmlContent += '<div style="text-align:center;"><h2>Shree & Shriyan Dhaba</h2>';
+            htmlContent += '<p style="font-size:12px;">Durlaga, Jharsuguda, Odisha<br>📞 +91 7077088311</p>';
+            htmlContent += '<p>Table: ' + order.table + ' | Customer: ' + (order.name || 'Guest') + '</p>';
+            htmlContent += '<p>Date: ' + order.timestamp + '</p>';
+            htmlContent += '<table><thead><tr><th>Item</th><th>Qty</th><th>Amt</th></tr></thead><tbody>';
+            order.items.forEach(item => {
+                const amt = item.qty * item.price;
+                htmlContent += '<tr><td>' + item.name_en + '</td><td>' + item.qty + '</td><td>₹' + amt + '</td></tr>';
+            });
+            htmlContent += '</tbody></table>';
+            htmlContent += '<p>Total: ₹' + order.total + '</p>';
+            htmlContent += '<p style="text-align:center; font-size:12px;">Thank You! Visit Again</p></div>';
+            htmlContent += '<script>window.print(); setTimeout(() => window.close(), 800);<\/script></body></html>';
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+            db.ref('tableOrders/' + orderId + '/status').set("accepted");
+            alert("✅ Order Accepted & Bill Printed (Auto Saved)");
+        }
+    });
 }
 
 // ====================== LIVE ORDERS & CUSTOMER SIDE ======================
@@ -611,7 +657,7 @@ function loadLiveOrdersRealTime() {
                 <td>${order.timestamp ? order.timestamp.split(',')[0] : 'N/A'}</td>
                 <td><span style="color: ${order.status === 'pending' ? '#f57c00' : '#2e7d32'};">${order.status || 'pending'}</span></td>
                 <td>
-                    <button onclick="acceptLiveOrder('${key}')" style="background:#2e7d32;color:white;padding:5px 10px;border:none;border-radius:4px;cursor:pointer;margin-right:4px;">Accept</button>
+                    <button onclick="acceptLiveOrder('${key}')" style="background:#2e7d32;color:white;padding:5px 10px;border:none;border-radius:4px;cursor:pointer;margin-right:4px;">Accept & Print</button>
                     <button onclick="deleteLiveOrder('${key}')" style="background:#e74c3c;color:white;padding:5px 10px;border:none;border-radius:4px;cursor:pointer;">🗑️</button>
                 </td>
             `;
@@ -623,14 +669,6 @@ function loadLiveOrdersRealTime() {
 function deleteLiveOrder(orderId) {
     if (!confirm("Delete this order?")) return;
     db.ref('tableOrders/' + orderId).remove();
-}
-
-function acceptLiveOrder(orderId) {
-    db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
-        const order = snapshot.val();
-        if (order) alert(`Accepted order for Table ${order.table} - ₹${order.total}`);
-        db.ref('tableOrders/' + orderId + '/status').set("accepted");
-    });
 }
 
 function joinTable() {
