@@ -339,10 +339,10 @@ function placeCustomerOrder() {
     };
     db.ref('tableOrders/' + currentOrderId).set(orderData);
     alert(`✅ Order Placed Successfully for Table ${currentTable}`);
-    const msg = currentLang === 'hi' ? `टेबल ${currentTable} के लिए ग्राहक का ऑर्डर प्राप्त हुआ` :
-                currentLang === 'or' ? `ଟେବୁଲ ${currentTable} ପାଇଁ ଗ୍ରାହକଙ୍କ ଅର୍ଡର ପ୍ରାପ୍ତ ହୋଇଛି` :
-                `Customer order for Table ${currentTable} is received`;
-    speak(msg);
+    
+    // NEW SOUND AFTER CUSTOMER CLICKS "PLACE ORDER"
+    speak(`ORDER SENT TO THE KITCHEN TABLE ${currentTable} ${currentName}`);
+    
     listenToCustomerOrderStatus();
 }
 
@@ -492,7 +492,7 @@ function voiceAdd() {
     alert("🎤 Voice Add feature coming soon. Use 'Add Item' for now.");
 }
 
-// ====================== PRINTING (Fixed with safe concatenation) ======================
+// ====================== PRINTING ======================
 function printBill() {
     if (bill.length === 0) return alert("Bill is empty!");
 
@@ -524,7 +524,6 @@ function printBill() {
     printWindow.document.write(htmlContent);
     printWindow.document.close();
 
-    // Clear bill after printing
     bill = [];
     renderBill();
     count++;
@@ -724,6 +723,14 @@ function generateQRCode() {
         <p style="margin-top:10px; font-weight:bold; color:#d84315;">Table ${tableNo} - Scan to Order</p>
     `;
 }
+
+// ====================== NEW ORDER NOTIFICATION SOUND FOR STAFF POS & KITCHEN DISPLAY ======================
+db.ref('tableOrders').on('child_added', (snapshot) => {
+    const order = snapshot.val();
+    if (order && order.status === 'pending') {
+        speak(`ORDER RECEIVED FROM THE TABLE ${order.table} ${order.name || 'Guest'}`);
+    }
+});
 
 // ====================== INITIALIZE ======================
 function initializeApp() {
