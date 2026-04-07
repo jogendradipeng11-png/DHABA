@@ -46,6 +46,9 @@
     .voice-control {
         background: #333; padding: 12px; border-radius: 10px; margin: 15px 0; text-align: center;
     }
+    @keyframes flash {
+        50% { opacity: 0.3; }
+    }
 </style>
 </head>
 <body>
@@ -340,8 +343,11 @@ function placeCustomerOrder() {
     db.ref('tableOrders/' + currentOrderId).set(orderData);
     alert(`✅ Order Placed Successfully for Table ${currentTable}`);
     
-    // NEW SOUND AFTER CUSTOMER CLICKS "PLACE ORDER"
-    speak(`ORDER SENT TO THE KITCHEN TABLE ${currentTable} ${currentName}`);
+    // SOUND AS PER CUSTOMER LANGUAGE SELECTION ON QR PAGE
+    let sentMsg = `ORDER SENT TO THE KITCHEN TABLE ${currentTable} ${currentName}`;
+    if (currentLang === 'hi') sentMsg = `ऑर्डर किचन को भेज दिया गया टेबल ${currentTable} ${currentName}`;
+    else if (currentLang === 'or') sentMsg = `ଅର୍ଡର କିଚେନ୍ କୁ ପଠାଯାଇଛି ଟେବୁଲ ${currentTable} ${currentName}`;
+    speak(sentMsg, currentLang);
     
     listenToCustomerOrderStatus();
 }
@@ -724,11 +730,32 @@ function generateQRCode() {
     `;
 }
 
-// ====================== NEW ORDER NOTIFICATION SOUND FOR STAFF POS & KITCHEN DISPLAY ======================
+// ====================== FLASH NOTIFICATION + LANGUAGE-AWARE SOUND FOR STAFF POS ======================
+function showFlashNotification() {
+    let flash = document.getElementById('newOrderFlash');
+    if (!flash) {
+        flash = document.createElement('div');
+        flash.id = 'newOrderFlash';
+        flash.style.cssText = 'background:#ff0000;color:white;padding:12px;text-align:center;font-size:18px;font-weight:bold;margin:10px 0;border-radius:8px;animation:flash 800ms infinite;';
+        flash.innerHTML = '🚨 NEW TABLE ORDER RECEIVED!';
+        const staffView = document.getElementById('staffView');
+        staffView.insertBefore(flash, staffView.children[1]);
+    }
+    flash.style.display = 'block';
+    setTimeout(() => { if (flash) flash.style.display = 'none'; }, 8000);
+}
+
 db.ref('tableOrders').on('child_added', (snapshot) => {
     const order = snapshot.val();
     if (order && order.status === 'pending') {
-        speak(`ORDER RECEIVED FROM THE TABLE ${order.table} ${order.name || 'Guest'}`);
+        // SOUND AS PER CUSTOMER LANGUAGE SELECTED ON QR PAGE
+        let receivedMsg = `ORDER RECEIVED FROM THE TABLE ${order.table} ${order.name || 'Guest'}`;
+        if (order.lang === 'hi') receivedMsg = `टेबल ${order.table} ${order.name || 'Guest'} से ऑर्डर प्राप्त हुआ`;
+        else if (order.lang === 'or') receivedMsg = `ଟେବୁଲ ${order.table} ${order.name || 'Guest'} ରୁ ଅର୍ଡର ପ୍ରାପ୍ତ ହୋଇଛି`;
+        speak(receivedMsg, order.lang || 'en');
+        
+        // FLASH NOTIFICATION FOR STAFF POS
+        showFlashNotification();
     }
 });
 
