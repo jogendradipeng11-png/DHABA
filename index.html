@@ -617,7 +617,7 @@ function dailyReport() {
     });
 }
 
-// ====================== STAFF NEW ORDER POPUP (EXPANDED) ======================
+// ====================== STAFF NEW ORDER POPUP ======================
 function showNewOrderPopup(order) {
     currentPendingOrder = order;
     const details = `Table ${order.table} - ${order.name || 'Guest'}<br>Total ₹${order.total}`;
@@ -764,7 +764,7 @@ db.ref('tableOrders').on('child_added', (snapshot) => {
     }
 });
 
-// ====================== CUSTOMER SIDE - MARK AS PAID (UPDATED) ======================
+// ====================== CUSTOMER SIDE - PAYMENT VALIDATION ======================
 function markAsPaid() {
     const whatsappNum = document.getElementById("custWhatsApp").value.trim();
     if (!whatsappNum || whatsappNum.length !== 10) {
@@ -790,12 +790,19 @@ function sendCustomerBillToWhatsApp(mobile) {
     alert(`✅ Bill sent to +91${mobile}`);
 }
 
-// ====================== CUSTOMER OTHER FUNCTIONS ======================
 function payByCash() {
     if (customerOrder.length === 0) return alert("Cart is empty!");
-    alert("💵 Cash payment noted.");
+    let details = `Cash Payment Details\n\n`;
+    details += `Table: ${currentTable}\n`;
+    details += `Customer: ${currentName}\n`;
+    details += `Total Amount: ₹${document.getElementById("custTotal").innerText}\n\n`;
+    details += `Please collect cash from customer.`;
+    alert(details);
+    customerOrder = [];
+    renderCustomerOrder();
 }
 
+// ====================== REMAINING CUSTOMER FUNCTIONS ======================
 function clearCustomerOrder() {
     if (confirm("Clear cart?")) {
         customerOrder = [];
