@@ -204,7 +204,7 @@ let customerOrder = [];
 let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
 
-// ====================== AUTO SAVE AS PDF ======================
+// ====================== AUTO SAVE AS PDF (Improved Layout) ======================
 function autoSaveBillAsPDF(order) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({
@@ -218,43 +218,56 @@ function autoSaveBillAsPDF(order) {
     const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, '');
     const fileName = `Table${tableNo}_${custName}_${dateStr}.pdf`;
 
-    let y = 20;
+    let y = 25;
 
     // Header
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
+    doc.setFontSize(20);
     doc.text("SHREE & SHRIYAN DHABA", 105, y, { align: "center" });
     y += 8;
-    doc.setFontSize(10);
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
     doc.text("At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)", 105, y, { align: "center" });
     y += 6;
-    doc.text("📞 +91 7077088311 | ✉ jogendra.dipeng11@gmail.com", 105, y, { align: "center" });
-    y += 10;
+    doc.text("📞 +91 7077088311    |    ✉ jogendra.dipeng11@gmail.com", 105, y, { align: "center" });
+    y += 12;
 
+    // Divider
     doc.setDrawColor(216, 67, 21);
+    doc.setLineWidth(0.8);
     doc.line(20, y, 190, y);
-    y += 10;
+    y += 12;
 
-    // Bill Info
-    doc.setFontSize(11);
-    doc.text(`Invoice     : INV${Date.now().toString().slice(-6)}`, 20, y);
+    // Bill Information
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("INVOICE", 20, y);
+    doc.text(`INV${Date.now().toString().slice(-6)}`, 170, y, { align: "right" });
+    y += 8;
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Table No.     : ${tableNo}`, 20, y);
     y += 7;
-    doc.text(`Table       : ${tableNo}`, 20, y);
+    doc.text(`Customer      : ${order.name || "Guest"}`, 20, y);
     y += 7;
-    doc.text(`Customer    : ${order.name || "Guest"}`, 20, y);
-    y += 7;
-    doc.text(`Date & Time : ${new Date().toLocaleString('en-IN')}`, 20, y);
+    doc.text(`Date & Time   : ${new Date().toLocaleString('en-IN')}`, 20, y);
     y += 12;
 
     doc.line(20, y, 190, y);
+    y += 12;
+
+    // Items Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.text("ITEMS", 20, y);
     y += 10;
 
-    // Items Table
-    doc.setFontSize(12);
-    doc.text("ITEMS", 20, y);
-    y += 8;
-
+    // Items List
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
     let subtotal = 0;
+
     (order.items || []).forEach(item => {
         const amt = item.qty * (item.price || 0);
         subtotal += amt;
@@ -262,44 +275,52 @@ function autoSaveBillAsPDF(order) {
         if (order.lang === 'hi' && item.name_hi) itemName = item.name_hi;
         if (order.lang === 'or' && item.name_or) itemName = item.name_or;
 
-        doc.setFontSize(11);
-        doc.text(`${itemName}`, 20, y);
-        doc.text(`x ${item.qty}`, 120, y);
+        const itemLine = `${itemName} × ${item.qty}`;
+        doc.text(itemLine, 20, y);
         doc.text(`₹${amt}`, 170, y, { align: "right" });
-        y += 8;
+        y += 9;
     });
-
-    const gst = Math.round(subtotal * 0.05);
-    const grandTotal = subtotal + gst;
 
     y += 5;
     doc.line(20, y, 190, y);
-    y += 10;
+    y += 12;
+
+    // Totals
+    const gst = Math.round(subtotal * 0.05);
+    const grandTotal = subtotal + gst;
 
     doc.setFontSize(12);
     doc.text("Subtotal", 20, y);
     doc.text(`₹${subtotal}`, 170, y, { align: "right" });
-    y += 8;
+    y += 9;
+
     doc.text("GST (5%)", 20, y);
     doc.text(`₹${gst}`, 170, y, { align: "right" });
-    y += 10;
+    y += 12;
 
-    doc.setFontSize(14);
+    // Grand Total
+    doc.setFontSize(15);
     doc.setFont("helvetica", "bold");
     doc.text("GRAND TOTAL", 20, y);
     doc.text(`₹${grandTotal}`, 170, y, { align: "right" });
 
-    y += 15;
+    y += 18;
+
+    // Footer
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
     doc.text("Thank You! Visit Again 😊", 105, y, { align: "center" });
+    y += 8;
+    doc.setFontSize(10);
+    doc.text("Powered by Shree & Shriyan Dhaba POS", 105, y, { align: "center" });
 
-    // Save PDF
+    // Save the PDF
     doc.save(fileName);
     console.log(`✅ Bill auto-saved as PDF: ${fileName}`);
 }
 
 // ====================== MENU ======================
+// (All other functions remain unchanged)
 function loadAndListenMenu() {
   db.ref('menu').on('value', (snapshot) => {
     const data = snapshot.val();
@@ -511,7 +532,7 @@ function acceptLiveOrder(orderId) {
   });
 }
 
-// ====================== PRINT POPUP WITH AUTO PDF SAVE ======================
+// ====================== PRINT POPUP ======================
 function showPrintPopup(order) {
   const printWin = window.open('', '_blank', 'width=800,height=700');
   let itemsHtml = '';
@@ -607,7 +628,7 @@ Grand Total : ₹\${grandTotal}
   `);
   printWin.document.close();
 
-  // Auto Save as PDF
+  // Auto Save as PDF with improved layout
   setTimeout(() => {
     autoSaveBillAsPDF(order);
   }, 700);
