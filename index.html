@@ -49,7 +49,6 @@
     @keyframes flash {
         50% { opacity: 0.3; }
     }
-    /* NEW MODAL STYLES - ONLY FOR NOTIFICATION */
     .modal {
         display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center;
@@ -195,7 +194,7 @@
     <button onclick="closeKitchenDisplay()" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); padding:15px 40px; background:#d84315; font-size:18px;">Close Kitchen Display</button>
 </div>
 
-<!-- NEW ORDER POPUP NOTIFICATION (ONLY ADDED FOR STAFF POS) -->
+<!-- NEW ORDER POPUP NOTIFICATION -->
 <div id="newOrderModal" class="modal">
     <div class="modal-content">
         <h3 style="color:#d84315;">🚨 NEW ORDER RECEIVED</h3>
@@ -260,7 +259,7 @@ let count = parseInt(localStorage.getItem("inv") || "1");
 let liveOrdersRef = null;
 let voiceSpeed = 0.95;
 let gstEnabled = true;
-let currentPendingOrder = null;   // For popup
+let currentPendingOrder = null;
 
 // ====================== SPEECH ======================
 const speech = window.speechSynthesis;
@@ -277,25 +276,6 @@ function speak(text, lang = 'en') {
 function updateVoiceSpeed(value) {
     voiceSpeed = parseFloat(value);
     document.getElementById('speedValue').textContent = voiceSpeed.toFixed(2) + 'x';
-}
-
-// ====================== NEW ORDER POPUP (ONLY ADDED) ======================
-function showNewOrderPopup(order) {
-    currentPendingOrder = order;
-    const details = `Table ${order.table} - ${order.name || 'Guest'}\nTotal ₹${order.total}`;
-    document.getElementById('modalOrderDetails').innerHTML = details.replace(/\n/g, '<br>');
-    document.getElementById('newOrderModal').style.display = 'flex';
-}
-
-function closeNewOrderModal() {
-    document.getElementById('newOrderModal').style.display = 'none';
-    currentPendingOrder = null;
-}
-
-function acceptAndPrintFromModal() {
-    if (!currentPendingOrder) return;
-    closeNewOrderModal();
-    acceptLiveOrder(currentPendingOrder.id);   // Reuse existing function (now enhanced)
 }
 
 // ====================== KITCHEN DISPLAY ======================
@@ -637,16 +617,30 @@ function dailyReport() {
     });
 }
 
-// ====================== ENHANCED ACCEPT & PRINT (WITH POPUP OPTIONS) ======================
+// ====================== STAFF NEW ORDER POPUP (EXPANDED) ======================
+function showNewOrderPopup(order) {
+    currentPendingOrder = order;
+    const details = `Table ${order.table} - ${order.name || 'Guest'}<br>Total ₹${order.total}`;
+    document.getElementById('modalOrderDetails').innerHTML = details;
+    document.getElementById('newOrderModal').style.display = 'flex';
+}
+
+function closeNewOrderModal() {
+    document.getElementById('newOrderModal').style.display = 'none';
+    currentPendingOrder = null;
+}
+
+function acceptAndPrintFromModal() {
+    if (!currentPendingOrder) return;
+    closeNewOrderModal();
+    acceptLiveOrder(currentPendingOrder.id);
+}
+
 function acceptLiveOrder(orderId) {
     db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
         const order = snapshot.val();
         if (!order) return;
-
-        // Auto save status
         db.ref('tableOrders/' + orderId + '/status').set("accepted");
-
-        // Show bill preview popup with 4 options
         showBillOptionsModal(order);
     });
 }
@@ -679,7 +673,6 @@ window.printNormalFromModal = function(orderId) {
     db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
         const order = snapshot.val();
         if (!order) return;
-        // Temporarily use local bill for printing
         bill = order.items.map(i => ({name: i.name_en, qty: i.qty, price: i.price}));
         printBill();
         alert("✅ Normal Print & Clear done (Auto Saved)");
@@ -759,7 +752,7 @@ function deleteLiveOrder(orderId) {
     db.ref('tableOrders/' + orderId).remove();
 }
 
-// ====================== NEW ORDER AUTO POPUP (ONLY THIS PART CHANGED) ======================
+// ====================== NEW ORDER AUTO POPUP ======================
 db.ref('tableOrders').on('child_added', (snapshot) => {
     const order = snapshot.val();
     if (order && order.status === 'pending') {
@@ -767,13 +760,75 @@ db.ref('tableOrders').on('child_added', (snapshot) => {
         if (order.lang === 'hi') receivedMsg = `टेबल ${order.table} ${order.name || 'Guest'} से ऑर्डर प्राप्त हुआ`;
         else if (order.lang === 'or') receivedMsg = `ଟେବୁଲ ${order.table} ${order.name || 'Guest'} ରୁ ଅର୍ଡର ପ୍ରାପ୍ତ ହୋଇଛି`;
         speak(receivedMsg, order.lang || 'en');
-        
-        // SHOW POPUP NOTIFICATION WITH CUSTOMER NAME & TABLE
         showNewOrderPopup(order);
     }
 });
 
-// ====================== CUSTOMER SIDE ======================
+// ====================== CUSTOMER SIDE - MARK AS PAID (UPDATED) ======================
+function markAsPaid() {
+    const whatsappNum = document.getElementById("custWhatsApp").value.trim();
+    if (!whatsappNum || whatsappNum.length !== 10) {
+        const mobile = prompt("Enter 10 digit mobile number to send bill on WhatsApp:");
+        if (!mobile || mobile.length !== 10) return alert("Please enter valid 10-digit number!");
+        sendCustomerBillToWhatsApp(mobile);
+        return;
+    }
+    sendCustomerBillToWhatsApp(whatsappNum);
+}
+
+function sendCustomerBillToWhatsApp(mobile) {
+    let msg = `Shree & Shriyan Dhaba Bill\nTable ${currentTable} - ${currentName}\n\n`;
+    customerOrder.forEach(item => {
+        const amt = item.qty * item.price;
+        msg += `${item.name_en} x${item.qty} = ₹${amt}\n`;
+    });
+    const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
+    msg += `\nTotal: ₹${total}\n\nThank You!`;
+    window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
+    customerOrder = [];
+    renderCustomerOrder();
+    alert(`✅ Bill sent to +91${mobile}`);
+}
+
+// ====================== CUSTOMER OTHER FUNCTIONS ======================
+function payByCash() {
+    if (customerOrder.length === 0) return alert("Cart is empty!");
+    alert("💵 Cash payment noted.");
+}
+
+function clearCustomerOrder() {
+    if (confirm("Clear cart?")) {
+        customerOrder = [];
+        renderCustomerOrder();
+    }
+}
+
+function generateDynamicPhonePeQR() {
+    const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
+    const container = document.getElementById("dynamicPhonePeQR");
+    if (total <= 0) {
+        container.style.display = "none";
+        return;
+    }
+    const txnNote = `Table${currentTable}_${Date.now()}`;
+    const upiLink = `upi://pay?pa=${MERCHANT_UPI}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${total.toFixed(2)}&cu=INR&tn=${encodeURIComponent(txnNote)}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(upiLink)}`;
+    container.innerHTML = `<img src="${qrUrl}" style="cursor:pointer;" onclick="window.open('${upiLink}','_blank')" alt="UPI QR"><p style="margin:8px 0 0 0; font-weight:bold; color:#6739B7;">₹${total.toFixed(2)} — Tap to Pay</p>`;
+    container.style.display = "block";
+}
+
+function generateQRCode() {
+    const tableNo = document.getElementById("qrTableNum").value.trim();
+    if (!tableNo) return alert("Enter Table Number");
+    const baseUrl = window.location.href.split('?')[0];
+    const orderLink = `${baseUrl}?mode=customer&table=${tableNo}`;
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(orderLink)}`;
+    document.getElementById("qrContainer").innerHTML = `
+        <img src="${qrSrc}" style="width:250px; border:8px solid #d84315; border-radius:12px;" alt="Table QR">
+        <p style="margin-top:10px; font-weight:bold; color:#d84315;">Table ${tableNo} - Scan to Order</p>
+    `;
+}
+
 function joinTable() {
     currentTable = document.getElementById("custTable").value.trim();
     currentName = document.getElementById("custName").value.trim();
@@ -827,52 +882,6 @@ function renderCustomerOrder() {
 function delCustomerItem(i) {
     customerOrder.splice(i, 1);
     renderCustomerOrder();
-}
-
-function clearCustomerOrder() {
-    if (confirm("Clear cart?")) {
-        customerOrder = [];
-        renderCustomerOrder();
-    }
-}
-
-function payByCash() {
-    if (customerOrder.length === 0) return alert("Cart is empty!");
-    alert("💵 Cash payment noted.");
-}
-
-function markAsPaid() {
-    const whatsappNum = document.getElementById("custWhatsApp").value.trim();
-    if (!whatsappNum || whatsappNum.length !== 10) return alert("Enter valid 10-digit WhatsApp number");
-    alert(`✅ Payment recorded for +91${whatsappNum}`);
-    customerOrder = [];
-    renderCustomerOrder();
-}
-
-function generateDynamicPhonePeQR() {
-    const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
-    const container = document.getElementById("dynamicPhonePeQR");
-    if (total <= 0) {
-        container.style.display = "none";
-        return;
-    }
-    const txnNote = `Table${currentTable}_${Date.now()}`;
-    const upiLink = `upi://pay?pa=${MERCHANT_UPI}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${total.toFixed(2)}&cu=INR&tn=${encodeURIComponent(txnNote)}`;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(upiLink)}`;
-    container.innerHTML = `<img src="${qrUrl}" style="cursor:pointer;" onclick="window.open('${upiLink}','_blank')" alt="UPI QR"><p style="margin:8px 0 0 0; font-weight:bold; color:#6739B7;">₹${total.toFixed(2)} — Tap to Pay</p>`;
-    container.style.display = "block";
-}
-
-function generateQRCode() {
-    const tableNo = document.getElementById("qrTableNum").value.trim();
-    if (!tableNo) return alert("Enter Table Number");
-    const baseUrl = window.location.href.split('?')[0];
-    const orderLink = `${baseUrl}?mode=customer&table=${tableNo}`;
-    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(orderLink)}`;
-    document.getElementById("qrContainer").innerHTML = `
-        <img src="${qrSrc}" style="width:250px; border:8px solid #d84315; border-radius:12px;" alt="Table QR">
-        <p style="margin-top:10px; font-weight:bold; color:#d84315;">Table ${tableNo} - Scan to Order</p>
-    `;
 }
 
 // ====================== INITIALIZE ======================
