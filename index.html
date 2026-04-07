@@ -16,12 +16,15 @@
 
     h2 { text-align: center; color: #d84315; margin: 8px 0 4px 0; }
     h3, h4 { color: #d84315; }
-    input, select, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
-    button { background: #2e7d32; color: white; border: none; font-size: 16px; cursor: pointer; margin-top: 5px; }
+    input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
+    button { background: #2e7d32; color: white; border: none; font-size: 16px; cursor: pointer; }
     button:hover { opacity: 0.9; }
     .cash-btn { background: #f57c00 !important; }
     .total { font-size: 22px; font-weight: bold; color: #d84315; text-align: center; margin: 15px 0; }
     .menu-item { display: flex; align-items: center; justify-content: space-between; background: #fff3e0; border: 2px solid #ff9800; border-radius: 10px; padding: 12px; margin: 10px 0; }
+
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
 
     /* Kitchen Display */
     .kitchen-view {
@@ -71,18 +74,22 @@
             </p>
             <p id="staffPosLabel" style="text-align:center;color:#d84315;font-weight:bold;">STAFF POS</p>
         </div>
+
         <input id="customerName" placeholder="Customer Name (optional)">
         <input id="invoice" readonly value="INV001">
         <select id="item"></select>
         <input id="qty" type="number" placeholder="Qty" value="1" min="1">
         <button onclick="addItem()">➕ Add Item</button>
         <button onclick="voiceAdd()">🎤 Voice Add</button>
-        <table border="1">
+
+        <table border="1" style="width:100%; margin:10px 0;">
             <thead><tr><th>Item</th><th>Qty</th><th>Amt</th><th>X</th></tr></thead>
             <tbody id="bill"></tbody>
         </table>
+
         <label><input type="checkbox" id="gst" checked> GST 5%</label>
         <div class="total">Total: ₹ <span id="total">0</span></div>
+
         <button onclick="printBill()">🧾 Normal Print & Clear</button>
         <button onclick="printThermalBill()" style="background:#d84315;">🖨️ Print Thermal + Auto Cut</button>
         <button onclick="exportExcel()">📊 Export Excel</button>
@@ -101,20 +108,11 @@
             <div id="currentMenuList"></div>
             <button onclick="hideCurrentMenu()" style="background:#666; margin-top:10px;">Close Menu</button>
         </div>
+
         <h4>Generate QR for Table Ordering</h4>
         <input id="qrTableNum" type="number" placeholder="Table Number">
         <button onclick="generateQRCode()" style="background:#ff9800;">📱 Generate Table QR</button>
         <div id="qrContainer" style="text-align:center;margin:15px 0;"></div>
-        <div id="liveOrdersSection" style="display:none; margin-top:20px;">
-            <h4 style="color:#d84315;">📋 Live Table Orders (Real-time)</h4>
-            <div id="liveOrdersContainer" style="max-height:400px; overflow-y:auto;">
-                <table id="liveOrdersTable" border="1" style="width:100%;">
-                    <thead><tr><th>Table</th><th>Customer</th><th>Total ₹</th><th>Time</th><th>Status</th><th>Action</th></tr></thead>
-                    <tbody id="liveOrdersBody"></tbody>
-                </table>
-            </div>
-            <button onclick="showTableOrders()" style="margin-top:10px;background:#666;">Close Live Orders</button>
-        </div>
     </div>
 
     <!-- CUSTOMER VIEW -->
@@ -142,20 +140,13 @@
             <div class="total">Your Total: ₹ <span id="custTotal">0</span></div>
             <button onclick="placeCustomerOrder()" id="placeOrderBtn" style="background:#d84315;">✅ Place Order for Kitchen</button>
 
-            <!-- Real-time Order Status -->
             <div id="customerOrderStatus" style="display:none; padding:25px; margin:15px 0; border-radius:12px; text-align:center; font-size:22px; font-weight:bold; background:#2e7d32; color:white;"></div>
 
             <div class="payment-section">
                 <h4 id="paymentTitle" style="margin:12px 0 8px 0; color:#2e7d32;">💰 Payment Options</h4>
                 <input id="custWhatsApp" type="tel" placeholder="WhatsApp Number (for receipt)" maxlength="10">
                 <h4 style="margin:15px 0 8px 0; color:#6739B7; text-align:center;">📱 Click & Pay - Exact Bill Amount</h4>
-                <p style="text-align:center; font-size:14px; color:#d84315; margin:8px 0 12px 0;">
-                    Tap the QR code below to directly open PhonePe with your exact bill amount
-                </p>
                 <div id="dynamicPhonePeQR" class="phonepay-qr" style="display:none; text-align:center;"></div>
-                <p style="text-align:center; font-size:13px; color:#666;">
-                    💡 If payment fails, open PhonePe app → Scan QR code
-                </p>
                 <button onclick="payByCash()" class="cash-btn" style="margin-top:15px;">💵 Pay by Cash</button>
                 <input id="paidAmount" type="number" placeholder="Enter Paid Amount ₹" style="margin-top:12px;">
                 <button onclick="markAsPaid()" id="paidBtn" style="background:#2e7d32; margin-top:10px;">
@@ -167,8 +158,6 @@
     </div>
 </div>
 
-<div id="notificationContainer" class="notification-container"></div>
-
 <!-- KITCHEN DISPLAY -->
 <div id="kitchenView" class="kitchen-view">
     <div class="kitchen-header">
@@ -176,7 +165,6 @@
         <div id="kitchenCount" style="position:absolute; top:20px; right:20px; background:rgba(0,0,0,0.6); padding:8px 18px; border-radius:25px;">0 Orders</div>
     </div>
     
-    <!-- Voice Speed Control -->
     <div class="voice-control" style="background:#333; padding:12px; border-radius:10px; margin:15px 0; text-align:center;">
         <label style="color:#ffeb3b;">Voice Speed: <span id="speedValue">0.95x</span></label><br>
         <input type="range" id="voiceSpeed" min="0.5" max="1.5" step="0.05" value="0.95" 
@@ -184,7 +172,7 @@
     </div>
 
     <div class="kitchen-orders" id="kitchenOrdersContainer"></div>
-    <button onclick="closeKitchenDisplay()" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); padding:15px 40px; background:#d84315; font-size:18px; border:none; border-radius:10px;">Close Kitchen Display</button>
+    <button onclick="closeKitchenDisplay()" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); padding:15px 40px; background:#d84315; font-size:18px;">Close Kitchen Display</button>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -215,9 +203,7 @@ function changeLanguage(lang) {
     document.getElementById('paymentTitle').textContent = t.paymentTitle;
     document.getElementById('paidBtn').textContent = t.iHavePaid;
     document.getElementById('clearCartBtn').textContent = t.clearCart;
-    if (document.getElementById("menuSection") && document.getElementById("menuSection").style.display !== "none") {
-        loadCustomerMenu();
-    }
+    if (document.getElementById("menuSection") && document.getElementById("menuSection").style.display !== "none") loadCustomerMenu();
 }
 
 // ====================== FIREBASE ======================
@@ -232,33 +218,31 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+
 const MERCHANT_UPI = "8847810037jp@ybl";
 const MERCHANT_NAME = "Shree & Shriyan Dhaba";
 
 let items = [];
 let bill = [];
-let currentTable = '';
 let customerOrder = [];
+let currentTable = '';
 let currentName = '';
+let currentOrderId = null;
 let count = parseInt(localStorage.getItem("inv") || "1");
 let liveOrdersRef = null;
-let currentOrderId = null;
 let voiceSpeed = 0.95;
 
-// ====================== MULTILINGUAL SPEECH WITH SPEED ======================
+// ====================== SPEECH ======================
 const speech = window.speechSynthesis;
 
 function speak(text, lang = 'en') {
     if (!speech) return;
     const utterance = new SpeechSynthesisUtterance(text);
-    
     if (lang === 'hi') utterance.lang = 'hi-IN';
     else if (lang === 'or') utterance.lang = 'or-IN';
     else utterance.lang = 'en-IN';
-    
     utterance.rate = voiceSpeed;
     utterance.pitch = 1.05;
-    
     speech.cancel();
     speech.speak(utterance);
 }
@@ -287,7 +271,7 @@ function loadKitchenDisplay() {
         let pendingCount = 0;
 
         if (!data) {
-            container.innerHTML = '<div style="text-align:center; padding:100px; color:#888; font-size:28px;">No pending orders at the moment</div>';
+            container.innerHTML = '<div style="text-align:center; padding:100px; color:#888; font-size:28px;">No pending orders</div>';
             return;
         }
 
@@ -322,23 +306,13 @@ function loadKitchenDisplay() {
 }
 
 window.updateOrderStatus = function(orderId, status) {
-    const orderRef = db.ref('tableOrders/' + orderId);
-    orderRef.once('value', (snapshot) => {
-        const order = snapshot.val();
-        if (!order) return;
-
-        if (status === 'ready') {
-            if (!confirm("Mark this order as READY to serve?")) return;
-            
-            if (currentLang === 'hi') speak("कृपया अपना स्वादिष्ट भोजन प्राप्त करें, धन्यवाद", 'hi');
-            else if (currentLang === 'or') speak("ଦୟାକରି ଆପଣଙ୍କର ସ୍ୱାଦିଷ୍ଟ ଖାଦ୍ୟ ଗ୍ରହଣ କରନ୍ତୁ, ଧନ୍ୟବାଦ", 'or');
-            else speak("Please receive your delicious food. Thank you.");
-            
-            orderRef.update({ status: "ready", completedAt: new Date().toLocaleString() });
-        } else {
-            orderRef.update({ status: status });
-        }
-    });
+    if (status === 'ready') {
+        if (!confirm("Mark this order as READY?")) return;
+        if (currentLang === 'hi') speak("कृपया अपना स्वादिष्ट भोजन प्राप्त करें, धन्यवाद", 'hi');
+        else if (currentLang === 'or') speak("ଦୟାକରି ଆପଣଙ୍କର ସ୍ୱାଦିଷ୍ଟ ଖାଦ୍ୟ ଗ୍ରହଣ କରନ୍ତୁ, ଧନ୍ୟବାଦ", 'or');
+        else speak("Please receive your delicious food. Thank you.");
+    }
+    db.ref('tableOrders/' + orderId + '/status').set(status);
 };
 
 // ====================== CUSTOMER STATUS ======================
@@ -378,7 +352,6 @@ function placeCustomerOrder() {
   db.ref('tableOrders/' + currentOrderId).set(orderData);
   alert(`✅ Order Placed Successfully for Table ${currentTable}`);
   
-  // Announce in kitchen
   if (currentLang === 'hi') speak(`टेबल ${currentTable} के लिए ऑर्डर प्राप्त हुआ`, 'hi');
   else if (currentLang === 'or') speak(`ଟେବୁଲ ${currentTable} ପାଇଁ ଅର୍ଡର ପ୍ରାପ୍ତ ହୋଇଛି`, 'or');
   else speak(`Order received for Table ${currentTable}`);
@@ -386,7 +359,7 @@ function placeCustomerOrder() {
   listenToCustomerOrderStatus();
 }
 
-// ====================== YOUR ORIGINAL FUNCTIONS (All Kept Intact) ======================
+// ====================== ALL YOUR ORIGINAL FUNCTIONS ======================
 function loadAndListenMenu() {
   db.ref('menu').on('value', (snapshot) => {
     const data = snapshot.val();
@@ -516,12 +489,8 @@ function voiceAdd() {
 }
 
 function exportExcel() {
-  if (bill.length === 0) {
-    alert("No items in the bill to export!");
-    return;
-  }
-  let csvContent = "data:text/csv;charset=utf-8,";
-  csvContent += "Item,Quantity,Rate,Amount\n";
+  if (bill.length === 0) return alert("No items in the bill to export!");
+  let csvContent = "data:text/csv;charset=utf-8,Item,Quantity,Rate,Amount\n";
   let subtotal = 0;
   bill.forEach(item => {
     const amount = item.qty * item.price;
@@ -531,24 +500,17 @@ function exportExcel() {
   const gst = Math.round(subtotal * 0.05);
   const grandTotal = subtotal + gst;
   csvContent += "\n,,,Subtotal," + subtotal + "\n,,,GST (5%)," + gst + "\n,,,Grand Total," + grandTotal + "\n";
-  const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", "Shree_Shriyan_Bill_" + new Date().toISOString().slice(0,10).replace(/-/g,'') + ".csv");
-  document.body.appendChild(link);
+  link.href = encodeURI(csvContent);
+  link.download = "Shree_Shriyan_Bill_" + new Date().toISOString().slice(0,10).replace(/-/g,'') + ".csv";
   link.click();
-  document.body.removeChild(link);
-  alert("✅ Bill exported successfully as Excel (CSV) file!");
+  alert("✅ Bill exported successfully!");
 }
 
 function showTableOrders() {
   const section = document.getElementById("liveOrdersSection");
-  if (section.style.display === "block") {
-    section.style.display = "none";
-    return;
-  }
-  section.style.display = "block";
-  loadLiveOrdersRealTime();
+  section.style.display = section.style.display === "block" ? "none" : "block";
+  if (section.style.display === "block") loadLiveOrdersRealTime();
 }
 
 function loadLiveOrdersRealTime() {
@@ -563,11 +525,9 @@ function loadLiveOrdersRealTime() {
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">No pending table orders at the moment.</td></tr>';
       return;
     }
-    let hasOrders = false;
     Object.keys(data).forEach((key) => {
       const order = data[key];
       if (!order || order.status === "completed") return;
-      hasOrders = true;
       const row = document.createElement("tr");
       row.innerHTML = `
         <td><strong>Table ${order.table}</strong></td>
@@ -582,21 +542,15 @@ function loadLiveOrdersRealTime() {
       `;
       tbody.appendChild(row);
     });
-    if (!hasOrders) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">No pending table orders at the moment.</td></tr>';
-    }
   });
 }
 
 function deleteLiveOrder(orderId) {
-    if (!confirm("❌ Are you sure you want to delete this table order permanently?")) return;
-    db.ref('tableOrders/' + orderId).remove()
-        .then(() => alert("✅ Order deleted successfully"))
-        .catch(() => alert("❌ Failed to delete"));
+    if (!confirm("Delete this order permanently?")) return;
+    db.ref('tableOrders/' + orderId).remove().then(() => alert("Order deleted")).catch(() => alert("Failed to delete"));
 }
 
 function acceptLiveOrder(orderId) {
-  if (!confirm("Accept this order and print the bill?")) return;
   db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
     const order = snapshot.val();
     if (order) showPrintPopup(order);
