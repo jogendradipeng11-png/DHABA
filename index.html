@@ -315,7 +315,7 @@ window.updateOrderStatus = function(orderId, status) {
         if (status === 'ready') {
             if (!confirm("Mark this order as READY to serve?")) return;
             
-            // COOK CLICKS "ORDER READY" → SHORT SOUND
+            // COOK CLICKS "ORDER READY" → SHORT SOUND (STAFF SIDE OK)
             const readyMsg = `ORDER READY FOR TABLE ${order.table} ${order.name || 'Guest'}`;
             speak(readyMsg, order.lang || 'en');
             
@@ -362,7 +362,7 @@ function listenToCustomerOrderStatus() {
             statusDiv.innerHTML = `🎉 YOUR ORDER IS READY!<br><span style="font-size:18px;">Please collect from the counter.<br>Thank You!</span>`;
             statusDiv.style.display = 'block';
             
-            // NOTIFICATION POP-UP ON CUSTOMER QR PAGE → LONG SOUND
+            // CUSTOMER QR PAGE SOUND (EXACTLY AS REQUESTED)
             const readyMsg = `ORDER READY FOR THE TABLE ${order.table} ${order.name || 'Guest'}, PLEASE COLLECT ORDER FROM THE COUNTER, THANK YOU`;
             speak(readyMsg, order.lang || 'en');
         } else if (order.status === 'preparing') {
