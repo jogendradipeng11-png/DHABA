@@ -314,10 +314,11 @@ window.updateOrderStatus = function(orderId, status) {
         if (!order) return;
         if (status === 'ready') {
             if (!confirm("Mark this order as READY to serve?")) return;
-            const msg = order.lang === 'hi' ? "आपका स्वादिष्ट भोजन तैयार है। कृपया काउंटर से ले लें। धन्यवाद" :
-                        order.lang === 'or' ? "ଆପଣଙ୍କର ସ୍ୱାଦିଷ୍ଟ ଖାଦ୍ୟ ପ୍ରସ୍ତୁତ ହୋଇଛି। ଦୟାକରି କାଉଣ୍ଟରରୁ ନିଅନ୍ତୁ। ଧନ୍ୟବାଦ" :
-                        "Your delicious food is ready. Please collect from the counter. Thank you.";
-            speak(msg, order.lang);
+            
+            // COOK CLICKS "ORDER READY" → SHORT SOUND
+            const readyMsg = `ORDER READY FOR TABLE ${order.table} ${order.name || 'Guest'}`;
+            speak(readyMsg, order.lang || 'en');
+            
             orderRef.update({ status: "ready", completedAt: new Date().toLocaleString() });
         } else {
             orderRef.update({ status: status });
@@ -343,7 +344,6 @@ function placeCustomerOrder() {
     db.ref('tableOrders/' + currentOrderId).set(orderData);
     alert(`✅ Order Placed Successfully for Table ${currentTable}`);
     
-    // SOUND AS PER CUSTOMER LANGUAGE SELECTION ON QR PAGE
     let sentMsg = `ORDER SENT TO THE KITCHEN TABLE ${currentTable} ${currentName}`;
     if (currentLang === 'hi') sentMsg = `ऑर्डर किचन को भेज दिया गया टेबल ${currentTable} ${currentName}`;
     else if (currentLang === 'or') sentMsg = `ଅର୍ଡର କିଚେନ୍ କୁ ପଠାଯାଇଛି ଟେବୁଲ ${currentTable} ${currentName}`;
@@ -361,6 +361,10 @@ function listenToCustomerOrderStatus() {
         if (order.status === 'ready') {
             statusDiv.innerHTML = `🎉 YOUR ORDER IS READY!<br><span style="font-size:18px;">Please collect from the counter.<br>Thank You!</span>`;
             statusDiv.style.display = 'block';
+            
+            // NOTIFICATION POP-UP ON CUSTOMER QR PAGE → LONG SOUND
+            const readyMsg = `ORDER READY FOR THE TABLE ${order.table} ${order.name || 'Guest'}, PLEASE COLLECT ORDER FROM THE COUNTER, THANK YOU`;
+            speak(readyMsg, order.lang || 'en');
         } else if (order.status === 'preparing') {
             statusDiv.innerHTML = `🔄 Your order is being prepared...`;
             statusDiv.style.display = 'block';
@@ -748,13 +752,10 @@ function showFlashNotification() {
 db.ref('tableOrders').on('child_added', (snapshot) => {
     const order = snapshot.val();
     if (order && order.status === 'pending') {
-        // SOUND AS PER CUSTOMER LANGUAGE SELECTED ON QR PAGE
         let receivedMsg = `ORDER RECEIVED FROM THE TABLE ${order.table} ${order.name || 'Guest'}`;
         if (order.lang === 'hi') receivedMsg = `टेबल ${order.table} ${order.name || 'Guest'} से ऑर्डर प्राप्त हुआ`;
         else if (order.lang === 'or') receivedMsg = `ଟେବୁଲ ${order.table} ${order.name || 'Guest'} ରୁ ଅର୍ଡର ପ୍ରାପ୍ତ ହୋଇଛି`;
         speak(receivedMsg, order.lang || 'en');
-        
-        // FLASH NOTIFICATION FOR STAFF POS
         showFlashNotification();
     }
 });
