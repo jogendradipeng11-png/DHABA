@@ -203,6 +203,30 @@ let customerOrder = [];
 let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
 
+// ====================== AUTO SAVE FUNCTION ======================
+function autoSaveBill(order) {
+    let savedBills = JSON.parse(localStorage.getItem("savedBills")) || [];
+    
+    const saveData = {
+        invoice: "INV" + String(Date.now()).slice(-6),
+        date: new Date().toLocaleString('en-IN'),
+        table: order.table || "Walk-in",
+        customer: order.name || "Guest",
+        items: order.items || [],
+        subtotal: order.total || 0,
+        gst: Math.round((order.total || 0) * 0.05),
+        grandTotal: Math.round((order.total || 0) * 1.05),
+        lang: order.lang || currentLang
+    };
+    
+    savedBills.unshift(saveData); // Add new bill at top
+    // Keep only last 100 bills to avoid storage overload
+    if (savedBills.length > 100) savedBills = savedBills.slice(0, 100);
+    
+    localStorage.setItem("savedBills", JSON.stringify(savedBills));
+    console.log("✅ Bill auto-saved locally");
+}
+
 // ====================== MENU ======================
 function loadAndListenMenu() {
   db.ref('menu').on('value', (snapshot) => {
@@ -415,7 +439,7 @@ function acceptLiveOrder(orderId) {
   });
 }
 
-// ====================== PRINT POPUP ======================
+// ====================== PRINT POPUP WITH AUTO SAVE ======================
 function showPrintPopup(order) {
   const printWin = window.open('', '_blank', 'width=800,height=700');
   let itemsHtml = '';
@@ -430,6 +454,7 @@ function showPrintPopup(order) {
   });
   const gstAmount = Math.round(subtotal * 0.05);
   const grandTotal = subtotal + gstAmount;
+
   const billContent = `
     <div style="max-width:400px; margin:0 auto; padding:15px; font-family:Arial; background:white; font-size:14px;">
       <div style="text-align:center;">
@@ -456,6 +481,7 @@ function showPrintPopup(order) {
       <p style="text-align:center; margin-top:20px; font-size:14px;">Thank You! Visit Again 😊</p>
     </div>
   `;
+
   printWin.document.write(`
     <!DOCTYPE html>
     <html>
@@ -466,12 +492,29 @@ function showPrintPopup(order) {
       ${billContent}
       <div style="text-align:center; margin-top:30px;">
         <h4>Choose Action</h4>
-        <button onclick="printNormal()" style="background:#27ae60;color:white;">🧾 Normal Print & Clear</button>
-        <button onclick="printThermal()" style="background:#e74c3c;color:white;">🖨️ Print Thermal + Auto Cut</button>
-        <button onclick="sendViaWhatsApp()" style="background:#25D366;color:white;">📲 Send Bill on WhatsApp</button>
-        <button onclick="window.close()" style="background:#1abc9c;color:white;">Close</button>
+        <button onclick="printNormal()" style="background:#27ae60;color:white; padding:10px 20px; margin:5px;">🧾 Normal Print & Clear</button>
+        <button onclick="printThermal()" style="background:#e74c3c;color:white; padding:10px 20px; margin:5px;">🖨️ Print Thermal + Auto Cut</button>
+        <button onclick="sendViaWhatsApp()" style="background:#25D366;color:white; padding:10px 20px; margin:5px;">📲 Send Bill on WhatsApp</button>
+        <button onclick="window.close()" style="background:#1abc9c;color:white; padding:10px 20px; margin:5px;">Close</button>
       </div>
+
       <script>
+        function printNormal() {
+          window.print();
+          setTimeout(() => {
+            alert("✅ Bill Printed (Normal) & Auto Saved");
+            window.close();
+          }, 800);
+        }
+
+        function printThermal() {
+          window.print();
+          setTimeout(() => {
+            alert("✅ Bill Printed (Thermal + Auto Cut) & Auto Saved");
+            window.close();
+          }, 800);
+        }
+
         function sendViaWhatsApp() {
           const whatsappNum = prompt("Enter Customer's 10-digit WhatsApp Number:", "");
           if (!whatsappNum || whatsappNum.length !== 10) {
@@ -502,12 +545,18 @@ Grand Total : ₹\${grandTotal}
           window.open(waUrl, '_blank');
           alert("✅ Full bill sent successfully on WhatsApp!");
         }
-        window.onload = () => setTimeout(() => window.print(), 600);
+
+        window.onload = () => setTimeout(() => {}, 600);
       <\/script>
     </body>
     </html>
   `);
   printWin.document.close();
+
+  // Auto Save the bill locally after opening print popup
+  setTimeout(() => {
+    autoSaveBill(order);
+  }, 500);
 }
 
 // ====================== STAFF POS WHATSAPP ======================
@@ -767,7 +816,7 @@ window.clearStaffBill = function() {
   localStorage.setItem("inv", count);
 };
 
-// ====================== UPDATED INITIALIZE APP ======================
+// ====================== INITIALIZE ======================
 function initializeApp() {
   const urlParams = new URLSearchParams(window.location.search);
   const mode = urlParams.get('mode');
@@ -778,17 +827,12 @@ function initializeApp() {
     document.getElementById('customerView').style.display = 'block';
 
     const tableInput = document.getElementById('custTable');
-    
     if (urlTable) {
       tableInput.value = urlTable;
-      tableInput.readOnly = true;                    // ← Table number is now non-editable
+      tableInput.readOnly = true;
       tableInput.style.backgroundColor = '#f0f0f0';
       tableInput.style.cursor = 'not-allowed';
-      
-      // Auto start ordering
-      setTimeout(() => {
-        joinTable();
-      }, 800);
+      setTimeout(() => joinTable(), 800);
     }
   } else {
     document.getElementById('staffView').style.display = 'block';
