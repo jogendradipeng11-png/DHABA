@@ -152,6 +152,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 // ====================== LANGUAGE DATA ======================
 const langData = {
@@ -203,28 +204,99 @@ let customerOrder = [];
 let currentName = '';
 let count = parseInt(localStorage.getItem("inv") || "1");
 
-// ====================== AUTO SAVE FUNCTION ======================
-function autoSaveBill(order) {
-    let savedBills = JSON.parse(localStorage.getItem("savedBills")) || [];
-    
-    const saveData = {
-        invoice: "INV" + String(Date.now()).slice(-6),
-        date: new Date().toLocaleString('en-IN'),
-        table: order.table || "Walk-in",
-        customer: order.name || "Guest",
-        items: order.items || [],
-        subtotal: order.total || 0,
-        gst: Math.round((order.total || 0) * 0.05),
-        grandTotal: Math.round((order.total || 0) * 1.05),
-        lang: order.lang || currentLang
-    };
-    
-    savedBills.unshift(saveData); // Add new bill at top
-    // Keep only last 100 bills to avoid storage overload
-    if (savedBills.length > 100) savedBills = savedBills.slice(0, 100);
-    
-    localStorage.setItem("savedBills", JSON.stringify(savedBills));
-    console.log("✅ Bill auto-saved locally");
+// ====================== AUTO SAVE AS PDF ======================
+function autoSaveBillAsPDF(order) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+    });
+
+    const tableNo = order.table || "Walkin";
+    const custName = (order.name || "Guest").replace(/[^a-zA-Z0-9]/g, '_');
+    const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, '');
+    const fileName = `Table${tableNo}_${custName}_${dateStr}.pdf`;
+
+    let y = 20;
+
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("SHREE & SHRIYAN DHABA", 105, y, { align: "center" });
+    y += 8;
+    doc.setFontSize(10);
+    doc.text("At/Po - Durlaga, Dist - Jharsuguda, Pin - 768204 (Odisha)", 105, y, { align: "center" });
+    y += 6;
+    doc.text("📞 +91 7077088311 | ✉ jogendra.dipeng11@gmail.com", 105, y, { align: "center" });
+    y += 10;
+
+    doc.setDrawColor(216, 67, 21);
+    doc.line(20, y, 190, y);
+    y += 10;
+
+    // Bill Info
+    doc.setFontSize(11);
+    doc.text(`Invoice     : INV${Date.now().toString().slice(-6)}`, 20, y);
+    y += 7;
+    doc.text(`Table       : ${tableNo}`, 20, y);
+    y += 7;
+    doc.text(`Customer    : ${order.name || "Guest"}`, 20, y);
+    y += 7;
+    doc.text(`Date & Time : ${new Date().toLocaleString('en-IN')}`, 20, y);
+    y += 12;
+
+    doc.line(20, y, 190, y);
+    y += 10;
+
+    // Items Table
+    doc.setFontSize(12);
+    doc.text("ITEMS", 20, y);
+    y += 8;
+
+    let subtotal = 0;
+    (order.items || []).forEach(item => {
+        const amt = item.qty * (item.price || 0);
+        subtotal += amt;
+        let itemName = item.name_en || item.name;
+        if (order.lang === 'hi' && item.name_hi) itemName = item.name_hi;
+        if (order.lang === 'or' && item.name_or) itemName = item.name_or;
+
+        doc.setFontSize(11);
+        doc.text(`${itemName}`, 20, y);
+        doc.text(`x ${item.qty}`, 120, y);
+        doc.text(`₹${amt}`, 170, y, { align: "right" });
+        y += 8;
+    });
+
+    const gst = Math.round(subtotal * 0.05);
+    const grandTotal = subtotal + gst;
+
+    y += 5;
+    doc.line(20, y, 190, y);
+    y += 10;
+
+    doc.setFontSize(12);
+    doc.text("Subtotal", 20, y);
+    doc.text(`₹${subtotal}`, 170, y, { align: "right" });
+    y += 8;
+    doc.text("GST (5%)", 20, y);
+    doc.text(`₹${gst}`, 170, y, { align: "right" });
+    y += 10;
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("GRAND TOTAL", 20, y);
+    doc.text(`₹${grandTotal}`, 170, y, { align: "right" });
+
+    y += 15;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text("Thank You! Visit Again 😊", 105, y, { align: "center" });
+
+    // Save PDF
+    doc.save(fileName);
+    console.log(`✅ Bill auto-saved as PDF: ${fileName}`);
 }
 
 // ====================== MENU ======================
@@ -439,7 +511,7 @@ function acceptLiveOrder(orderId) {
   });
 }
 
-// ====================== PRINT POPUP WITH AUTO SAVE ======================
+// ====================== PRINT POPUP WITH AUTO PDF SAVE ======================
 function showPrintPopup(order) {
   const printWin = window.open('', '_blank', 'width=800,height=700');
   let itemsHtml = '';
@@ -499,27 +571,11 @@ function showPrintPopup(order) {
       </div>
 
       <script>
-        function printNormal() {
-          window.print();
-          setTimeout(() => {
-            alert("✅ Bill Printed (Normal) & Auto Saved");
-            window.close();
-          }, 800);
-        }
-
-        function printThermal() {
-          window.print();
-          setTimeout(() => {
-            alert("✅ Bill Printed (Thermal + Auto Cut) & Auto Saved");
-            window.close();
-          }, 800);
-        }
-
+        function printNormal() { window.print(); setTimeout(() => { window.close(); }, 800); }
+        function printThermal() { window.print(); setTimeout(() => { window.close(); }, 800); }
         function sendViaWhatsApp() {
           const whatsappNum = prompt("Enter Customer's 10-digit WhatsApp Number:", "");
-          if (!whatsappNum || whatsappNum.length !== 10) {
-            return alert("❌ Please enter a valid 10-digit WhatsApp number");
-          }
+          if (!whatsappNum || whatsappNum.length !== 10) return alert("❌ Please enter a valid 10-digit WhatsApp number");
           let subtotal = 0;
           let itemsList = "";
           (${JSON.stringify(order.items || [])}).forEach(item => {
@@ -545,18 +601,16 @@ Grand Total : ₹\${grandTotal}
           window.open(waUrl, '_blank');
           alert("✅ Full bill sent successfully on WhatsApp!");
         }
-
-        window.onload = () => setTimeout(() => {}, 600);
       <\/script>
     </body>
     </html>
   `);
   printWin.document.close();
 
-  // Auto Save the bill locally after opening print popup
+  // Auto Save as PDF
   setTimeout(() => {
-    autoSaveBill(order);
-  }, 500);
+    autoSaveBillAsPDF(order);
+  }, 700);
 }
 
 // ====================== STAFF POS WHATSAPP ======================
