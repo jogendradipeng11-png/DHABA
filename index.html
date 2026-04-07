@@ -16,15 +16,12 @@
 
     h2 { text-align: center; color: #d84315; margin: 8px 0 4px 0; }
     h3, h4 { color: #d84315; }
-    input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
-    button { background: #2e7d32; color: white; border: none; font-size: 16px; cursor: pointer; }
+    input, select, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
+    button { background: #2e7d32; color: white; border: none; font-size: 16px; cursor: pointer; margin-top: 5px; }
     button:hover { opacity: 0.9; }
     .cash-btn { background: #f57c00 !important; }
     .total { font-size: 22px; font-weight: bold; color: #d84315; text-align: center; margin: 15px 0; }
     .menu-item { display: flex; align-items: center; justify-content: space-between; background: #fff3e0; border: 2px solid #ff9800; border-radius: 10px; padding: 12px; margin: 10px 0; }
-
-    table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-    th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
 
     /* Kitchen Display */
     .kitchen-view {
@@ -63,7 +60,7 @@
         <button class="lang-btn" onclick="changeLanguage('or')">ଓଡ଼ିଆ</button>
     </div>
 
-    <!-- STAFF POS VIEW -->
+    <!-- STAFF POS -->
     <div id="staffView">
         <div class="logo">
             <img src="./logo_180x90.jpg" alt="Logo">
@@ -74,22 +71,18 @@
             </p>
             <p id="staffPosLabel" style="text-align:center;color:#d84315;font-weight:bold;">STAFF POS</p>
         </div>
-
         <input id="customerName" placeholder="Customer Name (optional)">
         <input id="invoice" readonly value="INV001">
         <select id="item"></select>
         <input id="qty" type="number" placeholder="Qty" value="1" min="1">
         <button onclick="addItem()">➕ Add Item</button>
         <button onclick="voiceAdd()">🎤 Voice Add</button>
-
-        <table border="1" style="width:100%; margin:10px 0;">
+        <table border="1">
             <thead><tr><th>Item</th><th>Qty</th><th>Amt</th><th>X</th></tr></thead>
             <tbody id="bill"></tbody>
         </table>
-
         <label><input type="checkbox" id="gst" checked> GST 5%</label>
         <div class="total">Total: ₹ <span id="total">0</span></div>
-
         <button onclick="printBill()">🧾 Normal Print & Clear</button>
         <button onclick="printThermalBill()" style="background:#d84315;">🖨️ Print Thermal + Auto Cut</button>
         <button onclick="exportExcel()">📊 Export Excel</button>
@@ -108,11 +101,20 @@
             <div id="currentMenuList"></div>
             <button onclick="hideCurrentMenu()" style="background:#666; margin-top:10px;">Close Menu</button>
         </div>
-
         <h4>Generate QR for Table Ordering</h4>
         <input id="qrTableNum" type="number" placeholder="Table Number">
         <button onclick="generateQRCode()" style="background:#ff9800;">📱 Generate Table QR</button>
         <div id="qrContainer" style="text-align:center;margin:15px 0;"></div>
+        <div id="liveOrdersSection" style="display:none; margin-top:20px;">
+            <h4 style="color:#d84315;">📋 Live Table Orders (Real-time)</h4>
+            <div id="liveOrdersContainer" style="max-height:400px; overflow-y:auto;">
+                <table id="liveOrdersTable" border="1" style="width:100%;">
+                    <thead><tr><th>Table</th><th>Customer</th><th>Total ₹</th><th>Time</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody id="liveOrdersBody"></tbody>
+                </table>
+            </div>
+            <button onclick="showTableOrders()" style="margin-top:10px;background:#666;">Close Live Orders</button>
+        </div>
     </div>
 
     <!-- CUSTOMER VIEW -->
@@ -140,6 +142,7 @@
             <div class="total">Your Total: ₹ <span id="custTotal">0</span></div>
             <button onclick="placeCustomerOrder()" id="placeOrderBtn" style="background:#d84315;">✅ Place Order for Kitchen</button>
 
+            <!-- Real-time Order Status -->
             <div id="customerOrderStatus" style="display:none; padding:25px; margin:15px 0; border-radius:12px; text-align:center; font-size:22px; font-weight:bold; background:#2e7d32; color:white;"></div>
 
             <div class="payment-section">
@@ -157,6 +160,8 @@
         </div>
     </div>
 </div>
+
+<div id="notificationContainer" class="notification-container"></div>
 
 <!-- KITCHEN DISPLAY -->
 <div id="kitchenView" class="kitchen-view">
@@ -218,7 +223,6 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-
 const MERCHANT_UPI = "8847810037jp@ybl";
 const MERCHANT_NAME = "Shree & Shriyan Dhaba";
 
@@ -232,7 +236,7 @@ let count = parseInt(localStorage.getItem("inv") || "1");
 let liveOrdersRef = null;
 let voiceSpeed = 0.95;
 
-// ====================== SPEECH ======================
+// ====================== MULTILINGUAL SPEECH ======================
 const speech = window.speechSynthesis;
 
 function speak(text, lang = 'en') {
@@ -271,7 +275,7 @@ function loadKitchenDisplay() {
         let pendingCount = 0;
 
         if (!data) {
-            container.innerHTML = '<div style="text-align:center; padding:100px; color:#888; font-size:28px;">No pending orders</div>';
+            container.innerHTML = '<div style="text-align:center; padding:100px; color:#888; font-size:28px;">No pending orders at the moment</div>';
             return;
         }
 
@@ -306,14 +310,53 @@ function loadKitchenDisplay() {
 }
 
 window.updateOrderStatus = function(orderId, status) {
-    if (status === 'ready') {
-        if (!confirm("Mark this order as READY?")) return;
-        if (currentLang === 'hi') speak("कृपया अपना स्वादिष्ट भोजन प्राप्त करें, धन्यवाद", 'hi');
-        else if (currentLang === 'or') speak("ଦୟାକରି ଆପଣଙ୍କର ସ୍ୱାଦିଷ୍ଟ ଖାଦ୍ୟ ଗ୍ରହଣ କରନ୍ତୁ, ଧନ୍ୟବାଦ", 'or');
-        else speak("Please receive your delicious food. Thank you.");
-    }
-    db.ref('tableOrders/' + orderId + '/status').set(status);
+    const orderRef = db.ref('tableOrders/' + orderId);
+    orderRef.once('value', (snapshot) => {
+        const order = snapshot.val();
+        if (!order) return;
+
+        if (status === 'ready') {
+            if (!confirm("Mark this order as READY to serve?")) return;
+            
+            // Customer voice when order is ready
+            if (currentLang === 'hi') speak("आपका स्वादिष्ट भोजन तैयार है। कृपया काउंटर से ले लें। धन्यवाद", 'hi');
+            else if (currentLang === 'or') speak("ଆପଣଙ୍କର ସ୍ୱାଦିଷ୍ଟ ଖାଦ୍ୟ ପ୍ରସ୍ତୁତ ହୋଇଛି। ଦୟାକରି କାଉଣ୍ଟରରୁ ନିଅନ୍ତୁ। ଧନ୍ୟବାଦ", 'or');
+            else speak("Your delicious food is ready. Please collect from the counter. Thank you.");
+            
+            orderRef.update({ status: "ready", completedAt: new Date().toLocaleString() });
+        } else {
+            orderRef.update({ status: status });
+        }
+    });
 };
+
+// ====================== CUSTOMER PLACE ORDER - KITCHEN ANNOUNCEMENT ======================
+function placeCustomerOrder() {
+  if (customerOrder.length === 0) return alert("Cart is empty!");
+  const total = parseFloat(document.getElementById("custTotal").innerText);
+  currentOrderId = Date.now();
+  const orderData = {
+    id: currentOrderId,
+    table: currentTable,
+    name: currentName,
+    items: JSON.parse(JSON.stringify(customerOrder)),
+    total: total,
+    timestamp: new Date().toLocaleString(),
+    status: "pending",
+    lang: currentLang
+  };
+  db.ref('tableOrders/' + currentOrderId).set(orderData);
+  db.ref('newOrders/' + currentOrderId).set(orderData);
+  
+  alert(`✅ Order Placed Successfully for Table ${currentTable}`);
+  
+  // Kitchen voice when customer sends order
+  if (currentLang === 'hi') speak(`टेबल ${currentTable} के लिए ग्राहक का ऑर्डर प्राप्त हुआ`, 'hi');
+  else if (currentLang === 'or') speak(`ଟେବୁଲ ${currentTable} ପାଇଁ ଗ୍ରାହକଙ୍କ ଅର୍ଡର ପ୍ରାପ୍ତ ହୋଇଛି`, 'or');
+  else speak(`Customer order for Table ${currentTable} is received`);
+  
+  listenToCustomerOrderStatus();
+}
 
 // ====================== CUSTOMER STATUS ======================
 function listenToCustomerOrderStatus() {
@@ -334,32 +377,7 @@ function listenToCustomerOrderStatus() {
     });
 }
 
-// ====================== PLACE ORDER ======================
-function placeCustomerOrder() {
-  if (customerOrder.length === 0) return alert("Cart is empty!");
-  const total = parseFloat(document.getElementById("custTotal").innerText);
-  currentOrderId = Date.now();
-  const orderData = {
-    id: currentOrderId,
-    table: currentTable,
-    name: currentName,
-    items: JSON.parse(JSON.stringify(customerOrder)),
-    total: total,
-    timestamp: new Date().toLocaleString(),
-    status: "pending",
-    lang: currentLang
-  };
-  db.ref('tableOrders/' + currentOrderId).set(orderData);
-  alert(`✅ Order Placed Successfully for Table ${currentTable}`);
-  
-  if (currentLang === 'hi') speak(`टेबल ${currentTable} के लिए ऑर्डर प्राप्त हुआ`, 'hi');
-  else if (currentLang === 'or') speak(`ଟେବୁଲ ${currentTable} ପାଇଁ ଅର୍ଡର ପ୍ରାପ୍ତ ହୋଇଛି`, 'or');
-  else speak(`Order received for Table ${currentTable}`);
-  
-  listenToCustomerOrderStatus();
-}
-
-// ====================== ALL YOUR ORIGINAL FUNCTIONS ======================
+// ====================== YOUR ORIGINAL FUNCTIONS (All Kept) ======================
 function loadAndListenMenu() {
   db.ref('menu').on('value', (snapshot) => {
     const data = snapshot.val();
