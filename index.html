@@ -272,55 +272,70 @@ function loadKitchenDisplay() {
     });
 }
 
-window.updateOrderStatus = function(orderId, status) {
-    const orderRef = db.ref('tableOrders/' + orderId);
-    orderRef.once('value', (snapshot) => {
-        const order = snapshot.val();
-        if (!order) return;
+window.updateOrderStatus = function(orderId, status, order) {
+    if (!orderId || !status || !order) return;
 
-        if (status === 'ready') {
-            if (!confirm("Mark this order as READY to serve?")) return;
+    const currentOrderId = window.currentOrderId || null; // Make sure this is set on the customer QR page
 
-            let readyMsg = "Your order is ready. Please collect your delicious food from the counter. Thank you!";
-            if (order.lang === 'hi') readyMsg = "आपका ऑर्डर तैयार है। कृपया काउंटर से अपना स्वादिष्ट भोजन ले लें। धन्यवाद!";
-            else if (order.lang === 'or') readyMsg = "ଆପଣଙ୍କ ଅର୍ଡର ପ୍ରସ୍ତୁତ ହୋଇଛି। ଦୟାକରି କାଉଣ୍ଟରରୁ ଆପଣଙ୍କ ସ୍ୱାଦିଷ୍ଟ ଖାଦ୍ୟ ନେଇଯାନ୍ତୁ। ଧନ୍ୟବାଦ!";
+    const orderRef = firebase.firestore().collection('orders').doc(orderId); // Adjust if using Realtime DB
 
-            // === ONLY speak and show on Customer QR Page ===
-            if (currentOrderId && String(currentOrderId) === String(orderId)) {
-                speak(readyMsg, order.lang || 'en');
-
-                const statusDiv = document.getElementById('customerOrderStatus');
-                if (statusDiv) {
-                    statusDiv.innerHTML = `🎉 ${readyMsg}`;
-                    statusDiv.style.display = 'block';
-                    statusDiv.style.background = '#2e7d32';
-                    statusDiv.style.color = 'white';
-                }
-            }
-
-            orderRef.update({ status: "ready", completedAt: new Date().toLocaleString() });
-
-        } else if (status === 'preparing') {
-            let preparingMsg = "Your food is being prepared. Please wait a moment.";
-            if (order.lang === 'hi') preparingMsg = "आपका भोजन तैयार किया जा रहा है। कृपया थोड़ी देर प्रतीक्षा करें।";
-            else if (order.lang === 'or') preparingMsg = "ଆପଣଙ୍କ ଖାଦ୍ୟ ପ୍ରସ୍ତୁତ କରାଯାଉଛି। ଦୟାକରି କିଛି ସମୟ ଅପେକ୍ଷା କରନ୍ତୁ।";
-
-            // === ONLY speak and show on Customer QR Page ===
-            if (currentOrderId && String(currentOrderId) === String(orderId)) {
-                speak(preparingMsg, order.lang || 'en');
-
-                const statusDiv = document.getElementById('customerOrderStatus');
-                if (statusDiv) {
-                    statusDiv.innerHTML = `👨‍🍳 ${preparingMsg}`;
-                    statusDiv.style.display = 'block';
-                    statusDiv.style.background = '#1976d2';
-                    statusDiv.style.color = 'white';
-                }
-            }
-
-            orderRef.update({ status: "preparing" });
+    const messages = {
+        en: {
+            ready: "Your order is ready! Please collect it from the counter.",
+            preparing: "Your food is being prepared. Please wait a moment."
+        },
+        hi: {
+            ready: "आपका ऑर्डर तैयार है! कृपया काउंटर से ले लें।",
+            preparing: "आपका भोजन तैयार किया जा रहा है। कृपया थोड़ी देर प्रतीक्षा करें।"
+        },
+        or: {
+            ready: "ଆପଣଙ୍କ ଅର୍ଡର ପ୍ରସ୍ତୁତ ହୋଇଛି! ଦୟାକରି କାଉଣ୍ଟରରୁ ନିଅନ୍ତୁ।",
+            preparing: "ଆପଣଙ୍କ ଖାଦ୍ୟ ପ୍ରସ୍ତୁତ କରାଯାଉଛି। ଦୟାକରି କିଛି ସମୟ ଅପେକ୍ଷା କରନ୍ତୁ।"
         }
-    });
+    };
+
+    const lang = order.lang || 'en';
+    const msgObj = messages[lang] || messages.en;
+
+    if (status === 'ready') {
+        const readyMsg = msgObj.ready;
+
+        // === ONLY speak and show on Customer QR Page ===
+        if (currentOrderId && String(currentOrderId) === String(orderId)) {
+            speak(readyMsg, lang);
+            
+            const statusDiv = document.getElementById('customerOrderStatus');
+            if (statusDiv) {
+                statusDiv.innerHTML = `🎉 ${readyMsg}`;
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = '#2e7d32';
+                statusDiv.style.color = 'white';
+            }
+        }
+
+        orderRef.update({
+            status: "ready",
+            completedAt: new Date().toISOString()   // Better to use ISO format
+        });
+
+    } else if (status === 'preparing') {
+        const preparingMsg = msgObj.preparing;
+
+        // === ONLY speak and show on Customer QR Page ===
+        if (currentOrderId && String(currentOrderId) === String(orderId)) {
+            speak(preparingMsg, lang);
+
+            const statusDiv = document.getElementById('customerOrderStatus');
+            if (statusDiv) {
+                statusDiv.innerHTML = `👨‍🍳 ${preparingMsg}`;
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = '#1976d2';
+                statusDiv.style.color = 'white';
+            }
+        }
+
+        orderRef.update({ status: "preparing" });
+    }
 };
 // ====================== MARK AS PAID - UPDATED WITH POPUP ======================
 function markAsPaid() {
@@ -425,7 +440,44 @@ function setupCustomerCashAcceptanceListener() {
         }
     });
 }
+// === NEW: Listen for kitchen status changes and show on Customer QR Page ===
+function setupKitchenStatusListener() {
+    if (!currentOrderId) return;
 
+    db.ref('tableOrders/' + currentOrderId).on('value', (snapshot) => {
+        const order = snapshot.val();
+        if (!order) return;
+
+        const statusDiv = document.getElementById('customerOrderStatus');
+
+        if (order.status === 'preparing') {
+            let msg = "Your food is being prepared. Please wait a moment.";
+            if (order.lang === 'hi') msg = "आपका भोजन तैयार किया जा रहा है। कृपया थोड़ी देर प्रतीक्षा करें।";
+            else if (order.lang === 'or') msg = "ଆପଣଙ୍କ ଖାଦ୍ୟ ପ୍ରସ୍ତୁତ କରାଯାଉଛି। ଦୟାକରି କିଛି ସମୟ ଅପେକ୍ଷା କରନ୍ତୁ।";
+
+            if (statusDiv) {
+                statusDiv.innerHTML = `👨‍🍳 ${msg}`;
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = '#1976d2';
+                statusDiv.style.color = 'white';
+            }
+            speak(msg, order.lang || 'en');
+        } 
+        else if (order.status === 'ready') {
+            let msg = "Your order is ready. Please collect your delicious food from the counter. Thank you!";
+            if (order.lang === 'hi') msg = "आपका ऑर्डर तैयार है। कृपया काउंटर से अपना स्वादिष्ट भोजन ले लें। धन्यवाद!";
+            else if (order.lang === 'or') msg = "ଆପଣଙ୍କ ଅର୍ଡର ପ୍ରସ୍ତୁତ ହୋଇଛି। ଦୟାକରି କାଉଣ୍ଟରରୁ ଆପଣଙ୍କ ସ୍ୱାଦିଷ୍ଟ ଖାଦ୍ୟ ନେଇଯାନ୍ତୁ। ଧନ୍ୟବାଦ!";
+
+            if (statusDiv) {
+                statusDiv.innerHTML = `🎉 ${msg}`;
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = '#2e7d32';
+                statusDiv.style.color = 'white';
+            }
+            speak(msg, order.lang || 'en');
+        }
+    });
+}
 // ====================== MODAL FUNCTIONS ======================
 function closeNewOrderModal() {
     document.getElementById('newOrderModal').style.display = 'none';
@@ -814,6 +866,7 @@ function joinTable() {
     document.getElementById("displayName").innerText = currentName;
     loadCustomerMenu();
     setupCustomerCashAcceptanceListener();
+    setupKitchenStatusListener();
 }
 function loadCustomerMenu() {
     let html = '';
