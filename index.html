@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shree & Shriyan Dhaba POS - Staff & Kitchen Alerts</title>
+<title>Shree & Shriyan Dhaba POS - Smart Notifications</title>
 <style>
     body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #ff9800, #ff5722); padding: 10px; margin: 0; }
     .container { max-width: 520px; margin: auto; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
@@ -89,6 +89,37 @@
         padding: 5px 12px;
         font-size: 12px;
         margin-left: 10px;
+    }
+    /* Customer Ready Popup */
+    .customer-ready-popup {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #2e7d32, #1b5e20);
+        color: white;
+        padding: 30px 25px;
+        border-radius: 25px;
+        text-align: center;
+        z-index: 20000;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        border: 3px solid #ffeb3b;
+        animation: pulse 0.5s ease-in-out;
+        max-width: 90%;
+        width: 380px;
+    }
+    .customer-ready-popup h2 {
+        color: #ffeb3b;
+        margin: 0 0 10px 0;
+        font-size: 28px;
+    }
+    .customer-ready-popup p {
+        font-size: 18px;
+        margin: 10px 0;
+    }
+    @keyframes pulse {
+        0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0; }
+        100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
     }
     .customer-status-card {
         background: #e8f5e9;
@@ -187,7 +218,7 @@
             </table>
             <div class="total">Your Total: ₹ <span id="custTotal">0</span></div>
             <button onclick="placeCustomerOrder()" id="placeOrderBtn" style="background:#d84315;">✅ Place Order for Kitchen</button>
-            <div id="customerOrderStatus" style="display:none; padding:20px; margin:15px 0; border-radius:12px; text-align:center; font-size:20px; font-weight:bold; background:#2e7d32; color:white;"></div>
+            <div id="customerOrderStatus" style="display:none; padding:20px; margin:15px 0; border-radius:12px; text-align:center; font-size:18px; font-weight:bold; background:#2e7d32; color:white;"></div>
           
             <div class="payment-section">
                 <h4 id="paymentTitle" style="margin:12px 0 8px 0; color:#2e7d32;">💰 Payment Options</h4>
@@ -360,18 +391,17 @@ window.updateOrderStatus = function(orderId, status) {
         if (!order) return;
         if (status === 'preparing') {
             orderRef.update({ status: "preparing" });
-            // Speak in kitchen
             speak(`Starting preparation for table ${order.table}`, 'en');
         } else if (status === 'ready') {
-            if (!confirm("Mark this order as READY? Customer will be notified.")) return;
+            if (!confirm("Mark this order as READY? Customer will be notified with POPUP & VOICE.")) return;
             orderRef.update({ status: "ready", completedAt: new Date().toLocaleString() });
-            // Speak loud announcement for staff and customer notification
-            const readyMsg = `ORDER IS READY FOR TABLE ${order.table} ${order.name || 'Guest'}. PLEASE COLLECT YOUR DELICIOUS FOOD FROM THE COUNTER. THANK YOU!`;
-            speak(readyMsg, order.lang || 'en');
+            // Staff voice announcement
+            const staffMsg = `ORDER READY FOR TABLE ${order.table}. CUSTOMER NOTIFIED.`;
+            speak(staffMsg, 'en');
         }
     });
 };
-// ====================== CUSTOMER ORDER ======================
+// ====================== CUSTOMER ORDER & REAL-TIME READY NOTIFICATION ======================
 function placeCustomerOrder() {
     if (customerOrder.length === 0) return alert("Cart is empty!");
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
@@ -393,6 +423,33 @@ function placeCustomerOrder() {
     speak(sentMsg, currentLang);
     listenToCustomerOrderStatus();
 }
+function showCustomerReadyPopup(order) {
+    // Remove any existing popup
+    const existingPopup = document.getElementById('customerReadyPopup');
+    if (existingPopup) existingPopup.remove();
+    
+    const popup = document.createElement('div');
+    popup.id = 'customerReadyPopup';
+    popup.className = 'customer-ready-popup';
+    popup.innerHTML = `
+        <h2>🎉 ORDER IS READY! 🎉</h2>
+        <p style="font-size:20px; font-weight:bold;">Table ${order.table} - ${order.name || 'Guest'}</p>
+        <p>🍽️ PLEASE COLLECT YOUR DELICIOUS FOOD FROM THE COUNTER 🍽️</p>
+        <p style="font-size:14px; margin-top:15px;">Thank you for dining with us!</p>
+        <button onclick="document.getElementById('customerReadyPopup').remove()" style="background:#ffeb3b; color:#1b5e20; margin-top:15px; width:auto; padding:8px 20px;">OK</button>
+    `;
+    document.body.appendChild(popup);
+    
+    // Auto remove after 15 seconds
+    setTimeout(() => {
+        const p = document.getElementById('customerReadyPopup');
+        if (p) p.remove();
+    }, 15000);
+    
+    // Voice announcement for customer
+    const voiceMsg = `YOUR ORDER IS READY. PLEASE COLLECT YOUR DELICIOUS FOOD FROM THE COUNTER. THANK YOU.`;
+    speak(voiceMsg, order.lang || 'en');
+}
 function listenToCustomerOrderStatus() {
     if (!currentOrderId) return;
     const statusDiv = document.getElementById('customerOrderStatus');
@@ -407,8 +464,8 @@ function listenToCustomerOrderStatus() {
             statusDiv.innerHTML = `🎉 ORDER IS READY! 🎉<br><span style="font-size:18px;">Please collect your delicious food from the counter. Thank You!</span>`;
             statusDiv.style.display = 'block';
             statusDiv.style.background = "#2e7d32";
-            // Also speak to customer device
-            speak(`Your order is ready, please collect from counter. Thank you!`, currentLang);
+            // SHOW POPUP & VOICE ON CUSTOMER PAGE
+            showCustomerReadyPopup(order);
         } else if (order.status === 'pending') {
             statusDiv.innerHTML = `✅ Order received! Kitchen will start preparing soon.`;
             statusDiv.style.display = 'block';
@@ -479,7 +536,6 @@ function markAsPaid() {
         type: "payment",
         lang: currentLang
     };
-    // Staff notification for digital payment
     document.getElementById('modalTitle').innerHTML = '💰 PAYMENT RECEIVED (Digital)';
     document.getElementById('modalTitle').style.color = '#2e7d32';
     document.getElementById('modalOrderDetails').innerHTML = `Table ${paymentData.table} - ${paymentData.name}<br>Total: ₹${paymentData.total}<br>Payment Method: Digital/UPI`;
@@ -487,7 +543,7 @@ function markAsPaid() {
 }
 function payByCash() {
     if (customerOrder.length === 0) return alert("Cart is empty!");
-    // ONLY staff notification, no popup on customer page
+    // ONLY staff notification - simple alert on customer side
     notifyCashPaymentToStaff();
     // Clear customer cart after request
     customerOrder = [];
