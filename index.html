@@ -862,37 +862,29 @@ function payByCash() {
     }
 }
 
-function sendCustomerBillToWhatsApp(mobile) {
-    if (customerOrder.length === 0 && !currentOrderId) {
-        alert("No order to send!");
-        return;
-    }
-
-    let msg = `*Shree & Shriyan Dhaba*\n\n`;
-    msg += `📍 Durlaga, Jharsuguda, Odisha\n`;
-    msg += `📞 +91 7077088311\n\n`;
-    msg += `Table: ${currentTable}\n`;
-    msg += `Customer: ${currentName}\n`;
-    msg += `Date: ${new Date().toLocaleString()}\n\n`;
-    msg += `──────────────────\n`;
-
-    let calculatedTotal = 0;
-    customerOrder.forEach(item => {
-        const amt = item.qty * item.price;
-        calculatedTotal += amt;
-        msg += `${item.name_en} ×${item.qty} = ₹${amt}\n`;
+window.sendWhatsAppFromModal = function(orderId) {
+    closeBillOptionsModal();
+    const mobile = prompt("Enter 10 digit mobile number:");
+    if (!mobile || mobile.length !== 10) return alert("Please enter valid 10-digit number!");
+    db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
+        const order = snapshot.val();
+        if (!order) return;
+        let msg = `*Shree & Shriyan Dhaba*\n\n`;
+        msg += `📍 Durlaga, Jharsuguda, Odisha\n`;
+        msg += `📞 +91 7077088311\n\n`;
+        msg += `Table: ${order.table} - ${order.name || 'Guest'}\n`;
+        msg += `Date: ${order.timestamp || new Date().toLocaleString()}\n\n`;
+        msg += `──────────────────\n`;
+        order.items.forEach(item => {
+            msg += `${item.name_en} ×${item.qty} = ₹${item.qty * item.price}\n`;
+        });
+        msg += `──────────────────\n`;
+        msg += `*Total : ₹${order.total}*\n\n`;
+        msg += `Thank You! Visit Again 😊`;
+        window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
     });
+};
 
-    msg += `──────────────────\n`;
-    msg += `*Total : ₹${calculatedTotal}*\n\n`;
-    msg += `✅ Payment Received - Thank You!\n`;
-    msg += `Visit Again 😊\n\n`;
-    msg += `📱 UPI: 8847810037jp@ybl`;
-
-    const waLink = `https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`;
-    
-    // Open WhatsApp
-    window.open(waLink, '_blank');
 
     // Clear everything after sending
     setTimeout(() => {
