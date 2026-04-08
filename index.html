@@ -7,10 +7,7 @@
     body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #ff9800, #ff5722); padding: 10px; margin: 0; }
     .container { max-width: 520px; margin: auto; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
     .lang-selector { text-align: center; margin-bottom: 15px; padding: 8px 0; }
-    .lang-btn {
-        padding: 12px 20px; margin: 0 6px; border: 2px solid #d84315; background: #fff;
-        cursor: pointer; border-radius: 8px; font-size: 16px; font-weight: bold; color: #d84315;
-    }
+    .lang-btn { padding: 12px 20px; margin: 0 6px; border: 2px solid #d84315; background: #fff; cursor: pointer; border-radius: 8px; font-size: 16px; font-weight: bold; color: #d84315; }
     .lang-btn.active { background: #d84315; color: white; border-color: #d84315; }
     h2 { text-align: center; color: #d84315; margin: 8px 0 4px 0; }
     h3, h4 { color: #d84315; }
@@ -22,38 +19,15 @@
     .menu-item { display: flex; align-items: center; justify-content: space-between; background: #fff3e0; border: 2px solid #ff9800; border-radius: 10px; padding: 12px; margin: 10px 0; }
     table { width: 100%; border-collapse: collapse; margin: 10px 0; }
     th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-    .kitchen-view {
-        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: #0f0f0f; color: #fff; overflow-y: auto; z-index: 9999;
-    }
-    .kitchen-header {
-        background: #d84315; padding: 20px; text-align: center; font-size: 32px;
-        font-weight: bold; position: sticky; top: 0; z-index: 100;
-    }
-    .kitchen-orders {
-        display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-        gap: 20px; padding: 20px;
-    }
-    .kitchen-card {
-        background: #1f1f1f; border: 6px solid #ff9800; border-radius: 18px;
-        padding: 20px; box-shadow: 0 10px 30px rgba(255,152,0,0.4);
-    }
+    .kitchen-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f0f0f; color: #fff; overflow-y: auto; z-index: 9999; }
+    .kitchen-header { background: #d84315; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; position: sticky; top: 0; z-index: 100; }
+    .kitchen-orders { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 20px; padding: 20px; }
+    .kitchen-card { background: #1f1f1f; border: 6px solid #ff9800; border-radius: 18px; padding: 20px; box-shadow: 0 10px 30px rgba(255,152,0,0.4); }
     .kitchen-table { font-size: 32px; font-weight: bold; color: #ffeb3b; }
-    .kitchen-btn {
-        padding: 16px; font-size: 18px; margin: 8px 4px; border: none;
-        border-radius: 10px; cursor: pointer; width: 48%;
-    }
-    .voice-control {
-        background: #333; padding: 12px; border-radius: 10px; margin: 15px 0; text-align: center;
-    }
-    .modal {
-        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center;
-    }
-    .modal-content {
-        background: white; padding: 25px; border-radius: 15px; max-width: 420px; width: 90%;
-        text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }
+    .kitchen-btn { padding: 16px; font-size: 18px; margin: 8px 4px; border: none; border-radius: 10px; cursor: pointer; width: 48%; }
+    .voice-control { background: #333; padding: 12px; border-radius: 10px; margin: 15px 0; text-align: center; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center; }
+    .modal-content { background: white; padding: 25px; border-radius: 15px; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
 </style>
 </head>
 <body>
@@ -96,7 +70,23 @@
         <button onclick="showTableOrders()" style="background:#d84315;">📋 Live Table Orders</button>
         <button onclick="openKitchenDisplay()" style="background:#e65100; margin-top:8px;">🔥 Open Kitchen Display</button>
 
-        <!-- Live Table Orders Section -->
+        <h4>Manage Menu (Real-time Sync)</h4>
+        <input id="newItemName" placeholder="New Item Name (English)">
+        <input id="newItemPrice" type="number" placeholder="Price (₹)">
+        <button onclick="addNewMenuItem()" style="background:#ff9800;">➕ Add / Update Item</button>
+        <button onclick="showCurrentMenu()" style="background:#666;">📋 Show Current Menu</button>
+        <div id="currentMenuSection" style="display:none;">
+            <h4 style="color:#d84315;">Current Menu Items</h4>
+            <div id="currentMenuList"></div>
+            <button onclick="hideCurrentMenu()" style="background:#666; margin-top:10px;">Close Menu</button>
+        </div>
+
+        <h4>Generate QR for Table Ordering</h4>
+        <input id="qrTableNum" type="number" placeholder="Table Number">
+        <button onclick="generateQRCode()" style="background:#ff9800;">📱 Generate Table QR</button>
+        <div id="qrContainer" style="text-align:center;margin:15px 0;"></div>
+
+        <!-- Live Table Orders -->
         <div id="liveOrdersSection" style="display:none; margin-top:25px; padding:15px; background:#fff3e0; border:3px solid #ff9800; border-radius:15px;">
             <h4 style="color:#d84315; text-align:center; margin-bottom:15px;">📋 Live Table Orders</h4>
             <table border="1" style="width:100%; border-collapse:collapse;">
@@ -156,14 +146,13 @@
     </div>
     <div class="voice-control">
         <label style="color:#ffeb3b;">Voice Speed: <span id="speedValue">0.95x</span></label><br>
-        <input type="range" id="voiceSpeed" min="0.5" max="1.5" step="0.05" value="0.95"
-               style="width:80%; margin:8px auto;" oninput="updateVoiceSpeed(this.value)">
+        <input type="range" id="voiceSpeed" min="0.5" max="1.5" step="0.05" value="0.95" style="width:80%; margin:8px auto;" oninput="updateVoiceSpeed(this.value)">
     </div>
     <div class="kitchen-orders" id="kitchenOrdersContainer"></div>
     <button onclick="closeKitchenDisplay()" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); padding:15px 40px; background:#d84315; font-size:18px;">Close Kitchen Display</button>
 </div>
 
-<!-- NEW ORDER NOTIFICATION MODAL -->
+<!-- MODAL -->
 <div id="newOrderModal" class="modal">
     <div class="modal-content">
         <h3 id="modalTitle" style="color:#d84315;">🚨 NEW ORDER RECEIVED</h3>
@@ -296,8 +285,7 @@ window.updateOrderStatus = function(orderId, status) {
         if (!order) return;
         if (status === 'ready') {
             if (!confirm("Mark this order as READY to serve?")) return;
-            const readyMsg = `ORDER READY FOR TABLE ${order.table} ${order.name || 'Guest'}`;
-            speak(readyMsg, order.lang || 'en');
+            speak(`ORDER READY FOR TABLE ${order.table} ${order.name || 'Guest'}`, order.lang || 'en');
             orderRef.update({ status: "ready", completedAt: new Date().toLocaleString() });
         } else {
             orderRef.update({ status: status });
@@ -305,59 +293,12 @@ window.updateOrderStatus = function(orderId, status) {
     });
 };
 
-// ====================== CUSTOMER ORDER ======================
-function placeCustomerOrder() {
-    if (customerOrder.length === 0) return alert("Cart is empty!");
-    const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
-    currentOrderId = Date.now();
-    const orderData = {
-        id: currentOrderId,
-        table: currentTable,
-        name: currentName,
-        items: JSON.parse(JSON.stringify(customerOrder)),
-        total: total,
-        timestamp: new Date().toLocaleString(),
-        status: "pending",
-        lang: currentLang,
-        type: "order"
-    };
-    db.ref('tableOrders/' + currentOrderId).set(orderData);
-    alert(`✅ Order Placed Successfully for Table ${currentTable}`);
- 
-    let sentMsg = `ORDER SENT TO THE KITCHEN TABLE ${currentTable} ${currentName}`;
-    if (currentLang === 'hi') sentMsg = `ऑर्डर किचन को भेज दिया गया टेबल ${currentTable} ${currentName}`;
-    else if (currentLang === 'or') sentMsg = `ଅର୍ଡର କିଚେନ୍ କୁ ପଠାଯାଇଛି ଟେବୁଲ ${currentTable} ${currentName}`;
-    speak(sentMsg, currentLang);
- 
-    listenToCustomerOrderStatus();
-}
-function listenToCustomerOrderStatus() {
-    if (!currentOrderId) return;
-    db.ref('tableOrders/' + currentOrderId).on('value', (snapshot) => {
-        const order = snapshot.val();
-        if (!order) return;
-        const statusDiv = document.getElementById('customerOrderStatus');
-        if (order.status === 'ready') {
-            statusDiv.innerHTML = `🎉 YOUR ORDER IS READY!<br><span style="font-size:18px;">Please collect from the counter.<br>Thank You!</span>`;
-            statusDiv.style.display = 'block';
-            const readyMsg = `ORDER READY FOR THE TABLE ${order.table} ${order.name || 'Guest'}, PLEASE COLLECT ORDER FROM THE COUNTER, THANK YOU`;
-            speak(readyMsg, order.lang || 'en');
-        } else if (order.status === 'preparing') {
-            statusDiv.innerHTML = `🔄 Your order is being prepared...`;
-            statusDiv.style.display = 'block';
-        } else {
-            statusDiv.style.display = 'none';
-        }
-    });
-}
-
 // ====================== CASH PAYMENT - CUSTOMER SIDE ======================
 function payByCash() {
     if (!currentOrderId || customerOrder.length === 0) {
         return alert("No active order found. Please place order first!");
     }
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
-    
     if (confirm(`💵 Notify staff for Cash Payment of ₹${total} at Table ${currentTable}?`)) {
         db.ref('tableOrders/' + currentOrderId).update({
             status: "cash_payment_requested",
@@ -370,7 +311,7 @@ function payByCash() {
     }
 }
 
-// ====================== CASH PAYMENT - STAFF SIDE POPUP (Revised) ======================
+// ====================== CASH PAYMENT - STAFF POPUP (Revised) ======================
 function setupCashPaymentListener() {
     db.ref('tableOrders').on('child_changed', (snapshot) => {
         const order = snapshot.val();
@@ -384,26 +325,24 @@ function setupCashPaymentListener() {
                 <strong>Table ${order.table}</strong> - ${order.name || 'Guest'}<br>
                 Total: ₹${order.total}<br><br>
                 💵 <span style="color:#d84315; font-size:19px;">Customer wants to pay by Cash</span><br><br>
-                <small>Please collect cash from the table and mark order as completed after receiving payment.</small>
+                <small>Please collect cash from the table and mark as completed after receiving payment.</small>
             `;
             document.getElementById('modalOrderDetails').innerHTML = details;
             document.getElementById('newOrderModal').style.display = 'flex';
 
-            speak(`Cash payment requested for table ${order.table} by ${order.name || 'customer'}. Total amount ₹${order.total}`, order.lang || 'en');
+            speak(`Cash payment requested for table ${order.table} by ${order.name || 'customer'}. Total ₹${order.total}`, order.lang || 'en');
         }
     });
 }
 
-// ====================== CUSTOMER CASH ACCEPTANCE ======================
+// ====================== CUSTOMER ACCEPTANCE ======================
 function setupCustomerCashAcceptanceListener() {
     if (!currentOrderId) return;
     db.ref('tableOrders/' + currentOrderId).on('value', (snapshot) => {
         const order = snapshot.val();
-        if (!order) return;
-        if (order.status === "cash_accepted") {
+        if (order && order.status === "cash_accepted") {
             const statusDiv = document.getElementById('customerOrderStatus');
-            statusDiv.innerHTML = `✅ YOUR CASH PAYMENT REQUEST HAS BEEN ACCEPTED!<br>
-                                   <span style="font-size:18px;">Staff will collect cash shortly.<br>Thank You!</span>`;
+            statusDiv.innerHTML = `✅ YOUR CASH PAYMENT REQUEST HAS BEEN ACCEPTED!<br><span style="font-size:18px;">Staff will collect cash shortly.<br>Thank You!</span>`;
             statusDiv.style.display = 'block';
             statusDiv.style.background = '#f57c00';
             speak(`Your cash payment request for table ${currentTable} has been accepted by staff`, currentLang);
@@ -470,7 +409,7 @@ function sendCustomerBillToWhatsApp(mobile) {
     speak("Thank you for your payment at Shree & Shriyan Dhaba!", currentLang);
 }
 
-// ====================== MODAL FUNCTIONS ======================
+// ====================== MODAL & ACCEPT ======================
 function closeNewOrderModal() {
     document.getElementById('newOrderModal').style.display = 'none';
     currentPendingOrder = null;
@@ -561,8 +500,7 @@ window.sendWhatsAppFromModal = function(orderId) {
     });
 };
 
-// ====================== MENU, STAFF BILLING, PRINT, WHATSAPP, EXPORT etc. ======================
-// (All your original functions for menu, billing, printing etc. are kept unchanged below)
+// ====================== MENU ======================
 function loadAndListenMenu() {
     db.ref('menu').on('value', (snapshot) => {
         const data = snapshot.val();
@@ -646,6 +584,7 @@ function deleteMenuItem(index) {
     renderStaffMenu();
 }
 
+// ====================== STAFF BILLING ======================
 function addItem() {
     const idx = document.getElementById("item").value;
     if (!idx) return alert("Please select an item");
@@ -677,6 +616,7 @@ function voiceAdd() {
     alert("🎤 Voice Add feature coming soon. Use 'Add Item' for now.");
 }
 
+// ====================== PRINTING ======================
 function printBill() {
     if (bill.length === 0) return alert("Bill is empty!");
     const subtotal = bill.reduce((sum, b) => sum + (b.qty * b.price), 0);
@@ -716,6 +656,7 @@ function printThermalBill() {
     printBill();
 }
 
+// ====================== WHATSAPP ======================
 function sendWhatsApp() {
     if (bill.length === 0) return alert("Bill is empty!");
     const mobile = prompt("Enter 10 digit mobile number:");
@@ -742,6 +683,7 @@ function sendWhatsApp() {
     window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
+// ====================== OTHER FUNCTIONS ======================
 function exportExcel() {
     if (bill.length === 0) return alert("No items in the bill!");
     let csv = "Item,Quantity,Rate,Amount\n";
@@ -782,7 +724,6 @@ function dailyReport() {
         alert("✅ Daily Sales Report exported as CSV!");
     });
 }
-
 function loadLiveOrdersRealTime() {
     const tbody = document.getElementById("liveOrdersBody");
     if (liveOrdersRef) liveOrdersRef.off();
@@ -823,14 +764,11 @@ function showTableOrders() {
     if (section.style.display === "block") loadLiveOrdersRealTime();
 }
 
-// ====================== CUSTOMER MENU & ORDER ======================
+// ====================== CUSTOMER SIDE ======================
 function generateDynamicPhonePeQR() {
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
     const container = document.getElementById("dynamicPhonePeQR");
-    if (total <= 0) {
-        container.style.display = "none";
-        return;
-    }
+    if (total <= 0) { container.style.display = "none"; return; }
     const txnNote = `Table${currentTable}_${Date.now()}`;
     const upiLink = `upi://pay?pa=${MERCHANT_UPI}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${total.toFixed(2)}&cu=INR&tn=${encodeURIComponent(txnNote)}`;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(upiLink)}`;
@@ -947,7 +885,7 @@ function initializeApp() {
     }
     document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
     loadAndListenMenu();
-    setupCashPaymentListener();   // Staff cash popup listener
+    setupCashPaymentListener();   // Enable cash payment popup for staff
 }
 initializeApp();
 window.onbeforeunload = () => localStorage.setItem("inv", count);
