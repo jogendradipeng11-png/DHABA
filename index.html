@@ -281,15 +281,14 @@ window.updateOrderStatus = function(orderId, status) {
         if (status === 'ready') {
             if (!confirm("Mark this order as READY to serve?")) return;
 
-            // Message for cook + customer
             let readyMsg = "Your order is ready. Please collect your delicious food from the counter. Thank you!";
             if (order.lang === 'hi') readyMsg = "आपका ऑर्डर तैयार है। कृपया काउंटर से अपना स्वादिष्ट भोजन ले लें। धन्यवाद!";
             else if (order.lang === 'or') readyMsg = "ଆପଣଙ୍କ ଅର୍ଡର ପ୍ରସ୍ତୁତ ହୋଇଛି। ଦୟାକରି କାଉଣ୍ଟରରୁ ଆପଣଙ୍କ ସ୍ୱାଦିଷ୍ଟ ଖାଦ୍ୟ ନେଇଯାନ୍ତୁ। ଧନ୍ୟବାଦ!";
 
-            speak(readyMsg, order.lang || 'en');
-
-            // Show on Customer QR Page
+            // === ONLY speak and show on Customer QR Page ===
             if (currentOrderId && String(currentOrderId) === String(orderId)) {
+                speak(readyMsg, order.lang || 'en');
+
                 const statusDiv = document.getElementById('customerOrderStatus');
                 if (statusDiv) {
                     statusDiv.innerHTML = `🎉 ${readyMsg}`;
@@ -302,15 +301,14 @@ window.updateOrderStatus = function(orderId, status) {
             orderRef.update({ status: "ready", completedAt: new Date().toLocaleString() });
 
         } else if (status === 'preparing') {
-            // When cook clicks Start Preparing
             let preparingMsg = "Your food is being prepared. Please wait a moment.";
             if (order.lang === 'hi') preparingMsg = "आपका भोजन तैयार किया जा रहा है। कृपया थोड़ी देर प्रतीक्षा करें।";
             else if (order.lang === 'or') preparingMsg = "ଆପଣଙ୍କ ଖାଦ୍ୟ ପ୍ରସ୍ତୁତ କରାଯାଉଛି। ଦୟାକରି କିଛି ସମୟ ଅପେକ୍ଷା କରନ୍ତୁ।";
 
-            speak(preparingMsg, order.lang || 'en');
-
-            // Show on Customer QR Page
+            // === ONLY speak and show on Customer QR Page ===
             if (currentOrderId && String(currentOrderId) === String(orderId)) {
+                speak(preparingMsg, order.lang || 'en');
+
                 const statusDiv = document.getElementById('customerOrderStatus');
                 if (statusDiv) {
                     statusDiv.innerHTML = `👨‍🍳 ${preparingMsg}`;
