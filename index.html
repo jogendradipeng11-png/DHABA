@@ -862,36 +862,46 @@ function payByCash() {
     }
 }
 
-function markAsPaid() {
-    const paidAmount = parseFloat(document.getElementById("paidAmount").value);
-    const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
-    if (isNaN(paidAmount) || paidAmount < total) {
-        return alert("❌ Please enter a valid paid amount greater than or equal to the total!");
-    }
-    const whatsapp = document.getElementById("custWhatsApp").value.trim();
-    if (whatsapp && whatsapp.length !== 10) {
-        return alert("❌ WhatsApp number must be exactly 10 digits!");
+function sendCustomerBillToWhatsApp(mobile) {
+    if (customerOrder.length === 0 && !currentOrderId) {
+        alert("No order to send!");
+        return;
     }
 
-    if (currentOrderId) {
-        db.ref('tableOrders/' + currentOrderId).update({
-            status: "completed",
-            paymentType: "paid",
-            paidAmount: paidAmount,
-            completedAt: new Date().toLocaleString()
-        });
-    }
+    let msg = `*Shree & Shriyan Dhaba*\n\n`;
+    msg += `📍 Durlaga, Jharsuguda, Odisha\n`;
+    msg += `📞 +91 7077088311\n\n`;
+    msg += `Table: ${currentTable}\n`;
+    msg += `Customer: ${currentName}\n`;
+    msg += `Date: ${new Date().toLocaleString()}\n\n`;
+    msg += `──────────────────\n`;
 
-    if (whatsapp) {
-        sendCustomerBillToWhatsApp(whatsapp);
-    } else {
-        alert("✅ Payment marked as paid! Cart cleared. Thank you!");
-    }
+    let calculatedTotal = 0;
+    customerOrder.forEach(item => {
+        const amt = item.qty * item.price;
+        calculatedTotal += amt;
+        msg += `${item.name_en} ×${item.qty} = ₹${amt}\n`;
+    });
 
-    customerOrder = [];
-    renderCustomerOrder();
-    document.getElementById("paidAmount").value = "";
-    speak("Thank you for your payment at Shree & Shriyan Dhaba!", currentLang);
+    msg += `──────────────────\n`;
+    msg += `*Total : ₹${calculatedTotal}*\n\n`;
+    msg += `✅ Payment Received - Thank You!\n`;
+    msg += `Visit Again 😊\n\n`;
+    msg += `📱 UPI: 8847810037jp@ybl`;
+
+    const waLink = `https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`;
+    
+    // Open WhatsApp
+    window.open(waLink, '_blank');
+
+    // Clear everything after sending
+    setTimeout(() => {
+        customerOrder = [];
+        renderCustomerOrder();
+        document.getElementById("paidAmount").value = "";
+        alert(`✅ Receipt sent successfully to +91${mobile}`);
+        speak("Thank you for your payment at Shree & Shriyan Dhaba!", currentLang);
+    }, 800);
 }
 
 // ====================== NEW ORDER NOTIFICATION ======================
