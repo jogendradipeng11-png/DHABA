@@ -86,7 +86,6 @@
         <button onclick="generateQRCode()" style="background:#ff9800;">📱 Generate Table QR</button>
         <div id="qrContainer" style="text-align:center;margin:15px 0;"></div>
 
-        <!-- Live Table Orders -->
         <div id="liveOrdersSection" style="display:none; margin-top:25px; padding:15px; background:#fff3e0; border:3px solid #ff9800; border-radius:15px;">
             <h4 style="color:#d84315; text-align:center; margin-bottom:15px;">📋 Live Table Orders</h4>
             <table border="1" style="width:100%; border-collapse:collapse;">
@@ -293,7 +292,7 @@ window.updateOrderStatus = function(orderId, status) {
     });
 };
 
-// ====================== CASH PAYMENT - CUSTOMER ======================
+// ====================== CASH PAYMENT - CUSTOMER SIDE ======================
 function payByCash() {
     if (!currentOrderId || customerOrder.length === 0) return alert("No active order found. Please place order first!");
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
@@ -341,7 +340,7 @@ function setupCustomerCashAcceptanceListener() {
     });
 }
 
-// ====================== MARK AS PAID ======================
+// ====================== MARK AS PAID WITH WHATSAPP ======================
 function markAsPaid() {
     const paidAmount = parseFloat(document.getElementById("paidAmount").value);
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
@@ -395,7 +394,7 @@ function sendCustomerBillToWhatsApp(mobile) {
     alert(`✅ Receipt sent to +91${mobile}`);
 }
 
-// ====================== MODAL ======================
+// ====================== MODAL FUNCTIONS ======================
 function closeNewOrderModal() {
     document.getElementById('newOrderModal').style.display = 'none';
     currentPendingOrder = null;
