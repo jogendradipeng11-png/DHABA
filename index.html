@@ -115,7 +115,7 @@
             <div class="total">Your Total: ₹ <span id="custTotal">0</span></div>
             <button onclick="placeCustomerOrder()" id="placeOrderBtn" style="background:#d84315;">✅ Place Order for Kitchen</button>
             <div id="customerOrderStatus" style="display:none; padding:25px; margin:15px 0; border-radius:12px; text-align:center; font-size:22px; font-weight:bold; background:#2e7d32; color:white;"></div>
-         
+        
             <div class="payment-section">
                 <h4 id="paymentTitle" style="margin:12px 0 8px 0; color:#2e7d32;">💰 Payment Options</h4>
                 <input id="custWhatsApp" type="tel" placeholder="WhatsApp Number (for receipt)" maxlength="10">
@@ -226,7 +226,7 @@ function updateVoiceSpeed(value) {
     document.getElementById('speedValue').textContent = voiceSpeed.toFixed(2) + 'x';
 }
 
-// ====================== KITCHEN DISPLAY - UPDATED READY MESSAGE ======================
+// ====================== KITCHEN DISPLAY ======================
 function openKitchenDisplay() {
     document.getElementById('kitchenView').style.display = 'block';
     loadKitchenDisplay();
@@ -272,77 +272,28 @@ function loadKitchenDisplay() {
     });
 }
 
-window.updateOrderStatus = function(orderId, status, order) {
-    if (!orderId || !status || !order) return;
+// ====================== FIXED: KITCHEN STATUS UPDATE ======================
+window.updateOrderStatus = function(orderId, status) {
+    const orderRef = db.ref('tableOrders/' + orderId);
+    orderRef.once('value', (snapshot) => {
+        const order = snapshot.val();
+        if (!order) return;
 
-    const currentOrderId = window.currentOrderId || null; // Make sure this is set on the customer QR page
-
-    const orderRef = firebase.firestore().collection('orders').doc(orderId); // Adjust if using Realtime DB
-
-    const messages = {
-        en: {
-            ready: "Your order is ready! Please collect it from the counter.",
-            preparing: "Your food is being prepared. Please wait a moment."
-        },
-        hi: {
-            ready: "आपका ऑर्डर तैयार है! कृपया काउंटर से ले लें।",
-            preparing: "आपका भोजन तैयार किया जा रहा है। कृपया थोड़ी देर प्रतीक्षा करें।"
-        },
-        or: {
-            ready: "ଆପଣଙ୍କ ଅର୍ଡର ପ୍ରସ୍ତୁତ ହୋଇଛି! ଦୟାକରି କାଉଣ୍ଟରରୁ ନିଅନ୍ତୁ।",
-            preparing: "ଆପଣଙ୍କ ଖାଦ୍ୟ ପ୍ରସ୍ତୁତ କରାଯାଉଛି। ଦୟାକରି କିଛି ସମୟ ଅପେକ୍ଷା କରନ୍ତୁ।"
+        if (status === 'ready') {
+            if (!confirm("Mark this order as READY to serve?")) return;
+            orderRef.update({ status: "ready", completedAt: new Date().toLocaleString() });
+        } 
+        else if (status === 'preparing') {
+            orderRef.update({ status: "preparing" });
         }
-    };
-
-    const lang = order.lang || 'en';
-    const msgObj = messages[lang] || messages.en;
-
-    if (status === 'ready') {
-        const readyMsg = msgObj.ready;
-
-        // === ONLY speak and show on Customer QR Page ===
-        if (currentOrderId && String(currentOrderId) === String(orderId)) {
-            speak(readyMsg, lang);
-            
-            const statusDiv = document.getElementById('customerOrderStatus');
-            if (statusDiv) {
-                statusDiv.innerHTML = `🎉 ${readyMsg}`;
-                statusDiv.style.display = 'block';
-                statusDiv.style.background = '#2e7d32';
-                statusDiv.style.color = 'white';
-            }
-        }
-
-        orderRef.update({
-            status: "ready",
-            completedAt: new Date().toISOString()   // Better to use ISO format
-        });
-
-    } else if (status === 'preparing') {
-        const preparingMsg = msgObj.preparing;
-
-        // === ONLY speak and show on Customer QR Page ===
-        if (currentOrderId && String(currentOrderId) === String(orderId)) {
-            speak(preparingMsg, lang);
-
-            const statusDiv = document.getElementById('customerOrderStatus');
-            if (statusDiv) {
-                statusDiv.innerHTML = `👨‍🍳 ${preparingMsg}`;
-                statusDiv.style.display = 'block';
-                statusDiv.style.background = '#1976d2';
-                statusDiv.style.color = 'white';
-            }
-        }
-
-        orderRef.update({ status: "preparing" });
-    }
+    });
 };
-// ====================== MARK AS PAID - UPDATED WITH POPUP ======================
+
+// ====================== MARK AS PAID ======================
 function markAsPaid() {
     const paidAmount = parseFloat(document.getElementById("paidAmount").value);
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
     if (isNaN(paidAmount) || paidAmount < total) return alert("❌ Please enter a valid paid amount greater than or equal to the total!");
-
     if (currentOrderId) {
         db.ref('tableOrders/' + currentOrderId).update({
             status: "completed",
@@ -351,8 +302,6 @@ function markAsPaid() {
             completedAt: new Date().toLocaleString()
         });
     }
-
-    // === NEW: Mobile Number Popup for WhatsApp Receipt ===
     const mobile = prompt("Enter 10 digit WhatsApp Number to receive bill:");
     if (mobile && mobile.length === 10) {
         sendCustomerBillToWhatsApp(mobile);
@@ -384,18 +333,14 @@ function sendCustomerBillToWhatsApp(mobile) {
     msg += `*Total : ₹${total}*\n`;
     msg += `✅ Payment Received - Thank You!\n\n`;
     msg += `Visit Again 😊`;
-
     window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
-
     customerOrder = [];
     renderCustomerOrder();
     document.getElementById("paidAmount").value = "";
     alert(`✅ Receipt sent to +91${mobile}`);
 }
 
-// ====================== ALL OTHER FUNCTIONS REMAIN UNCHANGED ======================
-// (Rest of your original code continues below without any modification)
-
+// ====================== CASH & OTHER LISTENERS ======================
 function payByCash() {
     if (!currentOrderId || customerOrder.length === 0) return alert("No active order found. Please place order first!");
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
@@ -440,10 +385,10 @@ function setupCustomerCashAcceptanceListener() {
         }
     });
 }
-// === NEW: Listen for kitchen status changes and show on Customer QR Page ===
+
+// ====================== NEW: KITCHEN STATUS LISTENER FOR CUSTOMER ======================
 function setupKitchenStatusListener() {
     if (!currentOrderId) return;
-
     db.ref('tableOrders/' + currentOrderId).on('value', (snapshot) => {
         const order = snapshot.val();
         if (!order) return;
@@ -478,6 +423,7 @@ function setupKitchenStatusListener() {
         }
     });
 }
+
 // ====================== MODAL FUNCTIONS ======================
 function closeNewOrderModal() {
     document.getElementById('newOrderModal').style.display = 'none';
@@ -682,7 +628,7 @@ function voiceAdd() {
     alert("🎤 Voice Add feature coming soon. Use 'Add Item' for now.");
 }
 
-// ====================== PRINTING ======================
+// ====================== PRINTING & OTHER FUNCTIONS ======================
 function printBill() {
     if (bill.length === 0) return alert("Bill is empty!");
     const subtotal = bill.reduce((sum, b) => sum + (b.qty * b.price), 0);
@@ -722,7 +668,6 @@ function printThermalBill() {
     printBill();
 }
 
-// ====================== WHATSAPP ======================
 function sendWhatsApp() {
     if (bill.length === 0) return alert("Bill is empty!");
     const mobile = prompt("Enter 10 digit mobile number:");
@@ -749,7 +694,6 @@ function sendWhatsApp() {
     window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-// ====================== OTHER FUNCTIONS ======================
 function exportExcel() {
     if (bill.length === 0) return alert("No items in the bill!");
     let csv = "Item,Quantity,Rate,Amount\n";
@@ -768,6 +712,7 @@ function exportExcel() {
     link.click();
     alert("✅ Bill exported as CSV!");
 }
+
 function dailyReport() {
     const today = new Date().toLocaleDateString();
     db.ref('tableOrders').once('value', (snapshot) => {
@@ -790,6 +735,7 @@ function dailyReport() {
         alert("✅ Daily Sales Report exported as CSV!");
     });
 }
+
 function loadLiveOrdersRealTime() {
     const tbody = document.getElementById("liveOrdersBody");
     if (liveOrdersRef) liveOrdersRef.off();
@@ -866,7 +812,7 @@ function joinTable() {
     document.getElementById("displayName").innerText = currentName;
     loadCustomerMenu();
     setupCustomerCashAcceptanceListener();
-    setupKitchenStatusListener();
+    setupKitchenStatusListener();   // Important: This triggers the message on customer page
 }
 function loadCustomerMenu() {
     let html = '';
