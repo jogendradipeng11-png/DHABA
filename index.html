@@ -38,7 +38,6 @@
         <button class="lang-btn" onclick="changeLanguage('hi')">हिंदी</button>
         <button class="lang-btn" onclick="changeLanguage('or')">ଓଡ଼ିଆ</button>
     </div>
-
     <!-- STAFF POS VIEW -->
     <div id="staffView">
         <div class="logo">
@@ -69,7 +68,6 @@
         <button onclick="dailyReport()">📊 Daily Report</button>
         <button onclick="showTableOrders()" style="background:#d84315;">📋 Live Table Orders</button>
         <button onclick="openKitchenDisplay()" style="background:#e65100; margin-top:8px;">🔥 Open Kitchen Display</button>
-
         <h4>Manage Menu (Real-time Sync)</h4>
         <input id="newItemName" placeholder="New Item Name (English)">
         <input id="newItemPrice" type="number" placeholder="Price (₹)">
@@ -80,12 +78,10 @@
             <div id="currentMenuList"></div>
             <button onclick="hideCurrentMenu()" style="background:#666; margin-top:10px;">Close Menu</button>
         </div>
-
         <h4>Generate QR for Table Ordering</h4>
         <input id="qrTableNum" type="number" placeholder="Table Number">
         <button onclick="generateQRCode()" style="background:#ff9800;">📱 Generate Table QR</button>
         <div id="qrContainer" style="text-align:center;margin:15px 0;"></div>
-
         <div id="liveOrdersSection" style="display:none; margin-top:25px; padding:15px; background:#fff3e0; border:3px solid #ff9800; border-radius:15px;">
             <h4 style="color:#d84315; text-align:center; margin-bottom:15px;">📋 Live Table Orders</h4>
             <table border="1" style="width:100%; border-collapse:collapse;">
@@ -94,7 +90,6 @@
             </table>
         </div>
     </div>
-
     <!-- CUSTOMER VIEW (QR Page) -->
     <div id="customerView" style="display:none;">
         <div class="logo">
@@ -120,7 +115,7 @@
             <div class="total">Your Total: ₹ <span id="custTotal">0</span></div>
             <button onclick="placeCustomerOrder()" id="placeOrderBtn" style="background:#d84315;">✅ Place Order for Kitchen</button>
             <div id="customerOrderStatus" style="display:none; padding:25px; margin:15px 0; border-radius:12px; text-align:center; font-size:22px; font-weight:bold; background:#2e7d32; color:white;"></div>
-          
+         
             <div class="payment-section">
                 <h4 id="paymentTitle" style="margin:12px 0 8px 0; color:#2e7d32;">💰 Payment Options</h4>
                 <input id="custWhatsApp" type="tel" placeholder="WhatsApp Number (for receipt)" maxlength="10">
@@ -203,7 +198,6 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const MERCHANT_UPI = "8847810037jp@ybl";
 const MERCHANT_NAME = "Shree & Shriyan Dhaba";
-
 let items = [];
 let bill = [];
 let customerOrder = [];
@@ -232,7 +226,7 @@ function updateVoiceSpeed(value) {
     document.getElementById('speedValue').textContent = voiceSpeed.toFixed(2) + 'x';
 }
 
-// ====================== KITCHEN DISPLAY ======================
+// ====================== KITCHEN DISPLAY - UPDATED READY MESSAGE ======================
 function openKitchenDisplay() {
     document.getElementById('kitchenView').style.display = 'block';
     loadKitchenDisplay();
@@ -277,14 +271,23 @@ function loadKitchenDisplay() {
         document.getElementById('kitchenCount').textContent = pendingCount + " Orders";
     });
 }
+
 window.updateOrderStatus = function(orderId, status) {
     const orderRef = db.ref('tableOrders/' + orderId);
     orderRef.once('value', (snapshot) => {
         const order = snapshot.val();
         if (!order) return;
+
         if (status === 'ready') {
             if (!confirm("Mark this order as READY to serve?")) return;
-            speak(`ORDER READY FOR TABLE ${order.table} ${order.name || 'Guest'}`, order.lang || 'en');
+
+            // === NEW: Order Ready Voice Message ===
+            let readyMsg = "Your order is ready. Please collect your delicious food from the counter. Thank you!";
+            if (order.lang === 'hi') readyMsg = "आपका ऑर्डर तैयार है। कृपया काउंटर से अपना स्वादिष्ट भोजन ले लें। धन्यवाद!";
+            else if (order.lang === 'or') readyMsg = "ଆପଣଙ୍କ ଅର୍ଡର ପ୍ରସ୍ତୁତ ହୋଇଛି। ଦୟାକରି କାଉଣ୍ଟରରୁ ଆପଣଙ୍କ ସ୍ୱାଦିଷ୍ଟ ଖାଦ୍ୟ ନେଇଯାନ୍ତୁ। ଧନ୍ୟବାଦ!";
+
+            speak(readyMsg, order.lang || 'en');
+
             orderRef.update({ status: "ready", completedAt: new Date().toLocaleString() });
         } else {
             orderRef.update({ status: status });
@@ -292,61 +295,11 @@ window.updateOrderStatus = function(orderId, status) {
     });
 };
 
-// ====================== CASH PAYMENT - CUSTOMER SIDE ======================
-function payByCash() {
-    if (!currentOrderId || customerOrder.length === 0) return alert("No active order found. Please place order first!");
-    const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
-    if (confirm(`💵 Notify staff for Cash Payment of ₹${total} at Table ${currentTable}?`)) {
-        db.ref('tableOrders/' + currentOrderId).update({
-            status: "cash_payment_requested",
-            paymentType: "cash",
-            requestedAt: new Date().toLocaleString()
-        }).then(() => {
-            alert("✅ Cash payment request sent to staff successfully!");
-            speak(`Cash payment requested for table ${currentTable}`, currentLang);
-        });
-    }
-}
-
-// ====================== CASH PAYMENT - STAFF POPUP ======================
-function setupCashPaymentListener() {
-    db.ref('tableOrders').on('child_changed', (snapshot) => {
-        const order = snapshot.val();
-        if (!order || order.status !== "cash_payment_requested") return;
-        if (document.getElementById('staffView').style.display !== 'none') {
-            currentPendingOrder = order;
-            document.getElementById('modalTitle').innerHTML = '💵 CASH PAYMENT REQUEST';
-            document.getElementById('modalTitle').style.color = '#f57c00';
-            const details = `<strong>Table ${order.table}</strong> - ${order.name || 'Guest'}<br>Total: ₹${order.total}<br><br>💵 Customer wants to pay by Cash<br><br><small>Please collect cash from the table.</small>`;
-            document.getElementById('modalOrderDetails').innerHTML = details;
-            document.getElementById('newOrderModal').style.display = 'flex';
-            speak(`Cash payment requested for table ${order.table}. Total ₹${order.total}`, order.lang || 'en');
-        }
-    });
-}
-
-// ====================== CUSTOMER CASH ACCEPTANCE ======================
-function setupCustomerCashAcceptanceListener() {
-    if (!currentOrderId) return;
-    db.ref('tableOrders/' + currentOrderId).on('value', (snapshot) => {
-        const order = snapshot.val();
-        if (order && order.status === "cash_accepted") {
-            const statusDiv = document.getElementById('customerOrderStatus');
-            statusDiv.innerHTML = `✅ YOUR CASH PAYMENT REQUEST HAS BEEN ACCEPTED!<br><span style="font-size:18px;">Staff will collect cash shortly.<br>Thank You!</span>`;
-            statusDiv.style.display = 'block';
-            statusDiv.style.background = '#f57c00';
-            speak(`Your cash payment request for table ${currentTable} has been accepted by staff`, currentLang);
-        }
-    });
-}
-
-// ====================== MARK AS PAID WITH WHATSAPP ======================
+// ====================== MARK AS PAID - UPDATED WITH POPUP ======================
 function markAsPaid() {
     const paidAmount = parseFloat(document.getElementById("paidAmount").value);
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
     if (isNaN(paidAmount) || paidAmount < total) return alert("❌ Please enter a valid paid amount greater than or equal to the total!");
-    const whatsapp = document.getElementById("custWhatsApp").value.trim();
-    if (whatsapp && whatsapp.length !== 10) return alert("❌ WhatsApp number must be exactly 10 digits!");
 
     if (currentOrderId) {
         db.ref('tableOrders/' + currentOrderId).update({
@@ -357,8 +310,12 @@ function markAsPaid() {
         });
     }
 
-    if (whatsapp) {
-        sendCustomerBillToWhatsApp(whatsapp);
+    // === NEW: Mobile Number Popup for WhatsApp Receipt ===
+    const mobile = prompt("Enter 10 digit WhatsApp Number to receive bill:");
+    if (mobile && mobile.length === 10) {
+        sendCustomerBillToWhatsApp(mobile);
+    } else if (mobile) {
+        alert("❌ Please enter a valid 10-digit mobile number!");
     } else {
         alert(`✅ Payment of ₹${paidAmount} marked as PAID!\nThank you!`);
         speak("Thank you for your payment at Shree & Shriyan Dhaba!", currentLang);
@@ -392,6 +349,54 @@ function sendCustomerBillToWhatsApp(mobile) {
     renderCustomerOrder();
     document.getElementById("paidAmount").value = "";
     alert(`✅ Receipt sent to +91${mobile}`);
+}
+
+// ====================== ALL OTHER FUNCTIONS REMAIN UNCHANGED ======================
+// (Rest of your original code continues below without any modification)
+
+function payByCash() {
+    if (!currentOrderId || customerOrder.length === 0) return alert("No active order found. Please place order first!");
+    const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
+    if (confirm(`💵 Notify staff for Cash Payment of ₹${total} at Table ${currentTable}?`)) {
+        db.ref('tableOrders/' + currentOrderId).update({
+            status: "cash_payment_requested",
+            paymentType: "cash",
+            requestedAt: new Date().toLocaleString()
+        }).then(() => {
+            alert("✅ Cash payment request sent to staff successfully!");
+            speak(`Cash payment requested for table ${currentTable}`, currentLang);
+        });
+    }
+}
+
+function setupCashPaymentListener() {
+    db.ref('tableOrders').on('child_changed', (snapshot) => {
+        const order = snapshot.val();
+        if (!order || order.status !== "cash_payment_requested") return;
+        if (document.getElementById('staffView').style.display !== 'none') {
+            currentPendingOrder = order;
+            document.getElementById('modalTitle').innerHTML = '💵 CASH PAYMENT REQUEST';
+            document.getElementById('modalTitle').style.color = '#f57c00';
+            const details = `<strong>Table ${order.table}</strong> - ${order.name || 'Guest'}<br>Total: ₹${order.total}<br><br>💵 Customer wants to pay by Cash<br><br><small>Please collect cash from the table.</small>`;
+            document.getElementById('modalOrderDetails').innerHTML = details;
+            document.getElementById('newOrderModal').style.display = 'flex';
+            speak(`Cash payment requested for table ${order.table}. Total ₹${order.total}`, order.lang || 'en');
+        }
+    });
+}
+
+function setupCustomerCashAcceptanceListener() {
+    if (!currentOrderId) return;
+    db.ref('tableOrders/' + currentOrderId).on('value', (snapshot) => {
+        const order = snapshot.val();
+        if (order && order.status === "cash_accepted") {
+            const statusDiv = document.getElementById('customerOrderStatus');
+            statusDiv.innerHTML = `✅ YOUR CASH PAYMENT REQUEST HAS BEEN ACCEPTED!<br><span style="font-size:18px;">Staff will collect cash shortly.<br>Thank You!</span>`;
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#f57c00';
+            speak(`Your cash payment request for table ${currentTable} has been accepted by staff`, currentLang);
+        }
+    });
 }
 
 // ====================== MODAL FUNCTIONS ======================
@@ -434,7 +439,7 @@ function showBillOptionsModal(order) {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = modalHTML;
     document.body.appendChild(tempDiv.firstElementChild);
-}
+};
 window.closeBillOptionsModal = function() {
     const modals = document.querySelectorAll('.modal');
     if (modals.length) modals[modals.length-1].remove();
@@ -862,7 +867,6 @@ db.ref('tableOrders').on('child_added', (snapshot) => {
         showNewOrderPopup(order);
     }
 });
-
 function showNewOrderPopup(order) {
     if (document.getElementById('staffView').style.display !== 'none') {
         currentPendingOrder = order;
