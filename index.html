@@ -281,20 +281,49 @@ window.updateOrderStatus = function(orderId, status) {
         if (status === 'ready') {
             if (!confirm("Mark this order as READY to serve?")) return;
 
-            // === NEW: Order Ready Voice Message ===
+            // Message for cook + customer
             let readyMsg = "Your order is ready. Please collect your delicious food from the counter. Thank you!";
             if (order.lang === 'hi') readyMsg = "आपका ऑर्डर तैयार है। कृपया काउंटर से अपना स्वादिष्ट भोजन ले लें। धन्यवाद!";
             else if (order.lang === 'or') readyMsg = "ଆପଣଙ୍କ ଅର୍ଡର ପ୍ରସ୍ତୁତ ହୋଇଛି। ଦୟାକରି କାଉଣ୍ଟରରୁ ଆପଣଙ୍କ ସ୍ୱାଦିଷ୍ଟ ଖାଦ୍ୟ ନେଇଯାନ୍ତୁ। ଧନ୍ୟବାଦ!";
 
             speak(readyMsg, order.lang || 'en');
 
+            // Show on Customer QR Page
+            if (currentOrderId && String(currentOrderId) === String(orderId)) {
+                const statusDiv = document.getElementById('customerOrderStatus');
+                if (statusDiv) {
+                    statusDiv.innerHTML = `🎉 ${readyMsg}`;
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.background = '#2e7d32';
+                    statusDiv.style.color = 'white';
+                }
+            }
+
             orderRef.update({ status: "ready", completedAt: new Date().toLocaleString() });
-        } else {
-            orderRef.update({ status: status });
+
+        } else if (status === 'preparing') {
+            // When cook clicks Start Preparing
+            let preparingMsg = "Your food is being prepared. Please wait a moment.";
+            if (order.lang === 'hi') preparingMsg = "आपका भोजन तैयार किया जा रहा है। कृपया थोड़ी देर प्रतीक्षा करें।";
+            else if (order.lang === 'or') preparingMsg = "ଆପଣଙ୍କ ଖାଦ୍ୟ ପ୍ରସ୍ତୁତ କରାଯାଉଛି। ଦୟାକରି କିଛି ସମୟ ଅପେକ୍ଷା କରନ୍ତୁ।";
+
+            speak(preparingMsg, order.lang || 'en');
+
+            // Show on Customer QR Page
+            if (currentOrderId && String(currentOrderId) === String(orderId)) {
+                const statusDiv = document.getElementById('customerOrderStatus');
+                if (statusDiv) {
+                    statusDiv.innerHTML = `👨‍🍳 ${preparingMsg}`;
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.background = '#1976d2';
+                    statusDiv.style.color = 'white';
+                }
+            }
+
+            orderRef.update({ status: "preparing" });
         }
     });
 };
-
 // ====================== MARK AS PAID - UPDATED WITH POPUP ======================
 function markAsPaid() {
     const paidAmount = parseFloat(document.getElementById("paidAmount").value);
