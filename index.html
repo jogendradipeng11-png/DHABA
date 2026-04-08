@@ -54,6 +54,34 @@
         background: white; padding: 25px; border-radius: 15px; max-width: 420px; width: 90%;
         text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
+
+    /* Cash Payment Notification Popup for Staff */
+    .cash-staff-modal {
+        display: none; 
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 100%; 
+        background: rgba(0,0,0,0.8); 
+        z-index: 10000; 
+        align-items: center; 
+        justify-content: center;
+    }
+    .cash-staff-content {
+        background: #fff3e0; 
+        padding: 25px; 
+        border-radius: 18px; 
+        max-width: 420px; 
+        width: 92%;
+        text-align: center; 
+        border: 5px solid #f57c00;
+        box-shadow: 0 10px 30px rgba(245,124,0,0.5);
+    }
+    .cash-staff-content h3 {
+        color: #d84315;
+        margin: 0 0 15px 0;
+    }
 </style>
 </head>
 <body>
@@ -144,7 +172,7 @@
             <div class="total">Your Total: ₹ <span id="custTotal">0</span></div>
             <button onclick="placeCustomerOrder()" id="placeOrderBtn" style="background:#d84315;">✅ Place Order for Kitchen</button>
             <div id="customerOrderStatus" style="display:none; padding:25px; margin:15px 0; border-radius:12px; text-align:center; font-size:22px; font-weight:bold; background:#2e7d32; color:white;"></div>
-           
+          
             <div class="payment-section">
                 <h4 id="paymentTitle" style="margin:12px 0 8px 0; color:#2e7d32;">💰 Payment Options</h4>
                 <input id="custWhatsApp" type="tel" placeholder="WhatsApp Number (for receipt)" maxlength="10">
@@ -186,6 +214,15 @@
     </div>
 </div>
 
+<!-- CASH PAYMENT NOTIFICATION POPUP FOR STAFF -->
+<div id="cashStaffModal" class="cash-staff-modal">
+    <div class="cash-staff-content">
+        <h3>💵 CASH PAYMENT REQUEST</h3>
+        <div id="cashStaffDetails" style="background:white; padding:15px; border-radius:12px; margin:15px 0; text-align:left; font-size:16px;"></div>
+        <button onclick="closeCashStaffModal()" style="background:#2e7d32; padding:12px 30px; font-size:17px;">✅ OK - I Will Collect</button>
+    </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
@@ -213,7 +250,6 @@ function changeLanguage(lang) {
     document.getElementById('clearCartBtn').textContent = t.clearCart;
     if (document.getElementById("menuSection").style.display !== "none") loadCustomerMenu();
 }
-
 // ====================== FIREBASE ======================
 const firebaseConfig = {
   apiKey: "AIzaSyCOtpaUWrVF6yAsHv9b-gj_OA0p5_hWAQ4",
@@ -240,7 +276,6 @@ let voiceSpeed = 0.95;
 let gstEnabled = true;
 let currentPendingOrder = null;
 let currentPaymentOrder = null;
-
 // ====================== SPEECH ======================
 const speech = window.speechSynthesis;
 function speak(text, lang = 'en') {
@@ -256,7 +291,6 @@ function updateVoiceSpeed(value) {
     voiceSpeed = parseFloat(value);
     document.getElementById('speedValue').textContent = voiceSpeed.toFixed(2) + 'x';
 }
-
 // ====================== KITCHEN DISPLAY ======================
 function openKitchenDisplay() {
     document.getElementById('kitchenView').style.display = 'block';
@@ -317,7 +351,6 @@ window.updateOrderStatus = function(orderId, status) {
         }
     });
 };
-
 // ====================== CUSTOMER ORDER ======================
 function placeCustomerOrder() {
     if (customerOrder.length === 0) return alert("Cart is empty!");
@@ -336,12 +369,12 @@ function placeCustomerOrder() {
     };
     db.ref('tableOrders/' + currentOrderId).set(orderData);
     alert(`✅ Order Placed Successfully for Table ${currentTable}`);
-  
+ 
     let sentMsg = `ORDER SENT TO THE KITCHEN TABLE ${currentTable} ${currentName}`;
     if (currentLang === 'hi') sentMsg = `ऑर्डर किचन को भेज दिया गया टेबल ${currentTable} ${currentName}`;
     else if (currentLang === 'or') sentMsg = `ଅର୍ଡର କିଚେନ୍ କୁ ପଠାଯାଇଛି ଟେବୁଲ ${currentTable} ${currentName}`;
     speak(sentMsg, currentLang);
-  
+ 
     listenToCustomerOrderStatus();
 }
 function listenToCustomerOrderStatus() {
@@ -363,7 +396,6 @@ function listenToCustomerOrderStatus() {
         }
     });
 }
-
 // ====================== PAYMENT NOTIFICATION ======================
 function notifyStaffAboutPayment(paymentData) {
     currentPaymentOrder = paymentData;
@@ -373,7 +405,59 @@ function notifyStaffAboutPayment(paymentData) {
     document.getElementById('modalOrderDetails').innerHTML = details;
     document.getElementById('newOrderModal').style.display = 'flex';
 }
+// ====================== CASH PAYMENT - STAFF NOTIFICATION ONLY ======================
+function notifyCashPaymentToStaff() {
+    if (customerOrder.length === 0) return;
 
+    const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
+
+    const cashData = {
+        id: Date.now(),
+        table: currentTable,
+        name: currentName,
+        items: JSON.parse(JSON.stringify(customerOrder)),
+        total: total,
+        timestamp: new Date().toLocaleString(),
+        type: "cash_payment_notification",
+        status: "cash_pending",
+        lang: currentLang
+    };
+
+    // Save to Firebase so Staff POS and Kitchen can see
+    db.ref('tableOrders/' + cashData.id).set(cashData);
+
+    // Show popup on STAFF POS only
+    showCashStaffPopup(cashData);
+
+    // Voice alert for staff
+    let msg = `CASH PAYMENT REQUEST - TABLE ${currentTable} - ₹${total} - ${currentName}`;
+    speak(msg, 'en');
+}
+
+function showCashStaffPopup(data) {
+    const modal = document.getElementById('cashStaffModal');
+    const detailsDiv = document.getElementById('cashStaffDetails');
+
+    let itemsHtml = '';
+    data.items.forEach(item => {
+        itemsHtml += `${item.qty}× ${item.name_en} = ₹${item.qty * item.price}<br>`;
+    });
+
+    detailsDiv.innerHTML = `
+        <strong>Table: ${data.table}</strong><br>
+        Customer: ${data.name}<br><br>
+        <strong>Items:</strong><br>
+        ${itemsHtml}<br>
+        <strong style="color:#d84315; font-size:18px;">Total Amount: ₹${data.total}</strong><br><br>
+        <span style="color:#2e7d32;">Please collect cash from the customer.</span>
+    `;
+
+    modal.style.display = 'flex';
+}
+
+function closeCashStaffModal() {
+    document.getElementById('cashStaffModal').style.display = 'none';
+}
 // ====================== PAYMENT FUNCTIONS ======================
 function markAsPaid() {
     const whatsappNum = document.getElementById("custWhatsApp").value.trim();
@@ -396,24 +480,21 @@ function markAsPaid() {
     };
     notifyStaffAboutPayment(paymentData);
 }
+
 function payByCash() {
     if (customerOrder.length === 0) return alert("Cart is empty!");
-    const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
-    let details = `Cash Payment Details\n\nTable: ${currentTable}\nCustomer: ${currentName}\nTotal Amount: ₹${total}\n\nPlease collect cash from customer.`;
-    alert(details);
-    const paymentData = {
-        id: Date.now(),
-        table: currentTable,
-        name: currentName,
-        total: total,
-        timestamp: new Date().toLocaleString(),
-        type: "payment",
-        lang: currentLang
-    };
-    notifyStaffAboutPayment(paymentData);
+    
+    // Only notify Staff POS (No popup on customer side)
+    notifyCashPaymentToStaff();
+    
+    // Clear customer cart
     customerOrder = [];
     renderCustomerOrder();
+    
+    // Show simple confirmation to customer
+    alert("✅ Cash Payment Request Sent to Staff!\nPlease wait, staff will come to collect cash.");
 }
+
 function sendCustomerBillToWhatsApp(mobile) {
     if (customerOrder.length === 0) return;
     let msg = `*Shree & Shriyan Dhaba*\n\n`;
@@ -432,13 +513,11 @@ function sendCustomerBillToWhatsApp(mobile) {
     msg += `*Total : ₹${total}*\n\n`;
     msg += `Thank You! Visit Again 😊\n\n`;
     msg += `📱 Pay via UPI: 8847810037jp@ybl`;
-
     window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
     customerOrder = [];
     renderCustomerOrder();
     alert(`✅ Bill sent to +91${mobile}`);
 }
-
 // ====================== MODAL FUNCTIONS ======================
 function showNewOrderPopup(order) {
     currentPendingOrder = order;
@@ -533,7 +612,6 @@ window.sendWhatsAppFromModal = function(orderId) {
         window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
     });
 };
-
 // ====================== MENU ======================
 function loadAndListenMenu() {
     db.ref('menu').on('value', (snapshot) => {
@@ -617,7 +695,6 @@ function deleteMenuItem(index) {
     renderCurrentMenu();
     renderStaffMenu();
 }
-
 // ====================== STAFF BILLING ======================
 function addItem() {
     const idx = document.getElementById("item").value;
@@ -649,7 +726,6 @@ function removeItem(i) {
 function voiceAdd() {
     alert("🎤 Voice Add feature coming soon. Use 'Add Item' for now.");
 }
-
 // ====================== PRINTING ======================
 function printBill() {
     if (bill.length === 0) return alert("Bill is empty!");
@@ -657,11 +733,10 @@ function printBill() {
     const gst = gstEnabled ? Math.round(subtotal * 0.05) : 0;
     const grandTotal = subtotal + gst;
     const customer = document.getElementById("customerName").value || "Walk-in";
-
     const printWindow = window.open('', '_blank');
     let htmlContent = '<html><head><title>Bill - Shree & Shriyan Dhaba</title>';
     htmlContent += '<style>body{font-family:monospace;padding:20px;max-width:300px;margin:auto;}table{width:100%;border-collapse:collapse;}th,td{border-bottom:1px dotted #000;padding:4px 0;text-align:center;} img{display:block;margin:10px auto;}</style></head><body>';
-    
+   
     htmlContent += '<div style="text-align:center;">';
     htmlContent += '<img src="./logo_180x90.jpg" alt="Shree & Shriyan Dhaba" style="max-width:180px;height:auto;">';
     htmlContent += '<h2>Shree & Shriyan Dhaba</h2>';
@@ -678,7 +753,7 @@ function printBill() {
     htmlContent += '<h3 style="text-align:center;">Grand Total: ₹' + grandTotal + '</h3>';
     htmlContent += '<p style="text-align:center; font-size:12px;">Thank You! Visit Again</p></div>';
     htmlContent += '<script>window.print(); setTimeout(() => window.close(), 800);<\/script></body></html>';
-    
+   
     printWindow.document.write(htmlContent);
     printWindow.document.close();
     bill = [];
@@ -692,7 +767,6 @@ function printThermalBill() {
     alert("🖨️ Thermal Print triggered with Logo.\n\n(For real thermal printing, use ESC/POS printer or QZ Tray in future.)");
     printBill();
 }
-
 // ====================== OTHER FUNCTIONS ======================
 function exportExcel() {
     if (bill.length === 0) return alert("No items in the bill!");
@@ -712,16 +786,13 @@ function exportExcel() {
     link.click();
     alert("✅ Bill exported as CSV!");
 }
-
 function sendWhatsApp() {
     if (bill.length === 0) return alert("Bill is empty!");
     const mobile = prompt("Enter 10 digit mobile number:");
     if (!mobile || mobile.length !== 10) return alert("Please enter valid 10-digit number!");
-
     const subtotal = bill.reduce((sum, b) => sum + (b.qty * b.price), 0);
     const gst = gstEnabled ? Math.round(subtotal * 0.05) : 0;
     const total = subtotal + gst;
-
     let msg = `*Shree & Shriyan Dhaba*\n\n`;
     msg += `📍 Durlaga, Jharsuguda, Odisha\n`;
     msg += `📞 +91 7077088311\n\n`;
@@ -729,21 +800,17 @@ function sendWhatsApp() {
     msg += `Invoice: INV${String(count).padStart(3,'0')}\n`;
     msg += `Date: ${new Date().toLocaleString()}\n\n`;
     msg += `──────────────────\n`;
-
     bill.forEach(b => {
         msg += `${b.name} ×${b.qty} = ₹${b.qty * b.price}\n`;
     });
-
     msg += `──────────────────\n`;
     msg += `Subtotal : ₹${subtotal}\n`;
     if (gstEnabled) msg += `GST (5%) : ₹${gst}\n`;
     msg += `*Grand Total : ₹${total}*\n\n`;
     msg += `Thank You! Visit Again 😊\n\n`;
     msg += `📱 Pay via UPI: 8847810037jp@ybl`;
-
     window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
 }
-
 function dailyReport() {
     const today = new Date().toLocaleDateString();
     db.ref('tableOrders').once('value', (snapshot) => {
@@ -805,7 +872,6 @@ function deleteLiveOrder(orderId) {
     if (!confirm("Delete this order?")) return;
     db.ref('tableOrders/' + orderId).remove();
 }
-
 // ====================== NEW ORDER + PAYMENT AUTO POPUP ======================
 db.ref('tableOrders').on('child_added', (snapshot) => {
     const order = snapshot.val();
@@ -817,7 +883,6 @@ db.ref('tableOrders').on('child_added', (snapshot) => {
         showNewOrderPopup(order);
     }
 });
-
 // ====================== CUSTOMER SIDE FUNCTIONS ======================
 function generateDynamicPhonePeQR() {
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
@@ -899,7 +964,6 @@ function clearCustomerOrder() {
         renderCustomerOrder();
     }
 }
-
 // ====================== INITIALIZE ======================
 function initializeApp() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -919,7 +983,6 @@ function initializeApp() {
     document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
     loadAndListenMenu();
 }
-
 initializeApp();
 window.onbeforeunload = () => localStorage.setItem("inv", count);
 </script>
