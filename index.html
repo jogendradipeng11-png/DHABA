@@ -96,7 +96,7 @@
         </div>
     </div>
 
-    <!-- CUSTOMER VIEW -->
+    <!-- CUSTOMER VIEW (QR Page) -->
     <div id="customerView" style="display:none;">
         <div class="logo">
             <img src="./logo_180x90.jpg" alt="Logo" style="width:130px;">
@@ -293,11 +293,9 @@ window.updateOrderStatus = function(orderId, status) {
     });
 };
 
-// ====================== CASH PAYMENT - CUSTOMER SIDE ======================
+// ====================== CASH PAYMENT FUNCTIONS ======================
 function payByCash() {
-    if (!currentOrderId || customerOrder.length === 0) {
-        return alert("No active order found. Please place order first!");
-    }
+    if (!currentOrderId || customerOrder.length === 0) return alert("No active order found. Please place order first!");
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
     if (confirm(`💵 Notify staff for Cash Payment of ₹${total} at Table ${currentTable}?`)) {
         db.ref('tableOrders/' + currentOrderId).update({
@@ -311,31 +309,22 @@ function payByCash() {
     }
 }
 
-// ====================== CASH PAYMENT - STAFF POPUP (Revised) ======================
 function setupCashPaymentListener() {
     db.ref('tableOrders').on('child_changed', (snapshot) => {
         const order = snapshot.val();
         if (!order || order.status !== "cash_payment_requested") return;
-
         if (document.getElementById('staffView').style.display !== 'none') {
             currentPendingOrder = order;
             document.getElementById('modalTitle').innerHTML = '💵 CASH PAYMENT REQUEST';
             document.getElementById('modalTitle').style.color = '#f57c00';
-            const details = `
-                <strong>Table ${order.table}</strong> - ${order.name || 'Guest'}<br>
-                Total: ₹${order.total}<br><br>
-                💵 <span style="color:#d84315; font-size:19px;">Customer wants to pay by Cash</span><br><br>
-                <small>Please collect cash from the table and mark as completed after receiving payment.</small>
-            `;
+            const details = `<strong>Table ${order.table}</strong> - ${order.name || 'Guest'}<br>Total: ₹${order.total}<br><br>💵 Customer wants to pay by Cash<br><br><small>Please collect cash from the table.</small>`;
             document.getElementById('modalOrderDetails').innerHTML = details;
             document.getElementById('newOrderModal').style.display = 'flex';
-
-            speak(`Cash payment requested for table ${order.table} by ${order.name || 'customer'}. Total ₹${order.total}`, order.lang || 'en');
+            speak(`Cash payment requested for table ${order.table}. Total ₹${order.total}`, order.lang || 'en');
         }
     });
 }
 
-// ====================== CUSTOMER ACCEPTANCE ======================
 function setupCustomerCashAcceptanceListener() {
     if (!currentOrderId) return;
     db.ref('tableOrders/' + currentOrderId).on('value', (snapshot) => {
@@ -350,17 +339,12 @@ function setupCustomerCashAcceptanceListener() {
     });
 }
 
-// ====================== MARK AS PAID WITH WHATSAPP ======================
 function markAsPaid() {
     const paidAmount = parseFloat(document.getElementById("paidAmount").value);
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
-    if (isNaN(paidAmount) || paidAmount < total) {
-        return alert("❌ Please enter a valid paid amount greater than or equal to the total!");
-    }
+    if (isNaN(paidAmount) || paidAmount < total) return alert("❌ Please enter a valid paid amount greater than or equal to the total!");
     const whatsapp = document.getElementById("custWhatsApp").value.trim();
-    if (whatsapp && whatsapp.length !== 10) {
-        return alert("❌ WhatsApp number must be exactly 10 digits!");
-    }
+    if (whatsapp && whatsapp.length !== 10) return alert("❌ WhatsApp number must be exactly 10 digits!");
 
     if (currentOrderId) {
         db.ref('tableOrders/' + currentOrderId).update({
@@ -406,10 +390,9 @@ function sendCustomerBillToWhatsApp(mobile) {
     renderCustomerOrder();
     document.getElementById("paidAmount").value = "";
     alert(`✅ Receipt sent to +91${mobile}`);
-    speak("Thank you for your payment at Shree & Shriyan Dhaba!", currentLang);
 }
 
-// ====================== MODAL & ACCEPT ======================
+// ====================== MODAL FUNCTIONS ======================
 function closeNewOrderModal() {
     document.getElementById('newOrderModal').style.display = 'none';
     currentPendingOrder = null;
@@ -417,10 +400,7 @@ function closeNewOrderModal() {
 function acceptAndPrintFromModal() {
     closeNewOrderModal();
     if (currentPendingOrder && currentPendingOrder.status === "cash_payment_requested") {
-        db.ref('tableOrders/' + currentPendingOrder.id).update({
-            status: "cash_accepted",
-            acceptedAt: new Date().toLocaleString()
-        }).then(() => {
+        db.ref('tableOrders/' + currentPendingOrder.id).update({ status: "cash_accepted", acceptedAt: new Date().toLocaleString() }).then(() => {
             alert(`✅ Cash Payment Accepted for Table ${currentPendingOrder.table}`);
             speak(`Cash payment accepted for table ${currentPendingOrder.table}`, currentLang);
         });
@@ -768,7 +748,10 @@ function showTableOrders() {
 function generateDynamicPhonePeQR() {
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
     const container = document.getElementById("dynamicPhonePeQR");
-    if (total <= 0) { container.style.display = "none"; return; }
+    if (total <= 0) {
+        container.style.display = "none";
+        return;
+    }
     const txnNote = `Table${currentTable}_${Date.now()}`;
     const upiLink = `upi://pay?pa=${MERCHANT_UPI}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${total.toFixed(2)}&cu=INR&tn=${encodeURIComponent(txnNote)}`;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(upiLink)}`;
@@ -843,6 +826,28 @@ function clearCustomerOrder() {
         renderCustomerOrder();
     }
 }
+function placeCustomerOrder() {
+    if (customerOrder.length === 0) return alert("Cart is empty!");
+    const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
+    currentOrderId = Date.now();
+    const orderData = {
+        id: currentOrderId,
+        table: currentTable,
+        name: currentName,
+        items: JSON.parse(JSON.stringify(customerOrder)),
+        total: total,
+        timestamp: new Date().toLocaleString(),
+        status: "pending",
+        lang: currentLang,
+        type: "order"
+    };
+    db.ref('tableOrders/' + currentOrderId).set(orderData);
+    alert(`✅ Order Placed Successfully for Table ${currentTable}`);
+    let sentMsg = `ORDER SENT TO THE KITCHEN TABLE ${currentTable} ${currentName}`;
+    if (currentLang === 'hi') sentMsg = `ऑर्डर किचन को भेज दिया गया टेबल ${currentTable} ${currentName}`;
+    else if (currentLang === 'or') sentMsg = `ଅର୍ଡର କିଚେନ୍ କୁ ପଠାଯାଇଛି ଟେବୁଲ ${currentTable} ${currentName}`;
+    speak(sentMsg, currentLang);
+}
 
 // ====================== NEW ORDER NOTIFICATION ======================
 db.ref('tableOrders').on('child_added', (snapshot) => {
@@ -885,7 +890,7 @@ function initializeApp() {
     }
     document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
     loadAndListenMenu();
-    setupCashPaymentListener();   // Enable cash payment popup for staff
+    setupCashPaymentListener();
 }
 initializeApp();
 window.onbeforeunload = () => localStorage.setItem("inv", count);
