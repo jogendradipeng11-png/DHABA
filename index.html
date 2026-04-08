@@ -55,7 +55,7 @@
         text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
 
-    /* Cash Payment Popup for Staff & Kitchen */
+    /* Cash Payment Popup */
     .cash-staff-modal {
         display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;
@@ -77,7 +77,6 @@
     </div>
     <!-- STAFF POS VIEW -->
     <div id="staffView">
-        <!-- Your original staff POS content remains unchanged -->
         <div class="logo">
             <img src="./logo_180x90.jpg" alt="Logo" style="display:block;margin:auto;">
             <h2 id="staffTitle">Shree & Shriyan Dhaba</h2>
@@ -134,7 +133,6 @@
 
     <!-- CUSTOMER VIEW -->
     <div id="customerView" style="display:none;">
-        <!-- Your original customer view remains unchanged -->
         <div class="logo">
             <img src="./logo_180x90.jpg" alt="Logo" style="width:130px;">
             <h2 id="custTitle">Shree & Shriyan Dhaba</h2>
@@ -200,12 +198,12 @@
     </div>
 </div>
 
-<!-- CASH PAYMENT POPUP FOR STAFF -->
+<!-- CASH PAYMENT POPUP -->
 <div id="cashStaffModal" class="cash-staff-modal">
     <div class="cash-staff-content">
         <h3>💵 CASH PAYMENT REQUEST</h3>
         <div id="cashStaffDetails" style="background:white; padding:15px; border-radius:12px; margin:15px 0; text-align:left; font-size:16px;"></div>
-        <button onclick="closeCashStaffModal()" style="background:#2e7d32; padding:12px 30px; font-size:17px;">✅ OK - I Will Collect</button>
+        <button onclick="closeCashStaffModal()" style="background:#2e7d32; padding:12px 30px; font-size:17px;">✅ OK</button>
     </div>
 </div>
 
@@ -345,7 +343,7 @@ function sendOrderReadyToCustomer(order) {
     const readyMsg = `YOUR ORDER IS READY. PLEASE COLLECT YOUR DELICIOUS FOOD FROM THE COUNTER. THANK YOU`;
     speak(readyMsg, order.lang || 'en');
 }
-// ====================== CASH PAYMENT - STAFF & KITCHEN ONLY ======================
+// ====================== CASH PAYMENT - BOTH STAFF & KITCHEN ======================
 function notifyCashPaymentToStaff() {
     if (customerOrder.length === 0) return;
 
@@ -365,12 +363,11 @@ function notifyCashPaymentToStaff() {
 
     db.ref('tableOrders/' + cashData.id).set(cashData);
 
-    // Show popup + sound ONLY on Staff POS
-    if (document.getElementById('staffView').style.display !== 'none') {
-        showCashStaffPopup(cashData);
-        let msg = `CASH PAYMENT REQUEST - TABLE ${currentTable} - ${currentName} - TOTAL ₹${total}`;
-        speak(msg, 'en');
-    }
+    // Show popup + sound on BOTH Staff POS and Kitchen Display
+    showCashStaffPopup(cashData);
+
+    let msg = `CASH PAYMENT REQUEST FROM TABLE ${currentTable} CUSTOMER ${currentName} TOTAL ₹${total}`;
+    speak(msg, 'en');
 }
 
 function showCashStaffPopup(data) {
@@ -422,14 +419,10 @@ function markAsPaid() {
 
 function payByCash() {
     if (customerOrder.length === 0) return alert("Cart is empty!");
-
-    notifyCashPaymentToStaff();   // Only Staff POS gets popup + sound
-
+    notifyCashPaymentToStaff();
     customerOrder = [];
     renderCustomerOrder();
-
-    // Customer gets only simple message - NO popup
-    alert("✅ Cash payment request has been sent to staff.\nPlease wait, staff will collect the cash.");
+    alert("✅ Cash payment request sent to staff. Please wait for collection.");
 }
 
 function sendCustomerBillToWhatsApp(mobile) {
@@ -455,9 +448,7 @@ function sendCustomerBillToWhatsApp(mobile) {
     renderCustomerOrder();
     alert(`✅ Bill sent to +91${mobile}`);
 }
-// ====================== All other original functions remain unchanged ======================
-// (placeCustomerOrder, loadAndListenMenu, renderBill, printBill, etc.)
-
+// ====================== ORIGINAL FUNCTIONS (Unchanged) ======================
 function placeCustomerOrder() {
     if (customerOrder.length === 0) return alert("Cart is empty!");
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
@@ -483,7 +474,6 @@ function placeCustomerOrder() {
  
     listenToCustomerOrderStatus();
 }
-
 function listenToCustomerOrderStatus() {
     if (!currentOrderId) return;
     db.ref('tableOrders/' + currentOrderId).on('value', (snapshot) => {
@@ -503,7 +493,6 @@ function listenToCustomerOrderStatus() {
         }
     });
 }
-
 function notifyStaffAboutPayment(paymentData) {
     currentPaymentOrder = paymentData;
     document.getElementById('modalTitle').innerHTML = '💰 PAYMENT RECEIVED';
@@ -512,7 +501,6 @@ function notifyStaffAboutPayment(paymentData) {
     document.getElementById('modalOrderDetails').innerHTML = details;
     document.getElementById('newOrderModal').style.display = 'flex';
 }
-
 // ====================== MENU ======================
 function loadAndListenMenu() {
     db.ref('menu').on('value', (snapshot) => {
