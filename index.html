@@ -55,7 +55,7 @@
         text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
 
-    /* Cash Payment Notification Popup for Staff */
+    /* Cash Payment Popup for Staff Only */
     .cash-staff-modal {
         display: none; 
         position: fixed; 
@@ -214,7 +214,7 @@
     </div>
 </div>
 
-<!-- CASH PAYMENT NOTIFICATION POPUP FOR STAFF -->
+<!-- CASH PAYMENT POPUP FOR STAFF ONLY -->
 <div id="cashStaffModal" class="cash-staff-modal">
     <div class="cash-staff-content">
         <h3>💵 CASH PAYMENT REQUEST</h3>
@@ -423,15 +423,14 @@ function notifyCashPaymentToStaff() {
         lang: currentLang
     };
 
-    // Save to Firebase so Staff POS and Kitchen can see
     db.ref('tableOrders/' + cashData.id).set(cashData);
 
-    // Show popup on STAFF POS only
-    showCashStaffPopup(cashData);
-
-    // Voice alert for staff
-    let msg = `CASH PAYMENT REQUEST - TABLE ${currentTable} - ₹${total} - ${currentName}`;
-    speak(msg, 'en');
+    // Show popup and speak ONLY if we are on Staff POS (not customer view)
+    if (document.getElementById('staffView').style.display !== 'none') {
+        showCashStaffPopup(cashData);
+        let msg = `CASH PAYMENT REQUEST - TABLE ${currentTable} - ₹${total} - ${currentName}`;
+        speak(msg, 'en');
+    }
 }
 
 function showCashStaffPopup(data) {
@@ -448,8 +447,8 @@ function showCashStaffPopup(data) {
         Customer: ${data.name}<br><br>
         <strong>Items:</strong><br>
         ${itemsHtml}<br>
-        <strong style="color:#d84315; font-size:18px;">Total Amount: ₹${data.total}</strong><br><br>
-        <span style="color:#2e7d32;">Please collect cash from the customer.</span>
+        <strong style="color:#d84315; font-size:18px;">Total: ₹${data.total}</strong><br><br>
+        Please collect cash from the customer.
     `;
 
     modal.style.display = 'flex';
@@ -484,15 +483,13 @@ function markAsPaid() {
 function payByCash() {
     if (customerOrder.length === 0) return alert("Cart is empty!");
     
-    // Only notify Staff POS (No popup on customer side)
     notifyCashPaymentToStaff();
     
-    // Clear customer cart
     customerOrder = [];
     renderCustomerOrder();
     
-    // Show simple confirmation to customer
-    alert("✅ Cash Payment Request Sent to Staff!\nPlease wait, staff will come to collect cash.");
+    // Simple message for customer - no popup, no sound
+    alert("✅ Cash payment request has been sent to staff. Please wait for collection.");
 }
 
 function sendCustomerBillToWhatsApp(mobile) {
