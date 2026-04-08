@@ -64,6 +64,7 @@
         <button class="lang-btn" onclick="changeLanguage('hi')">हिंदी</button>
         <button class="lang-btn" onclick="changeLanguage('or')">ଓଡ଼ିଆ</button>
     </div>
+
     <!-- STAFF POS VIEW -->
     <div id="staffView">
         <div class="logo">
@@ -94,6 +95,7 @@
         <button onclick="dailyReport()">📊 Daily Report</button>
         <button onclick="showTableOrders()" style="background:#d84315;">📋 Live Table Orders</button>
         <button onclick="openKitchenDisplay()" style="background:#e65100; margin-top:8px;">🔥 Open Kitchen Display</button>
+
         <h4>Manage Menu (Real-time Sync)</h4>
         <input id="newItemName" placeholder="New Item Name (English)">
         <input id="newItemPrice" type="number" placeholder="Price (₹)">
@@ -104,21 +106,13 @@
             <div id="currentMenuList"></div>
             <button onclick="hideCurrentMenu()" style="background:#666; margin-top:10px;">Close Menu</button>
         </div>
+
         <h4>Generate QR for Table Ordering</h4>
         <input id="qrTableNum" type="number" placeholder="Table Number">
         <button onclick="generateQRCode()" style="background:#ff9800;">📱 Generate Table QR</button>
         <div id="qrContainer" style="text-align:center;margin:15px 0;"></div>
-        <div id="liveOrdersSection" style="display:none; margin-top:20px;">
-            <h4 style="color:#d84315;">📋 Live Table Orders (Real-time)</h4>
-            <div id="liveOrdersContainer" style="max-height:400px; overflow-y:auto;">
-                <table id="liveOrdersTable" border="1" style="width:100%;">
-                    <thead><tr><th>Table</th><th>Customer</th><th>Total ₹</th><th>Time</th><th>Status</th><th>Action</th></tr></thead>
-                    <tbody id="liveOrdersBody"></tbody>
-                </table>
-            </div>
-            <button onclick="showTableOrders()" style="margin-top:10px;background:#666;">Close Live Orders</button>
-        </div>
     </div>
+
     <!-- CUSTOMER VIEW -->
     <div id="customerView" style="display:none;">
         <div class="logo">
@@ -176,7 +170,7 @@
     <button onclick="closeKitchenDisplay()" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); padding:15px 40px; background:#d84315; font-size:18px;">Close Kitchen Display</button>
 </div>
 
-<!-- NEW ORDER / PAYMENT POPUP NOTIFICATION -->
+<!-- NEW ORDER NOTIFICATION MODAL -->
 <div id="newOrderModal" class="modal">
     <div class="modal-content">
         <h3 id="modalTitle" style="color:#d84315;">🚨 NEW ORDER RECEIVED</h3>
@@ -196,6 +190,7 @@ const langData = {
     or: { staffTitle: "ଶ୍ରୀ ଏଣ୍ଡ ଶ୍ରୀୟାନ ଢାବା", staffPosLabel: "ଷ୍ଟାଫ POS", welcomeText: "ସ୍ୱାଗତ!", custTitle: "ଶ୍ରୀ ଏଣ୍ଡ ଶ୍ରୀୟାନ ଢାବା", custLabel: "ଟେବୁଲ ଅର୍ଡରିଂ", startOrdering: "✅ ଅର୍ଡରିଂ ଆରମ୍ଭ କରନ୍ତୁ", placeOrderKitchen: "✅ କିଚେନ୍ ପାଇଁ ଅର୍ଡର ପ୍ଲେସ୍ କରନ୍ତୁ", paymentTitle: "💰 ପେମେଣ୍ଟ ବିକଳ୍ପ", iHavePaid: "✅ ମୁଁ ପେମେଣ୍ଟ କରିଛି - ୱାଟ୍ସଆପ୍ ରେ ରସିଦ ପାଆନ୍ତୁ", clearCart: "🗑️ କାର୍ଟ ଖାଲି କରନ୍ତୁ" }
 };
 let currentLang = 'en';
+
 function changeLanguage(lang) {
     currentLang = lang;
     document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
@@ -226,8 +221,10 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+
 const MERCHANT_UPI = "8847810037jp@ybl";
 const MERCHANT_NAME = "Shree & Shriyan Dhaba";
+
 let items = [];
 let bill = [];
 let customerOrder = [];
@@ -374,79 +371,17 @@ function notifyStaffAboutPayment(paymentData) {
     document.getElementById('newOrderModal').style.display = 'flex';
 }
 
-// ====================== PAYMENT FUNCTIONS ======================
-function markAsPaid() {
-    const whatsappNum = document.getElementById("custWhatsApp").value.trim();
-    const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
-    if (!whatsappNum || whatsappNum.length !== 10) {
-        const mobile = prompt("Enter 10 digit mobile number to send bill on WhatsApp:");
-        if (!mobile || mobile.length !== 10) return alert("Please enter valid 10-digit number!");
-        sendCustomerBillToWhatsApp(mobile);
-    } else {
-        sendCustomerBillToWhatsApp(whatsappNum);
-    }
-    const paymentData = {
-        id: Date.now(),
-        table: currentTable,
-        name: currentName,
-        total: total,
-        timestamp: new Date().toLocaleString(),
-        type: "payment",
-        lang: currentLang
-    };
-    notifyStaffAboutPayment(paymentData);
-}
-function payByCash() {
-    if (customerOrder.length === 0) return alert("Cart is empty!");
-    const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
-    let details = `Cash Payment Details\n\nTable: ${currentTable}\nCustomer: ${currentName}\nTotal Amount: ₹${total}\n\nPlease collect cash from customer.`;
-    alert(details);
-    const paymentData = {
-        id: Date.now(),
-        table: currentTable,
-        name: currentName,
-        total: total,
-        timestamp: new Date().toLocaleString(),
-        type: "payment",
-        lang: currentLang
-    };
-    notifyStaffAboutPayment(paymentData);
-    customerOrder = [];
-    renderCustomerOrder();
-}
-function sendCustomerBillToWhatsApp(mobile) {
-    if (customerOrder.length === 0) return;
-    let msg = `*Shree & Shriyan Dhaba*\n\n`;
-    msg += `📍 Durlaga, Jharsuguda, Odisha\n`;
-    msg += `📞 +91 7077088311\n\n`;
-    msg += `Table: ${currentTable}\n`;
-    msg += `Customer: ${currentName}\n`;
-    msg += `Date: ${new Date().toLocaleString()}\n\n`;
-    msg += `──────────────────\n`;
-    customerOrder.forEach(item => {
-        const amt = item.qty * item.price;
-        msg += `${item.name_en} ×${item.qty} = ₹${amt}\n`;
-    });
-    const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
-    msg += `──────────────────\n`;
-    msg += `*Total : ₹${total}*\n\n`;
-    msg += `Thank You! Visit Again 😊\n\n`;
-    msg += `📱 Pay via UPI: 8847810037jp@ybl`;
-
-    window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
-    customerOrder = [];
-    renderCustomerOrder();
-    alert(`✅ Bill sent to +91${mobile}`);
-}
-
 // ====================== MODAL FUNCTIONS ======================
 function showNewOrderPopup(order) {
-    currentPendingOrder = order;
-    document.getElementById('modalTitle').innerHTML = '🚨 NEW ORDER RECEIVED';
-    document.getElementById('modalTitle').style.color = '#d84315';
-    const details = `Table ${order.table} - ${order.name || 'Guest'}<br>Total ₹${order.total}`;
-    document.getElementById('modalOrderDetails').innerHTML = details;
-    document.getElementById('newOrderModal').style.display = 'flex';
+    // Only show notification popup on Staff POS view
+    if (document.getElementById('staffView').style.display !== 'none') {
+        currentPendingOrder = order;
+        document.getElementById('modalTitle').innerHTML = '🚨 NEW ORDER RECEIVED';
+        document.getElementById('modalTitle').style.color = '#d84315';
+        const details = `Table ${order.table} - ${order.name || 'Guest'}<br>Total ₹${order.total}`;
+        document.getElementById('modalOrderDetails').innerHTML = details;
+        document.getElementById('newOrderModal').style.display = 'flex';
+    }
 }
 function closeNewOrderModal() {
     document.getElementById('newOrderModal').style.display = 'none';
@@ -693,26 +628,7 @@ function printThermalBill() {
     printBill();
 }
 
-// ====================== OTHER FUNCTIONS ======================
-function exportExcel() {
-    if (bill.length === 0) return alert("No items in the bill!");
-    let csv = "Item,Quantity,Rate,Amount\n";
-    let subtotal = 0;
-    bill.forEach(item => {
-        const amt = item.qty * item.price;
-        subtotal += amt;
-        csv += `"${item.name}",${item.qty},${item.price},${amt}\n`;
-    });
-    const gst = gstEnabled ? Math.round(subtotal * 0.05) : 0;
-    const grand = subtotal + gst;
-    csv += `\n,,,Subtotal,${subtotal}\n,,,GST (5%),${gst}\n,,,Grand Total,${grand}\n`;
-    const link = document.createElement("a");
-    link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
-    link.download = `Shree_Shriyan_Bill_${new Date().toISOString().slice(0,10)}.csv`;
-    link.click();
-    alert("✅ Bill exported as CSV!");
-}
-
+// ====================== WHATSAPP ======================
 function sendWhatsApp() {
     if (bill.length === 0) return alert("Bill is empty!");
     const mobile = prompt("Enter 10 digit mobile number:");
@@ -742,6 +658,51 @@ function sendWhatsApp() {
     msg += `📱 Pay via UPI: 8847810037jp@ybl`;
 
     window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+function sendCustomerBillToWhatsApp(mobile) {
+    if (customerOrder.length === 0) return;
+    let msg = `*Shree & Shriyan Dhaba*\n\n`;
+    msg += `📍 Durlaga, Jharsuguda, Odisha\n`;
+    msg += `📞 +91 7077088311\n\n`;
+    msg += `Table: ${currentTable}\n`;
+    msg += `Customer: ${currentName}\n`;
+    msg += `Date: ${new Date().toLocaleString()}\n\n`;
+    msg += `──────────────────\n`;
+    customerOrder.forEach(item => {
+        const amt = item.qty * item.price;
+        msg += `${item.name_en} ×${item.qty} = ₹${amt}\n`;
+    });
+    const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
+    msg += `──────────────────\n`;
+    msg += `*Total : ₹${total}*\n\n`;
+    msg += `Thank You! Visit Again 😊\n\n`;
+    msg += `📱 Pay via UPI: 8847810037jp@ybl`;
+
+    window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
+    customerOrder = [];
+    renderCustomerOrder();
+    alert(`✅ Bill sent to +91${mobile}`);
+}
+
+// ====================== OTHER FUNCTIONS ======================
+function exportExcel() {
+    if (bill.length === 0) return alert("No items in the bill!");
+    let csv = "Item,Quantity,Rate,Amount\n";
+    let subtotal = 0;
+    bill.forEach(item => {
+        const amt = item.qty * item.price;
+        subtotal += amt;
+        csv += `"${item.name}",${item.qty},${item.price},${amt}\n`;
+    });
+    const gst = gstEnabled ? Math.round(subtotal * 0.05) : 0;
+    const grand = subtotal + gst;
+    csv += `\n,,,Subtotal,${subtotal}\n,,,GST (5%),${gst}\n,,,Grand Total,${grand}\n`;
+    const link = document.createElement("a");
+    link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+    link.download = `Shree_Shriyan_Bill_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+    alert("✅ Bill exported as CSV!");
 }
 
 function dailyReport() {
@@ -805,18 +766,6 @@ function deleteLiveOrder(orderId) {
     if (!confirm("Delete this order?")) return;
     db.ref('tableOrders/' + orderId).remove();
 }
-
-// ====================== NEW ORDER + PAYMENT AUTO POPUP ======================
-db.ref('tableOrders').on('child_added', (snapshot) => {
-    const order = snapshot.val();
-    if (order && order.status === 'pending' && order.type === "order") {
-        let receivedMsg = `ORDER RECEIVED FROM THE TABLE ${order.table} ${order.name || 'Guest'}`;
-        if (order.lang === 'hi') receivedMsg = `टेबल ${order.table} ${order.name || 'Guest'} से ऑर्डर प्राप्त हुआ`;
-        else if (order.lang === 'or') receivedMsg = `ଟେବୁଲ ${order.table} ${order.name || 'Guest'} ରୁ ଅର୍ଡର ପ୍ରାପ୍ତ ହୋଇଛି`;
-        speak(receivedMsg, order.lang || 'en');
-        showNewOrderPopup(order);
-    }
-});
 
 // ====================== CUSTOMER SIDE FUNCTIONS ======================
 function generateDynamicPhonePeQR() {
@@ -900,6 +849,14 @@ function clearCustomerOrder() {
     }
 }
 
+// ====================== LIVE ORDERS SECTION (for staff) ======================
+function showTableOrders() {
+    const section = document.getElementById("liveOrdersSection");
+    if (!section) return;
+    section.style.display = (section.style.display === "block") ? "none" : "block";
+    if (section.style.display === "block") loadLiveOrdersRealTime();
+}
+
 // ====================== INITIALIZE ======================
 function initializeApp() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -919,6 +876,20 @@ function initializeApp() {
     document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
     loadAndListenMenu();
 }
+
+// ====================== NEW ORDER NOTIFICATION - FIXED ======================
+db.ref('tableOrders').on('child_added', (snapshot) => {
+    const order = snapshot.val();
+    if (order && order.status === 'pending' && order.type === "order") {
+        let receivedMsg = `ORDER RECEIVED FROM THE TABLE ${order.table} ${order.name || 'Guest'}`;
+        if (order.lang === 'hi') receivedMsg = `टेबल ${order.table} ${order.name || 'Guest'} से ऑर्डर प्राप्त हुआ`;
+        else if (order.lang === 'or') receivedMsg = `ଟେବୁଲ ${order.table} ${order.name || 'Guest'} ରୁ ଅର୍ଡର ପ୍ରାପ୍ତ ହୋଇଛି`;
+        speak(receivedMsg, order.lang || 'en');
+        
+        // Show popup ONLY on staff side
+        showNewOrderPopup(order);
+    }
+});
 
 initializeApp();
 window.onbeforeunload = () => localStorage.setItem("inv", count);
