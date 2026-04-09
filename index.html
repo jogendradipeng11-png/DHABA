@@ -526,13 +526,16 @@ function markAsPaid() {
 function payByCash() {
     if (customerOrder.length === 0) return alert("Cart is empty!");
 
-    notifyCashPaymentToStaff();        // Send notification to staff
+    // Send notification to staff
+    notifyCashPaymentToStaff();
 
-    customerOrder = [];                // Clear customer's cart
+    // Clear cart for customer
+    customerOrder = [];
     renderCustomerOrder();
 
-    showCustomerCashConfirmation();    // Show popup with auto-close timer
-    speakCustomerCashConfirmation();   // Voice message for customer
+    // Show ONLY customer-friendly message
+    showCustomerCashConfirmation();
+    speakCustomerCashConfirmation();
 }
 
 
@@ -1129,30 +1132,38 @@ function deleteLiveOrder(orderId) {
     db.ref('tableOrders/' + orderId).remove();
 }
 
-// ====================== REAL-TIME LISTENER FOR STAFF ======================
+// ====================== REAL-TIME LISTENER ======================
+// This ensures staff popup only shows on staff page, not on customer QR page
 db.ref('tableOrders').on('child_added', (snapshot) => {
     const data = snapshot.val();
     if (!data) return;
+
+    // Check if we are on Staff POS page
+    const isStaffPage = (document.getElementById('staffView') && 
+                        document.getElementById('staffView').style.display !== 'none');
 
     if (data.type === "order" && data.status === "pending") {
         let receivedMsg = `ORDER RECEIVED FROM TABLE ${data.table} ${data.name || 'Guest'}`;
         if (data.lang === 'hi') receivedMsg = `टेबल ${data.table} ${data.name || 'Guest'} से ऑर्डर प्राप्त हुआ`;
         else if (data.lang === 'or') receivedMsg = `ଟେବୁଲ ${data.table} ${data.name || 'Guest'} ରୁ ଅର୍ଡର ପ୍ରାପ୍ତ ହୋଇଛି`;
-        
+       
         speak(receivedMsg, data.lang || 'en');
         showNewOrderPopup(data);
     }
     else if (data.type === "cash_payment_notification" && data.status === "cash_pending") {
-        let cashMsg = `CASH PAYMENT REQUEST - TABLE ${data.table} - ₹${data.total || 0} - ${data.name || 'Guest'}`;
-       
-        if (data.lang === 'hi') {
-            cashMsg = `टेबल ${data.table} - ₹${data.total || 0} - कैश पेमेंट रिक्वेस्ट - ${data.name || 'Guest'}`;
-        } else if (data.lang === 'or') {
-            cashMsg = `ଟେବୁଲ ${data.table} - ₹${data.total || 0} - କ୍ୟାଶ୍ ପେମେଣ୍ଟ ରିକ୍ୱେଷ୍ଟ - ${data.name || 'Guest'}`;
+        // Show cash notification popup ONLY on staff page
+        if (isStaffPage) {
+            let cashMsg = `CASH PAYMENT REQUEST - TABLE ${data.table} - ₹${data.total || 0} - ${data.name || 'Guest'}`;
+            if (data.lang === 'hi') {
+                cashMsg = `टेबल ${data.table} - ₹${data.total || 0} - कैश पेमेंट रिक्वेस्ट - ${data.name || 'Guest'}`;
+            } else if (data.lang === 'or') {
+                cashMsg = `ଟେବୁଲ ${data.table} - ₹${data.total || 0} - କ୍ୟାଶ୍ ପେମେଣ୍ଟ ରିକ୍ୱେଷ୍ଟ - ${data.name || 'Guest'}`;
+            }
+           
+            speak(cashMsg, 'en');
+            showCashStaffPopup(data);
         }
-        
-        speak(cashMsg, 'en');
-        showCashStaffPopup(data);
+        // Customer page will NOT show anything here
     }
 });
 
