@@ -317,23 +317,37 @@ function closeKitchenDisplay() {
 
 function loadKitchenDisplay() {
     const container = document.getElementById('kitchenOrdersContainer');
+    
     db.ref('tableOrders').on('value', (snapshot) => {
         const data = snapshot.val();
         container.innerHTML = '';
         let pendingCount = 0;
+
         if (!data) {
             container.innerHTML = '<div style="text-align:center; padding:100px; color:#888; font-size:28px;">No pending orders at the moment</div>';
             document.getElementById('kitchenCount').textContent = "0 Orders";
             return;
         }
+
         Object.keys(data).forEach((key) => {
             const order = data[key];
-            if (!order || order.status === 'ready' || order.status === 'completed') return;
+
+            // ✅ Only show real kitchen orders
+            // Skip cash payment requests completely
+            if (!order || 
+                order.status === 'ready' || 
+                order.status === 'completed' ||
+                order.type === "cash_payment_notification") {
+                return;
+            }
+
             pendingCount++;
+
             let itemsHtml = '';
             (order.items || []).forEach(item => {
                 itemsHtml += `<div style="padding:8px 0; border-bottom:1px dashed #555;">${item.qty}× ${item.name_en || item.name}</div>`;
             });
+
             const card = document.createElement('div');
             card.className = 'kitchen-card';
             card.innerHTML = `
@@ -348,6 +362,7 @@ function loadKitchenDisplay() {
             `;
             container.appendChild(card);
         });
+
         document.getElementById('kitchenCount').textContent = pendingCount + " Orders";
     });
 }
