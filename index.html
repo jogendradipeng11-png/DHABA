@@ -491,11 +491,17 @@ function markAsPaid() {
 
 function payByCash() {
     if (customerOrder.length === 0) return alert("Cart is empty!");
+
+    // This sends only cash notification to staff (no kitchen order)
     notifyCashPaymentToStaff();
+
+    // Clear the customer's cart after requesting cash
     customerOrder = [];
     renderCustomerOrder();
+
     alert("✅ Cash Payment Request Sent to Staff!\nPlease wait, staff will come to collect cash.");
-}
+};
+
 
 function sendCustomerBillToWhatsApp(mobile) {
     if (customerOrder.length === 0) return;
