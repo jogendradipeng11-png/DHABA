@@ -137,6 +137,18 @@
         <input id="qrTableNum" type="number" placeholder="Table Number">
         <button onclick="generateQRCode()" style="background:#ff9800;">📱 Generate Table QR</button>
         <div id="qrContainer" style="text-align:center;margin:15px 0;"></div>
+
+        <!-- Live Table Orders Section -->
+        <div id="liveOrdersSection" style="display:none; margin-top:20px;">
+            <h4 style="color:#d84315;">📋 Live Table Orders (Real-time)</h4>
+            <div id="liveOrdersContainer" style="max-height:400px; overflow-y:auto;">
+                <table id="liveOrdersTable" border="1" style="width:100%;">
+                    <thead><tr><th>Table</th><th>Customer</th><th>Total ₹</th><th>Time</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody id="liveOrdersBody"></tbody>
+                </table>
+            </div>
+            <button onclick="showTableOrders()" style="margin-top:10px;background:#666;">Close Live Orders</button>
+        </div>
     </div>
 
     <!-- CUSTOMER VIEW -->
@@ -267,12 +279,13 @@ let currentTable = '';
 let currentName = '';
 let currentOrderId = null;
 let count = parseInt(localStorage.getItem("inv") || "1");
+let liveOrdersRef = null;
 let voiceSpeed = 0.95;
 let gstEnabled = true;
 let currentPendingOrder = null;
 let currentPaymentOrder = null;
 
-// ====================== IMPROVED SPEECH ======================
+// ====================== SPEECH ======================
 function speak(text, lang = 'en') {
     if (!('speechSynthesis' in window)) {
         console.warn("Speech Synthesis not supported");
@@ -847,11 +860,13 @@ function dailyReport() {
     });
 }
 
+// ====================== LIVE TABLE ORDERS ======================
 function showTableOrders() {
     const section = document.getElementById("liveOrdersSection");
     section.style.display = (section.style.display === "block") ? "none" : "block";
     if (section.style.display === "block") loadLiveOrdersRealTime();
 }
+
 function loadLiveOrdersRealTime() {
     const tbody = document.getElementById("liveOrdersBody");
     if (liveOrdersRef) liveOrdersRef.off();
@@ -882,18 +897,17 @@ function loadLiveOrdersRealTime() {
         });
     });
 }
+
 function deleteLiveOrder(orderId) {
     if (!confirm("Delete this order?")) return;
     db.ref('tableOrders/' + orderId).remove();
 }
-
 
 // ====================== REAL-TIME LISTENER FOR STAFF (ORDERS + CASH PAYMENTS) ======================
 db.ref('tableOrders').on('child_added', (snapshot) => {
     const data = snapshot.val();
     if (!data) return;
 
-    // 1. Normal New Table Order
     if (data.type === "order" && data.status === "pending") {
         let receivedMsg = `ORDER RECEIVED FROM TABLE ${data.table} ${data.name || 'Guest'}`;
         if (data.lang === 'hi') receivedMsg = `टेबल ${data.table} ${data.name || 'Guest'} से ऑर्डर प्राप्त हुआ`;
@@ -903,7 +917,6 @@ db.ref('tableOrders').on('child_added', (snapshot) => {
         showNewOrderPopup(data);
     }
 
-    // 2. CASH PAYMENT REQUEST (Fixed)
     else if (data.type === "cash_payment_notification" && data.status === "cash_pending") {
         let cashMsg = `CASH PAYMENT REQUEST - TABLE ${data.table} - ₹${data.total || 0} - ${data.name || 'Guest'}`;
         
