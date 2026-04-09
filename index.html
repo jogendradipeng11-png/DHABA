@@ -270,9 +270,9 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-   
-// ====================== GOOGLE SHEETS CONFIG ======================
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyukfdkV3KUdYQsZvoQ88UIvo68XBC4G-l5B4HzI4F4v6drZHnjcbWsDpLrvEuRELf2fw/exec";
+    // ====================== GOOGLE SHEETS CONFIG ======================
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby41yg2-33yViDkrPKGU0P4Ai3FIErPgV45PnVFejFN_ZzM6Gm6WqrfvuM1qKCIHYHdTA/exec";
+ 
 
 const MERCHANT_UPI = "8847810037jp@ybl";
 const MERCHANT_NAME = "Shree & Shriyan Dhaba";
@@ -391,10 +391,8 @@ window.updateOrderStatus = function(orderId, status) {
 // ====================== CUSTOMER ORDER ======================
 function placeCustomerOrder() {
     if (customerOrder.length === 0) return alert("Cart is empty!");
-
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
     currentOrderId = Date.now();
-
     const orderData = {
         id: currentOrderId,
         table: currentTable,
@@ -406,46 +404,33 @@ function placeCustomerOrder() {
         lang: currentLang,
         type: "order"
     };
-
-    // Save to Firebase (existing)
     db.ref('tableOrders/' + currentOrderId).set(orderData);
-
-    // ==================== NEW: AUTO SAVE TO GOOGLE SHEETS ====================
-    const sheetData = {
-        type: "table_order",
-        invoiceNo: "TBL-" + String(currentOrderId).slice(-6),
-        tableInfo: "Table " + currentTable,
-        customerName: currentName || "Guest",
-        items: customerOrder,
-        subtotal: total,
-        gst: Math.round(total * 0.05),
-        grandTotal: total + Math.round(total * 0.05),   // You can adjust GST logic
-        date: new Date().toISOString().split('T')[0]
-    };
-
-    fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(sheetData),
-        headers: { "Content-Type": "application/json" }
-    })
-    .then(res => res.json())
-    .then(result => {
-        console.log("✅ Table order saved to Google Sheets:", result);
-    })
-    .catch(err => {
-        console.error("Failed to save table order to Google Sheets:", err);
-        // Optional: alert("Order placed but failed to save in report.");
-    });
-    // =====================================================================
-
     alert(`✅ Order Placed Successfully for Table ${currentTable}`);
-
     let sentMsg = `ORDER SENT TO THE KITCHEN TABLE ${currentTable} ${currentName}`;
     if (currentLang === 'hi') sentMsg = `ऑर्डर किचन को भेज दिया गया टेबल ${currentTable} ${currentName}`;
     else if (currentLang === 'or') sentMsg = `ଅର୍ଡର କିଚେନ୍ କୁ ପଠାଯାଇଛି ଟେବୁଲ ${currentTable} ${currentName}`;
-
     speak(sentMsg, currentLang);
     listenToCustomerOrderStatus();
+}
+
+function listenToCustomerOrderStatus() {
+    if (!currentOrderId) return;
+    db.ref('tableOrders/' + currentOrderId).on('value', (snapshot) => {
+        const order = snapshot.val();
+        if (!order) return;
+        const statusDiv = document.getElementById('customerOrderStatus');
+        if (order.status === 'ready') {
+            statusDiv.innerHTML = `🎉 YOUR ORDER IS READY!<br><span style="font-size:18px;">Please collect from the counter.<br>Thank You!</span>`;
+            statusDiv.style.display = 'block';
+            const readyMsg = `ORDER READY FOR THE TABLE ${order.table} ${order.name || 'Guest'}, PLEASE COLLECT ORDER FROM THE COUNTER, THANK YOU`;
+            speak(readyMsg, order.lang || 'en');
+        } else if (order.status === 'preparing') {
+            statusDiv.innerHTML = `🔄 Your order is being prepared...`;
+            statusDiv.style.display = 'block';
+        } else {
+            statusDiv.style.display = 'none';
+        }
+    });
 }
 
 // ====================== PAYMENT FUNCTIONS ======================
@@ -729,28 +714,7 @@ function acceptLiveOrder(orderId) {
     db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
         const order = snapshot.val();
         if (!order) return;
-
         db.ref('tableOrders/' + orderId + '/status').set("accepted");
-
-        // Save to Google Sheets when staff accepts (optional but good for reporting)
-        const sheetData = {
-            type: "table_order_accepted",
-            invoiceNo: "TBL-" + String(order.id || orderId).slice(-6),
-            tableInfo: "Table " + order.table,
-            customerName: order.name || "Guest",
-            items: order.items || [],
-            subtotal: order.total || 0,
-            gst: Math.round((order.total || 0) * 0.05),
-            grandTotal: order.total || 0,
-            date: new Date().toISOString().split('T')[0]
-        };
-
-        fetch(GOOGLE_SCRIPT_URL, {
-            method: "POST",
-            body: JSON.stringify(sheetData),
-            headers: { "Content-Type": "application/json" }
-        }).catch(err => console.error("Sheets save failed on accept", err));
-
         showBillOptionsModal(order);
     });
 }
@@ -1168,8 +1132,7 @@ function dailyReport() {
             XLSX.utils.book_append_sheet(wb, ws, "Daily Report");
             XLSX.writeFile(wb, `Dhaba_Daily_Report_${today}.xlsx`);
 
-            const totalSales = bills.reduce((sum, b) => sum + (parseFloat(b[8]) || 0), 0);
-            alert(`✅ Daily Report Exported Successfully!\nTotal Bills: ${bills.length}\nTotal Sales Today: ₹${totalSales}`);
+            alert(`✅ Daily Report Exported Successfully!\nTotal Bills: ${bills.length}\nTotal Sales Today: ₹${bills.reduce((sum, b) => sum + (parseFloat(b[8])||0), 0)}`);
         })
         .catch(err => {
             console.error(err);
