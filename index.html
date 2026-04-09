@@ -461,12 +461,16 @@ function notifyCashPaymentToStaff() {
 }
 
 function showCashStaffPopup(data) {
+    currentPaymentOrder = data;   // ← Important fix
+
     const modal = document.getElementById('cashStaffModal');
     const detailsDiv = document.getElementById('cashStaffDetails');
+
     let itemsHtml = '';
-    data.items.forEach(item => {
-        itemsHtml += `${item.qty}× ${item.name_en} = ₹${item.qty * item.price}<br>`;
+    (data.items || []).forEach(item => {
+        itemsHtml += `${item.qty}× ${item.name_en || item.name} = ₹${item.qty * item.price}<br>`;
     });
+
     detailsDiv.innerHTML = `
         <strong>Table: ${data.table}</strong><br>
         Customer: ${data.name}<br><br>
@@ -475,11 +479,26 @@ function showCashStaffPopup(data) {
         <strong style="color:#d84315; font-size:18px;">Total Amount: ₹${data.total}</strong><br><br>
         <span style="color:#2e7d32;">Please collect cash from the customer.</span>
     `;
+
     modal.style.display = 'flex';
 }
 
 function closeCashStaffModal() {
-    document.getElementById('cashStaffModal').style.display = 'none';
+    const modal = document.getElementById('cashStaffModal');
+    modal.style.display = 'none';
+
+    // FIX: Remove the cash notification from Firebase so it doesn't show again
+    if (currentPaymentOrder && currentPaymentOrder.id) {
+        db.ref('tableOrders/' + currentPaymentOrder.id).remove()
+            .then(() => {
+                console.log("✅ Cash payment notification cleared successfully");
+            })
+            .catch(err => {
+                console.error("Error removing cash notification:", err);
+            });
+
+        currentPaymentOrder = null;
+    }
 }
 
 function markAsPaid() {
@@ -1111,7 +1130,7 @@ function deleteLiveOrder(orderId) {
     db.ref('tableOrders/' + orderId).remove();
 }
 
-// ====================== REAL-TIME LISTENER FOR STAFF (ORDERS + CASH PAYMENTS) ======================
+// ====================== REAL-TIME LISTENER FOR STAFF ======================
 db.ref('tableOrders').on('child_added', (snapshot) => {
     const data = snapshot.val();
     if (!data) return;
@@ -1120,32 +1139,24 @@ db.ref('tableOrders').on('child_added', (snapshot) => {
         let receivedMsg = `ORDER RECEIVED FROM TABLE ${data.table} ${data.name || 'Guest'}`;
         if (data.lang === 'hi') receivedMsg = `टेबल ${data.table} ${data.name || 'Guest'} से ऑर्डर प्राप्त हुआ`;
         else if (data.lang === 'or') receivedMsg = `ଟେବୁଲ ${data.table} ${data.name || 'Guest'} ରୁ ଅର୍ଡର ପ୍ରାପ୍ତ ହୋଇଛି`;
-
+        
         speak(receivedMsg, data.lang || 'en');
         showNewOrderPopup(data);
     }
-
     else if (data.type === "cash_payment_notification" && data.status === "cash_pending") {
         let cashMsg = `CASH PAYMENT REQUEST - TABLE ${data.table} - ₹${data.total || 0} - ${data.name || 'Guest'}`;
-        
+       
         if (data.lang === 'hi') {
             cashMsg = `टेबल ${data.table} - ₹${data.total || 0} - कैश पेमेंट रिक्वेस्ट - ${data.name || 'Guest'}`;
         } else if (data.lang === 'or') {
             cashMsg = `ଟେବୁଲ ${data.table} - ₹${data.total || 0} - କ୍ୟାଶ୍ ପେମେଣ୍ଟ ରିକ୍ୱେଷ୍ଟ - ${data.name || 'Guest'}`;
         }
-
+        
         speak(cashMsg, 'en');
         showCashStaffPopup(data);
     }
 });
 
-// ====================== EXTRA SAFETY LISTENER ======================
-db.ref('tableOrders').on('child_changed', (snapshot) => {
-    const data = snapshot.val();
-    if (data && data.type === "cash_payment_notification" && data.status === "cash_pending") {
-        showCashStaffPopup(data);
-    }
-});
 
 // ====================== CUSTOMER SIDE FUNCTIONS ======================
 function generateDynamicPhonePeQR() {
