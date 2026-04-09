@@ -119,9 +119,7 @@
         <button onclick="printThermalBill()" style="background:#d84315;">🖨️ Print Thermal + Auto Cut</button>
         <button onclick="exportExcel()">📊 Export Excel</button>
         <button onclick="sendWhatsApp()">📲 WhatsApp</button>
-        <button onclick="dailyReport('daily')">📅 Today's Report</button>
-        <button onclick="dailyReport('weekly')">📆 Weekly Report (Last 7 Days)</button>
-        <button onclick="dailyReport('monthly')">📊 Monthly Report</button>
+        <button onclick="dailyReport()">📊 Daily Report</button>
         <button onclick="manageBills()" style="background:#d84315;">📋 Manage Bills</button>
         <button onclick="showTableOrders()" style="background:#d84315;">📋 Live Table Orders</button>
         <button onclick="openKitchenDisplay()" style="background:#e65100; margin-top:8px;">🔥 Open Kitchen Display</button>
@@ -273,7 +271,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
     // ====================== GOOGLE SHEETS CONFIG ======================
-https://script.google.com/macros/s/AKfycbyukfdkV3KUdYQsZvoQ88UIvo68XBC4G-l5B4HzI4F4v6drZHnjcbWsDpLrvEuRELf2fw/exec
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby41yg2-33yViDkrPKGU0P4Ai3FIErPgV45PnVFejFN_ZzM6Gm6WqrfvuM1qKCIHYHdTA/exec";
  
 
 const MERCHANT_UPI = "8847810037jp@ybl";
@@ -1107,55 +1105,38 @@ function sendWhatsApp() {
     window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-function dailyReport(period = 'daily') {
-    let url = GOOGLE_SCRIPT_URL;
+function dailyReport() {
+    const today = new Date().toISOString().split('T')[0];
 
-    if (period === 'daily') {
-        const today = new Date().toISOString().split('T')[0];
-        url += `?date=${today}`;
-    } 
-    else if (period === 'weekly') {
-        url += `?action=weekly`;
-    } 
-    else if (period === 'monthly') {
-        const ym = new Date().toISOString().slice(0, 7);   // e.g. 2026-04
-        url += `?action=monthly&month=${ym}`;
-    }
-
-    fetch(url)
+    fetch(`${GOOGLE_SCRIPT_URL}?date=${today}`)
         .then(res => res.json())
         .then(bills => {
-            if (!bills || bills.length === 0) {
-                return alert(`No bills found for this ${period} period!`);
+            if (bills.length === 0) {
+                return alert("No bills found for today!");
             }
 
             const dataForExcel = bills.map(b => ({
-                Timestamp: b[0] || '',
-                "Invoice No": b[1] || '',
-                Type: b[2] || '',
-                "Table/Customer": b[3] || '',
-                "Customer Name": b[4] || 'Guest',
-                Subtotal: b[6] || 0,
-                "GST (5%)": b[7] || 0,
-                "Grand Total": b[8] || 0,
-                Date: b[9] || ''
+                Timestamp: b[0],
+                "Invoice No": b[1],
+                Type: b[2],
+                "Table/Customer": b[3],
+                "Customer Name": b[4],
+                Subtotal: b[6],
+                "GST (5%)": b[7],
+                "Grand Total": b[8],
+                Date: b[9]
             }));
 
             const ws = XLSX.utils.json_to_sheet(dataForExcel);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, `${period.toUpperCase()}_Report`);
+            XLSX.utils.book_append_sheet(wb, ws, "Daily Report");
+            XLSX.writeFile(wb, `Dhaba_Daily_Report_${today}.xlsx`);
 
-            XLSX.writeFile(wb, `Dhaba_${period}_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
-
-            const totalSales = bills.reduce((sum, b) => sum + (parseFloat(b[8]) || 0), 0);
-
-            alert(`✅ ${period.toUpperCase()} Report Exported Successfully!\n\n` +
-                  `Total Bills : ${bills.length}\n` +
-                  `Total Sales : ₹${totalSales.toFixed(2)}`);
+            alert(`✅ Daily Report Exported Successfully!\nTotal Bills: ${bills.length}\nTotal Sales Today: ₹${bills.reduce((sum, b) => sum + (parseFloat(b[8])||0), 0)}`);
         })
         .catch(err => {
             console.error(err);
-            alert("❌ Cannot connect to Google Sheet.\nPlease check your internet connection.");
+            alert("Cannot connect to Google Sheet.\nPlease check your internet connection.");
         });
 }
 
