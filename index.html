@@ -848,8 +848,45 @@ function dailyReport() {
 }
 
 function showTableOrders() {
-    alert("Live Table Orders feature is under development.");
+    const section = document.getElementById("liveOrdersSection");
+    section.style.display = (section.style.display === "block") ? "none" : "block";
+    if (section.style.display === "block") loadLiveOrdersRealTime();
 }
+function loadLiveOrdersRealTime() {
+    const tbody = document.getElementById("liveOrdersBody");
+    if (liveOrdersRef) liveOrdersRef.off();
+    liveOrdersRef = db.ref('tableOrders');
+    liveOrdersRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        tbody.innerHTML = "";
+        if (!data || Object.keys(data).length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:20px;">No pending table orders.</td></tr>';
+            return;
+        }
+        Object.keys(data).forEach((key) => {
+            const order = data[key];
+            if (!order || order.status === "completed") return;
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td><strong>Table ${order.table}</strong></td>
+                <td>${order.name || 'Guest'}</td>
+                <td style="font-weight:bold;">₹${order.total || 0}</td>
+                <td>${order.timestamp ? order.timestamp.split(',')[0] : 'N/A'}</td>
+                <td><span style="color: ${order.status === 'pending' ? '#f57c00' : '#2e7d32'};">${order.status || 'pending'}</span></td>
+                <td>
+                    <button onclick="acceptLiveOrder('${key}')" style="background:#2e7d32;color:white;padding:5px 10px;border:none;border-radius:4px;cursor:pointer;margin-right:4px;">Accept & Print</button>
+                    <button onclick="deleteLiveOrder('${key}')" style="background:#e74c3c;color:white;padding:5px 10px;border:none;border-radius:4px;cursor:pointer;">🗑️</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    });
+}
+function deleteLiveOrder(orderId) {
+    if (!confirm("Delete this order?")) return;
+    db.ref('tableOrders/' + orderId).remove();
+}
+
 
 // ====================== REAL-TIME LISTENER FOR STAFF (ORDERS + CASH PAYMENTS) ======================
 db.ref('tableOrders').on('child_added', (snapshot) => {
