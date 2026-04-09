@@ -461,11 +461,16 @@ function notifyCashPaymentToStaff() {
 }
 
 function showCashStaffPopup(data) {
-    currentPaymentOrder = data;   // ← Important fix
+    // Strong safety: Never show this popup on Customer QR page
+    const staffView = document.getElementById('staffView');
+    if (!staffView || staffView.style.display === 'none') {
+        return;   // Exit - Do not show anything on customer side
+    }
 
+    currentPaymentOrder = data; 
     const modal = document.getElementById('cashStaffModal');
     const detailsDiv = document.getElementById('cashStaffDetails');
-
+    
     let itemsHtml = '';
     (data.items || []).forEach(item => {
         itemsHtml += `${item.qty}× ${item.name_en || item.name} = ₹${item.qty * item.price}<br>`;
@@ -479,7 +484,6 @@ function showCashStaffPopup(data) {
         <strong style="color:#d84315; font-size:18px;">Total Amount: ₹${data.total}</strong><br><br>
         <span style="color:#2e7d32;">Please collect cash from the customer.</span>
     `;
-
     modal.style.display = 'flex';
 }
 
@@ -1133,14 +1137,14 @@ function deleteLiveOrder(orderId) {
 }
 
 // ====================== REAL-TIME LISTENER ======================
-// This ensures staff popup only shows on staff page, not on customer QR page
+// ====================== REAL-TIME LISTENER (Fixed - Staff Only) ======================
 db.ref('tableOrders').on('child_added', (snapshot) => {
     const data = snapshot.val();
     if (!data) return;
 
-    // Check if we are on Staff POS page
-    const isStaffPage = (document.getElementById('staffView') && 
-                        document.getElementById('staffView').style.display !== 'none');
+    // Reliable check: Are we on Staff POS page or Customer QR page?
+    const staffView = document.getElementById('staffView');
+    const isStaffPage = staffView && staffView.style.display !== 'none';
 
     if (data.type === "order" && data.status === "pending") {
         let receivedMsg = `ORDER RECEIVED FROM TABLE ${data.table} ${data.name || 'Guest'}`;
@@ -1151,7 +1155,7 @@ db.ref('tableOrders').on('child_added', (snapshot) => {
         showNewOrderPopup(data);
     }
     else if (data.type === "cash_payment_notification" && data.status === "cash_pending") {
-        // Show cash notification popup ONLY on staff page
+        // Show cash notification popup and sound ONLY on STAFF page
         if (isStaffPage) {
             let cashMsg = `CASH PAYMENT REQUEST - TABLE ${data.table} - ₹${data.total || 0} - ${data.name || 'Guest'}`;
             if (data.lang === 'hi') {
@@ -1163,10 +1167,9 @@ db.ref('tableOrders').on('child_added', (snapshot) => {
             speak(cashMsg, 'en');
             showCashStaffPopup(data);
         }
-        // Customer page will NOT show anything here
+        // Customer QR page: Do nothing (no popup, no sound)
     }
 });
-
 
 // ====================== CUSTOMER SIDE FUNCTIONS ======================
 function generateDynamicPhonePeQR() {
