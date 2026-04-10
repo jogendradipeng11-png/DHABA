@@ -271,7 +271,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
     // ====================== GOOGLE SHEETS CONFIG ======================
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby41yg2-33yViDkrPKGU0P4Ai3FIErPgV45PnVFejFN_ZzM6Gm6WqrfvuM1qKCIHYHdTA/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyukfdkV3KUdYQsZvoQ88UIvo68XBC4G-l5B4HzI4F4v6drZHnjcbWsDpLrvEuRELf2fw/exec";
  
 
 const MERCHANT_UPI = "8847810037jp@ybl";
@@ -775,10 +775,25 @@ window.printNormalFromModal = function(orderId) {
     closeBillOptionsModal();
     db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
         const order = snapshot.val();
-        if (!order) return;
-        bill = order.items.map(i => ({name: i.name_en, qty: i.qty, price: i.price}));
-        printBill();
-        alert("✅ Normal Print & Clear done");
+        if (!order || !order.items) return alert("Order not found!");
+
+        const billItems = order.items.map(i => ({
+            name: i.name_en || i.name,
+            qty: i.qty || 1,
+            price: i.price || 0
+        }));
+
+        const invoiceNo = `INV-TBL-${order.table || 'WALKIN'}-${String(order.id).slice(-6)}`;
+        const customerName = order.name || "Guest";
+        const tableInfo = `Table ${order.table || 'Walk-in'}`;
+
+        // This will automatically save to Google Sheets + print
+        printBill(billItems, customerName, invoiceNo, tableInfo, true);
+
+        // Mark order as completed in Firebase
+        db.ref('tableOrders/' + orderId + '/status').set("completed");
+        
+        alert("✅ Table Order Printed & Saved to Google Sheets!");
     });
 };
 
@@ -786,13 +801,26 @@ window.printThermalFromModal = function(orderId) {
     closeBillOptionsModal();
     db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
         const order = snapshot.val();
-        if (!order) return;
-        bill = order.items.map(i => ({name: i.name_en, qty: i.qty, price: i.price}));
-        printThermalBill();
-        alert("✅ Thermal Print + Auto Cut done");
+        if (!order || !order.items) return alert("Order not found!");
+
+        const billItems = order.items.map(i => ({
+            name: i.name_en || i.name,
+            qty: i.qty || 1,
+            price: i.price || 0
+        }));
+
+        const invoiceNo = `INV-TBL-${order.table || 'WALKIN'}-${String(order.id).slice(-6)}`;
+        const customerName = order.name || "Guest";
+        const tableInfo = `Table ${order.table || 'Walk-in'}`;
+
+        // This will automatically save to Google Sheets + print
+        printThermalBill(billItems, customerName, invoiceNo, tableInfo, true);
+
+        db.ref('tableOrders/' + orderId + '/status').set("completed");
+        
+        alert("✅ Thermal Print Done & Bill Saved to Google Sheets!");
     });
 };
-
 window.sendWhatsAppFromModal = function(orderId) {
     closeBillOptionsModal();
     const mobile = prompt("Enter 10 digit mobile number:");
@@ -988,31 +1016,19 @@ function removeItem(i) {
 function voiceAdd() {
     alert("🎤 Voice Add feature coming soon.");
 }
-
-// ====================== PRINTING ======================
-function printBill() {
-    if (bill.length === 0) return alert("Bill is empty!");
-
-    const subtotal = bill.reduce((sum, b) => sum + (b.qty * b.price), 0);
-    const gst = gstEnabled ? Math.round(subtotal * 0.05) : 0;
-    const grandTotal = subtotal + gst;
-
-    const customer = document.getElementById("customerName").value.trim() || "Walk-in";
-    const invoiceNo = document.getElementById("invoice").value;
-
-    // === SAVE BILL TO GOOGLE SHEETS ===
+<!-- ====================== GOOGLE SHEETS SAVE FUNCTION (NEW) ====================== -->
+function saveBillToGoogleSheets(billItems, customerName, tableInfo, invoiceNo, subtotal, gst, grandTotal, type = "staff_pos") {
     const billData = {
         invoiceNo: invoiceNo,
-        type: "staff_pos",
-        tableInfo: "Walk-in",
-        customerName: customer,
-        items: bill,
+        type: type,
+        tableInfo: tableInfo,
+        customerName: customerName,
+        items: billItems,
         subtotal: subtotal,
         gst: gst,
         grandTotal: grandTotal,
         date: new Date().toISOString().split('T')[0]
     };
-
     fetch(GOOGLE_SCRIPT_URL, {
         method: "POST",
         body: JSON.stringify(billData),
@@ -1020,9 +1036,30 @@ function printBill() {
     })
     .then(res => res.json())
     .then(result => {
-        if (result.status === "success") console.log("✅ Bill saved to Google Sheets");
+        if (result.status === "success") {
+            console.log("✅ Bill automatically saved to Google Sheets");
+        } else {
+            console.error("Google Sheets save failed", result);
+        }
     })
     .catch(err => console.error("Google Sheets save failed:", err));
+}
+// ====================== PRINTING ======================
+function printBill(customBill = null, customCustomer = null, customInvoice = null, customTableInfo = null, isTableOrder = false) {
+    let printBillItems = customBill || bill;
+    if (printBillItems.length === 0) return alert("Bill is empty!");
+
+    const customer = customCustomer || document.getElementById("customerName").value.trim() || "Walk-in";
+    const invoiceNo = customInvoice || document.getElementById("invoice").value;
+    const tableInfo = customTableInfo || "Walk-in";
+
+    const subtotal = printBillItems.reduce((sum, b) => sum + (b.qty * b.price), 0);
+    const gst = Math.round(subtotal * 0.05);   // always 5% GST
+    const grandTotal = subtotal + gst;
+
+    // === AUTO SAVE TO GOOGLE SHEETS (WORKS FOR BOTH STAFF + TABLE ORDERS) ===
+    const billType = isTableOrder ? "table_order" : "staff_pos";
+    saveBillToGoogleSheets(printBillItems, customer, tableInfo, invoiceNo, subtotal, gst, grandTotal, billType);
 
     // === PRINT THE BILL ===
     const printWindow = window.open('', '_blank');
@@ -1032,35 +1069,37 @@ function printBill() {
     htmlContent += '<img src="./logo_180x90.jpg" alt="Shree & Shriyan Dhaba" style="max-width:180px;height:auto;">';
     htmlContent += '<h2>Shree & Shriyan Dhaba</h2>';
     htmlContent += '<p style="font-size:12px;">Durlaga, Jharsuguda, Odisha<br>📞 +91 7077088311</p>';
-    htmlContent += '<p>Customer: ' + customer + ' | Invoice: ' + invoiceNo + '</p>';
-    htmlContent += '<p>Date: ' + new Date().toLocaleString() + '</p>';
+    htmlContent += `<p>Customer: ${customer} | ${tableInfo} | Invoice: ${invoiceNo}</p>`;
+    htmlContent += `<p>Date: ${new Date().toLocaleString()}</p>`;
     htmlContent += '<table><thead><tr><th>Item</th><th>Qty</th><th>Amt</th></tr></thead><tbody>';
-    bill.forEach(b => {
-        htmlContent += '<tr><td>' + b.name + '</td><td>' + b.qty + '</td><td>₹' + (b.qty * b.price) + '</td></tr>';
+    printBillItems.forEach(b => {
+        htmlContent += `<tr><td>${b.name}</td><td>${b.qty}</td><td>₹${(b.qty * b.price)}</td></tr>`;
     });
     htmlContent += '</tbody></table>';
-    htmlContent += '<p>Subtotal: ₹' + subtotal + '</p>';
-    if (gstEnabled) htmlContent += '<p>GST (5%): ₹' + gst + '</p>';
-    htmlContent += '<h3 style="text-align:center;">Grand Total: ₹' + grandTotal + '</h3>';
+    htmlContent += `<p>Subtotal: ₹${subtotal}</p>`;
+    htmlContent += `<p>GST (5%): ₹${gst}</p>`;
+    htmlContent += `<h3 style="text-align:center;">Grand Total: ₹${grandTotal}</h3>`;
     htmlContent += '<p style="text-align:center; font-size:12px;">Thank You! Visit Again</p></div>';
     htmlContent += '<script>window.print(); setTimeout(() => window.close(), 800);<\/script></body></html>';
     printWindow.document.write(htmlContent);
     printWindow.document.close();
 
-    // Clear bill and update invoice
-    bill = [];
-    renderBill();
-    count++;
-    document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
-    localStorage.setItem("inv", count);
+    // Clear bill ONLY for normal staff POS (do NOT clear for table orders)
+    if (!isTableOrder) {
+        bill = [];
+        renderBill();
+        count++;
+        document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
+        localStorage.setItem("inv", count);
+    }
 }
 
-function printThermalBill() {
-    if (bill.length === 0) return alert("Bill is empty!");
+function printThermalBill(customBill = null, customCustomer = null, customInvoice = null, customTableInfo = null, isTableOrder = false) {
+    if ((customBill || bill).length === 0) return alert("Bill is empty!");
     alert("🖨️ Thermal Print triggered.");
-    printBill();
+    // Call the new improved printBill (it will handle saving to Google Sheets)
+    printBill(customBill, customCustomer, customInvoice, customTableInfo, isTableOrder);
 }
-
 function exportExcel() {
     if (bill.length === 0) return alert("No items in the bill!");
     let csv = "Item,Quantity,Rate,Amount\n";
