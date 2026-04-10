@@ -114,6 +114,7 @@
         <div class="total">Total: ₹ <span id="total">0</span></div>
         <button onclick="printBill()">🧾 Normal Print & Clear</button>
         <button onclick="printThermalBill()" style="background:#d84315;">🖨️ Print Thermal + Auto Cut</button>
+        <button onclick="saveBillToSheet()" style="background:#1976d2;">💾 Save Bill (to Sheet)</button>
         <button onclick="exportExcel()">📊 Export Excel</button>
         <button onclick="sendWhatsApp()">📲 WhatsApp</button>
         <button onclick="dailyReport()">📊 Daily Report</button>
@@ -272,7 +273,126 @@ let voiceSpeed = 0.95;
 let gstEnabled = true;
 let currentPendingOrder = null;
 let currentPaymentOrder = null;
-
+// ====================== HELPER FUNCTION ======================
+function isBillEmpty(showAlert = true) {
+    if (bill.length === 0) {
+        if (showAlert) {
+            alert("❌ Bill is empty!\nPlease add some items first.");
+        }
+        return true;
+    }
+    return false;
+}
+// ====================== SAVE TO GOOGLE SHEET ======================
+function saveBillToSheet(callback = null) {
+    if (isBillEmpty()) return false;
+    const subtotal = bill.reduce((sum, b) => sum + (b.qty * b.price), 0);
+    const gst = gstEnabled ? Math.round(subtotal * 0.05) : 0;
+    const grandTotal = subtotal + gst;
+    const customer = document.getElementById("customerName").value.trim() || "Walk-in";
+    const invoiceNo = document.getElementById("invoice").value;
+    const billData = {
+        invoiceNo: invoiceNo,
+        type: "staff_pos",
+        tableInfo: "Walk-in",
+        customerName: customer,
+        items: bill,
+        subtotal: subtotal,
+        gst: gst,
+        grandTotal: grandTotal,
+        date: new Date().toISOString().split('T')[0]
+    };
+    fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(billData),
+        headers: { "Content-Type": "application/json" }
+    })
+    .then(res => res.json())
+    .then(result => {
+        if (result.status === "success") {
+            console.log("✅ Bill saved to Google Sheet:", invoiceNo);
+            if (callback) callback(true);
+        } else {
+            console.error("Save failed:", result);
+            if (callback) callback(false);
+        }
+    })
+    .catch(err => {
+        console.error("Google Sheet error:", err);
+        alert("⚠️ Bill printed but could not save to Google Sheet.\nCheck internet connection.");
+        if (callback) callback(false);
+    });
+    return true;
+}
+// ====================== PRINT BILL (Auto Save + Print + Clear) ======================
+function printBill() {
+    if (isBillEmpty()) return;
+    // Auto Save to Google Sheet before printing
+    saveBillToSheet((success) => {
+        // This runs after save attempt (whether success or fail)
+        performPrintAndClear();
+    });
+}
+// Actual printing and clearing logic (separated for reuse)
+function performPrintAndClear() {
+    const subtotal = bill.reduce((sum, b) => sum + (b.qty * b.price), 0);
+    const gst = gstEnabled ? Math.round(subtotal * 0.05) : 0;
+    const grandTotal = subtotal + gst;
+    const customer = document.getElementById("customerName").value.trim() || "Walk-in";
+    const invoiceNo = document.getElementById("invoice").value;
+    // Print Logic
+    const printWindow = window.open('', '_blank');
+    let htmlContent = `<html><head><title>Bill</title>
+        <style>
+            body{font-family:monospace;padding:20px;max-width:300px;margin:auto;}
+            table{width:100%;border-collapse:collapse;}
+            th,td{border-bottom:1px dotted #000;padding:4px 0;text-align:center;}
+            img{display:block;margin:10px auto;}
+        </style>
+    </head><body>`;
+    htmlContent += `<div style="text-align:center;">
+        <img src="./logo_180x90.jpg" alt="Logo" style="max-width:180px;">
+        <h2>Shree & Shriyan Dhaba</h2>
+        <p style="font-size:12px;">Durlaga, Jharsuguda, Odisha<br>📞 +91 7077088311</p>
+        <p>Customer: ${customer} | Invoice: ${invoiceNo}</p>
+        <p>Date: ${new Date().toLocaleString()}</p>
+        <table><thead><tr><th>Item</th><th>Qty</th><th>Amt</th></tr></thead><tbody>`;
+    bill.forEach(b => {
+        htmlContent += `<tr><td>${b.name}</td><td>${b.qty}</td><td>₹${b.qty * b.price}</td></tr>`;
+    });
+    htmlContent += `</tbody></table>
+        <p>Subtotal: ₹${subtotal}</p>`;
+    if (gstEnabled) htmlContent += `<p>GST (5%): ₹${gst}</p>`;
+    htmlContent += `<h3 style="text-align:center;">Grand Total: ₹${grandTotal}</h3>
+        <p style="text-align:center; font-size:12px;">Thank You! Visit Again 😊</p></div>`;
+    htmlContent += `<script>window.print(); setTimeout(() => window.close(), 800);<\/script></body></html>`;
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    // Clear the bill after printing
+    clearBill();
+}
+// Thermal Print (Reuses the same logic)
+function printThermalBill() {
+    if (isBillEmpty()) return;
+    alert("🖨️ Thermal Print + Auto Cut triggered.");
+    printBill(); // It will auto-save + print
+}
+// Dedicated Manual Save Button
+function saveBillToSheetManual() {
+    saveBillToSheet((success) => {
+        if (success) {
+            alert("✅ Bill saved successfully to Google Sheet!");
+        }
+    });
+}
+// Clear Bill Function
+function clearBill() {
+    bill = [];
+    renderBill();
+    count++;
+    document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
+    localStorage.setItem("inv", count);
+} where do i paste
 // Speech
 function speak(text, lang = 'en') {
     if (!('speechSynthesis' in window)) return;
@@ -1175,7 +1295,61 @@ function speakCustomerCashConfirmation() {
     else if (currentLang === 'or') message = "ଆପଣଙ୍କ କ୍ୟାଶ୍ ପେମେଣ୍ଟ ରିକ୍ୱେଷ୍ଟ ଷ୍ଟାଫଙ୍କୁ ପଠାଯାଇଛି। ଦୟାକରି ଅପେକ୍ଷା କରନ୍ତୁ, ଷ୍ଟାଫ କ୍ୟାଶ୍ ନେବାକୁ ଆସିବେ।";
     speak(message, currentLang);
 }
+// New: Dedicated Save Bill to Google Sheet (without printing)
+function saveBillToSheet() {
+    if (bill.length === 0) {
+        return alert("❌ Bill is empty! Add some items first.");
+    }
 
+    const subtotal = bill.reduce((sum, b) => sum + (b.qty * b.price), 0);
+    const gst = gstEnabled ? Math.round(subtotal * 0.05) : 0;
+    const grandTotal = subtotal + gst;
+
+    const customer = document.getElementById("customerName").value.trim() || "Walk-in";
+    const invoiceNo = document.getElementById("invoice").value;
+
+    const billData = {
+        invoiceNo: invoiceNo,
+        type: "staff_pos",
+        tableInfo: "Walk-in",
+        customerName: customer,
+        items: bill,
+        subtotal: subtotal,
+        gst: gst,
+        grandTotal: grandTotal,
+        date: new Date().toISOString().split('T')[0]
+    };
+
+    // Show loading feedback
+    const saveBtn = event ? event.currentTarget : null;
+    if (saveBtn) saveBtn.innerHTML = "⏳ Saving...";
+    if (saveBtn) saveBtn.disabled = true;
+
+    fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(billData),
+        headers: { "Content-Type": "application/json" }
+    })
+    .then(res => res.json())
+    .then(result => {
+        if (result.status === "success") {
+            alert(`✅ Bill SAVED successfully to Google Sheet!\nInvoice: ${invoiceNo}\nTotal: ₹${grandTotal}`);
+            console.log("Bill saved:", result);
+        } else {
+            alert("⚠️ Save failed: " + (result.message || "Unknown error"));
+        }
+    })
+    .catch(err => {
+        console.error("Save error:", err);
+        alert("❌ Could not save to Google Sheet.\nCheck your internet or Web App URL.");
+    })
+    .finally(() => {
+        if (saveBtn) {
+            saveBtn.innerHTML = "💾 Save Bill (to Sheet)";
+            saveBtn.disabled = false;
+        }
+    });
+}
 // Initialize
 function initializeApp() {
     const urlParams = new URLSearchParams(window.location.search);
