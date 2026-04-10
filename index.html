@@ -56,31 +56,14 @@
         text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
     .cash-staff-modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.8);
-        z-index: 10000;
-        align-items: center;
-        justify-content: center;
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;
     }
     .cash-staff-content {
-        background: #fff3e0;
-        padding: 25px;
-        border-radius: 18px;
-        max-width: 420px;
-        width: 92%;
-        text-align: center;
-        border: 5px solid #f57c00;
-        box-shadow: 0 10px 30px rgba(245,124,0,0.5);
+        background: #fff3e0; padding: 25px; border-radius: 18px; max-width: 420px; width: 92%;
+        text-align: center; border: 5px solid #f57c00; box-shadow: 0 10px 30px rgba(245,124,0,0.5);
     }
-    .cash-staff-content h3 {
-        color: #d84315;
-        margin: 0 0 15px 0;
-    }
+    .cash-staff-content h3 { color: #d84315; margin: 0 0 15px 0; }
 </style>
 </head>
 <body>
@@ -112,15 +95,17 @@
         </table>
         <label><input type="checkbox" id="gst" checked onchange="renderBill()"> GST 5%</label>
         <div class="total">Total: ₹ <span id="total">0</span></div>
+        
         <button onclick="printBill()">🧾 Normal Print & Clear</button>
         <button onclick="printThermalBill()" style="background:#d84315;">🖨️ Print Thermal + Auto Cut</button>
-        <button onclick="saveBillToSheet()" style="background:#1976d2;">💾 Save Bill (to Sheet)</button>
+        <button onclick="saveBillToSheetManual()" style="background:#1976d2;">💾 Save Bill Only</button>
         <button onclick="exportExcel()">📊 Export Excel</button>
         <button onclick="sendWhatsApp()">📲 WhatsApp</button>
         <button onclick="dailyReport()">📊 Daily Report</button>
         <button onclick="manageBills()" style="background:#d84315;">📋 Manage Bills</button>
         <button onclick="showTableOrders()" style="background:#d84315;">📋 Live Table Orders</button>
         <button onclick="openKitchenDisplay()" style="background:#e65100; margin-top:8px;">🔥 Open Kitchen Display</button>
+
         <h4>Manage Menu (Real-time Sync)</h4>
         <input id="newItemName" placeholder="New Item Name (English)">
         <input id="newItemPrice" type="number" placeholder="Price (₹)">
@@ -131,21 +116,8 @@
             <div id="currentMenuList"></div>
             <button onclick="hideCurrentMenu()" style="background:#666; margin-top:10px;">Close Menu</button>
         </div>
-        <h4>Generate QR for Table Ordering</h4>
-        <input id="qrTableNum" type="number" placeholder="Table Number">
-        <button onclick="generateQRCode()" style="background:#ff9800;">📱 Generate Table QR</button>
-        <div id="qrContainer" style="text-align:center;margin:15px 0;"></div>
-        <div id="liveOrdersSection" style="display:none; margin-top:20px;">
-            <h4 style="color:#d84315;">📋 Live Table Orders (Real-time)</h4>
-            <div id="liveOrdersContainer" style="max-height:400px; overflow-y:auto;">
-                <table id="liveOrdersTable" border="1" style="width:100%;">
-                    <thead><tr><th>Table</th><th>Customer</th><th>Total ₹</th><th>Time</th><th>Status</th><th>Action</th></tr></thead>
-                    <tbody id="liveOrdersBody"></tbody>
-                </table>
-            </div>
-            <button onclick="showTableOrders()" style="margin-top:10px;background:#666;">Close Live Orders</button>
-        </div>
     </div>
+
     <div id="customerView" style="display:none;">
         <div class="logo">
             <img src="./logo_180x90.jpg" alt="Logo" style="width:130px;">
@@ -220,12 +192,13 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
-// Language Data
+// ====================== LANGUAGE & CONFIG ======================
 const langData = {
     en: { staffTitle: "Shree & Shriyan Dhaba", staffPosLabel: "STAFF POS", welcomeText: "Welcome!", custTitle: "Shree & Shriyan Dhaba", custLabel: "TABLE ORDERING", startOrdering: "✅ Start Ordering", placeOrderKitchen: "✅ Place Order for Kitchen", paymentTitle: "💰 Payment Options", iHavePaid: "✅ I Have Paid - Get Receipt on WhatsApp", clearCart: "🗑️ Clear Cart" },
     hi: { staffTitle: "श्री एंड श्रियान ढाबा", staffPosLabel: "स्टाफ POS", welcomeText: "स्वागत है!", custTitle: "श्री एंड श्रियान ढाबा", custLabel: "टेबल ऑर्डरिंग", startOrdering: "✅ ऑर्डरिंग शुरू करें", placeOrderKitchen: "✅ किचन के लिए ऑर्डर प्लेस करें", paymentTitle: "💰 भुगतान विकल्प", iHavePaid: "✅ मैंने भुगतान कर दिया - व्हाट्सएप पर रसीद प्राप्त करें", clearCart: "🗑️ कार्ट साफ करें" },
     or: { staffTitle: "ଶ୍ରୀ ଏଣ୍ଡ ଶ୍ରୀୟାନ ଢାବା", staffPosLabel: "ଷ୍ଟାଫ POS", welcomeText: "ସ୍ୱାଗତ!", custTitle: "ଶ୍ରୀ ଏଣ୍ଡ ଶ୍ରୀୟାନ ଢାବା", custLabel: "ଟେବୁଲ ଅର୍ଡରିଂ", startOrdering: "✅ ଅର୍ଡରିଂ ଆରମ୍ଭ କରନ୍ତୁ", placeOrderKitchen: "✅ କିଚେନ୍ ପାଇଁ ଅର୍ଡର ପ୍ଲେସ୍ କରନ୍ତୁ", paymentTitle: "💰 ପେମେଣ୍ଟ ବିକଳ୍ପ", iHavePaid: "✅ ମୁଁ ପେମେଣ୍ଟ କରିଛି - ୱାଟ୍ସଆପ୍ ରେ ରସିଦ ପାଆନ୍ତୁ", clearCart: "🗑️ କାର୍ଟ ଖାଲି କରନ୍ତୁ" }
 };
+
 let currentLang = 'en';
 function changeLanguage(lang) {
     currentLang = lang;
@@ -245,7 +218,7 @@ function changeLanguage(lang) {
     if (document.getElementById("menuSection").style.display !== "none") loadCustomerMenu();
 }
 
-// Firebase
+// Firebase & Google Sheets
 const firebaseConfig = {
   apiKey: "AIzaSyCOtpaUWrVF6yAsHv9b-gj_OA0p5_hWAQ4",
   authDomain: "dhaba-bills.firebaseapp.com",
@@ -258,7 +231,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Google Sheets Config - UPDATE THIS WITH YOUR DEPLOYED WEB APP URL
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzOJZO3rBBBCsIG9DtEnAoZPRsSdUH8TssRnMgohB9J41A_nh-jEmLhRKOyjxmRJcACKg/exec";
 
 let items = [];
@@ -273,16 +245,16 @@ let voiceSpeed = 0.95;
 let gstEnabled = true;
 let currentPendingOrder = null;
 let currentPaymentOrder = null;
-// ====================== HELPER FUNCTION ======================
+
+// ====================== BILL HELPER ======================
 function isBillEmpty(showAlert = true) {
     if (bill.length === 0) {
-        if (showAlert) {
-            alert("❌ Bill is empty!\nPlease add some items first.");
-        }
+        if (showAlert) alert("❌ Bill is empty!\nPlease add some items first.");
         return true;
     }
     return false;
 }
+
 // ====================== SAVE TO GOOGLE SHEET ======================
 function saveBillToSheet(callback = null) {
     if (isBillEmpty()) return false;
@@ -291,6 +263,7 @@ function saveBillToSheet(callback = null) {
     const grandTotal = subtotal + gst;
     const customer = document.getElementById("customerName").value.trim() || "Walk-in";
     const invoiceNo = document.getElementById("invoice").value;
+
     const billData = {
         invoiceNo: invoiceNo,
         type: "staff_pos",
@@ -302,6 +275,7 @@ function saveBillToSheet(callback = null) {
         grandTotal: grandTotal,
         date: new Date().toISOString().split('T')[0]
     };
+
     fetch(GOOGLE_SCRIPT_URL, {
         method: "POST",
         body: JSON.stringify(billData),
@@ -313,42 +287,33 @@ function saveBillToSheet(callback = null) {
             console.log("✅ Bill saved to Google Sheet:", invoiceNo);
             if (callback) callback(true);
         } else {
-            console.error("Save failed:", result);
             if (callback) callback(false);
         }
     })
     .catch(err => {
         console.error("Google Sheet error:", err);
-        alert("⚠️ Bill printed but could not save to Google Sheet.\nCheck internet connection.");
+        alert("⚠️ Could not save to Google Sheet. Check internet.");
         if (callback) callback(false);
     });
     return true;
 }
-// ====================== PRINT BILL (Auto Save + Print + Clear) ======================
+
+// ====================== PRINT FUNCTIONS ======================
 function printBill() {
     if (isBillEmpty()) return;
-    // Auto Save to Google Sheet before printing
-    saveBillToSheet((success) => {
-        // This runs after save attempt (whether success or fail)
-        performPrintAndClear();
-    });
+    saveBillToSheet(() => performPrintAndClear());
 }
-// Actual printing and clearing logic (separated for reuse)
+
 function performPrintAndClear() {
     const subtotal = bill.reduce((sum, b) => sum + (b.qty * b.price), 0);
     const gst = gstEnabled ? Math.round(subtotal * 0.05) : 0;
     const grandTotal = subtotal + gst;
     const customer = document.getElementById("customerName").value.trim() || "Walk-in";
     const invoiceNo = document.getElementById("invoice").value;
-    // Print Logic
+
     const printWindow = window.open('', '_blank');
-    let htmlContent = `<html><head><title>Bill</title>
-        <style>
-            body{font-family:monospace;padding:20px;max-width:300px;margin:auto;}
-            table{width:100%;border-collapse:collapse;}
-            th,td{border-bottom:1px dotted #000;padding:4px 0;text-align:center;}
-            img{display:block;margin:10px auto;}
-        </style>
+    let htmlContent = `<html><head><title>Bill - Shree & Shriyan Dhaba</title>
+        <style>body{font-family:monospace;padding:20px;max-width:300px;margin:auto;}table{width:100%;border-collapse:collapse;}th,td{border-bottom:1px dotted #000;padding:4px 0;text-align:center;}img{display:block;margin:10px auto;}</style>
     </head><body>`;
     htmlContent += `<div style="text-align:center;">
         <img src="./logo_180x90.jpg" alt="Logo" style="max-width:180px;">
@@ -366,34 +331,33 @@ function performPrintAndClear() {
     htmlContent += `<h3 style="text-align:center;">Grand Total: ₹${grandTotal}</h3>
         <p style="text-align:center; font-size:12px;">Thank You! Visit Again 😊</p></div>`;
     htmlContent += `<script>window.print(); setTimeout(() => window.close(), 800);<\/script></body></html>`;
+
     printWindow.document.write(htmlContent);
     printWindow.document.close();
-    // Clear the bill after printing
     clearBill();
 }
-// Thermal Print (Reuses the same logic)
+
 function printThermalBill() {
     if (isBillEmpty()) return;
     alert("🖨️ Thermal Print + Auto Cut triggered.");
-    printBill(); // It will auto-save + print
+    printBill();
 }
-// Dedicated Manual Save Button
+
 function saveBillToSheetManual() {
     saveBillToSheet((success) => {
-        if (success) {
-            alert("✅ Bill saved successfully to Google Sheet!");
-        }
+        if (success) alert("✅ Bill saved successfully to Google Sheet!");
     });
 }
-// Clear Bill Function
+
 function clearBill() {
     bill = [];
     renderBill();
     count++;
     document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
     localStorage.setItem("inv", count);
-} where do i paste
-// Speech
+}
+
+// ====================== SPEECH ======================
 function speak(text, lang = 'en') {
     if (!('speechSynthesis' in window)) return;
     const utterance = new SpeechSynthesisUtterance(text);
@@ -403,12 +367,13 @@ function speak(text, lang = 'en') {
     speechSynthesis.cancel();
     speechSynthesis.speak(utterance);
 }
+
 function updateVoiceSpeed(value) {
     voiceSpeed = parseFloat(value);
     document.getElementById('speedValue').textContent = voiceSpeed.toFixed(2) + 'x';
 }
 
-// Kitchen Display
+// ====================== KITCHEN DISPLAY ======================
 function openKitchenDisplay() {
     document.getElementById('kitchenView').style.display = 'block';
     loadKitchenDisplay();
@@ -469,7 +434,7 @@ window.updateOrderStatus = function(orderId, status) {
     });
 };
 
-// Customer Order
+// ====================== CUSTOMER ORDER ======================
 function placeCustomerOrder() {
     if (customerOrder.length === 0) return alert("Cart is empty!");
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
@@ -493,6 +458,7 @@ function placeCustomerOrder() {
     speak(sentMsg, currentLang);
     listenToCustomerOrderStatus();
 }
+
 function listenToCustomerOrderStatus() {
     if (!currentOrderId) return;
     db.ref('tableOrders/' + currentOrderId).on('value', (snapshot) => {
@@ -513,7 +479,7 @@ function listenToCustomerOrderStatus() {
     });
 }
 
-// Payment Functions
+// ====================== PAYMENT FUNCTIONS ======================
 function notifyStaffAboutPayment(paymentData) {
     currentPaymentOrder = paymentData;
     document.getElementById('modalTitle').innerHTML = '💰 PAYMENT RECEIVED';
@@ -522,6 +488,7 @@ function notifyStaffAboutPayment(paymentData) {
     document.getElementById('modalOrderDetails').innerHTML = details;
     document.getElementById('newOrderModal').style.display = 'flex';
 }
+
 function notifyCashPaymentToStaff() {
     if (customerOrder.length === 0) return;
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
@@ -541,6 +508,7 @@ function notifyCashPaymentToStaff() {
     let msg = `CASH PAYMENT REQUEST - TABLE ${currentTable} - ₹${total} - ${currentName}`;
     speak(msg, 'en');
 }
+
 function showCashStaffPopup(data) {
     const staffView = document.getElementById('staffView');
     if (!staffView || staffView.style.display === 'none') return;
@@ -554,13 +522,13 @@ function showCashStaffPopup(data) {
     detailsDiv.innerHTML = `
         <strong>Table: ${data.table}</strong><br>
         Customer: ${data.name}<br><br>
-        <strong>Items:</strong><br>
-        ${itemsHtml}<br>
+        <strong>Items:</strong><br>${itemsHtml}<br>
         <strong style="color:#d84315; font-size:18px;">Total Amount: ₹${data.total}</strong><br><br>
         <span style="color:#2e7d32;">Please collect cash from the customer.</span>
     `;
     modal.style.display = 'flex';
 }
+
 function closeCashStaffModal() {
     const modal = document.getElementById('cashStaffModal');
     modal.style.display = 'none';
@@ -569,6 +537,7 @@ function closeCashStaffModal() {
         currentPaymentOrder = null;
     }
 }
+
 function markAsPaid() {
     const whatsappNum = document.getElementById("custWhatsApp").value.trim();
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
@@ -590,6 +559,7 @@ function markAsPaid() {
     };
     notifyStaffAboutPayment(paymentData);
 }
+
 function payByCash() {
     if (customerOrder.length === 0) return alert("Cart is empty!");
     notifyCashPaymentToStaff();
@@ -598,6 +568,7 @@ function payByCash() {
     showCustomerCashConfirmation();
     speakCustomerCashConfirmation();
 }
+
 function sendCustomerBillToWhatsApp(mobile) {
     if (customerOrder.length === 0) return;
     let msg = `*Shree & Shriyan Dhaba*\n\n`;
@@ -622,40 +593,7 @@ function sendCustomerBillToWhatsApp(mobile) {
     alert(`✅ Bill sent to +91${mobile}`);
 }
 
-// Modal Functions
-window.saveBillFromModal = function(orderId) {
-    closeBillOptionsModal();
-    db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
-        const order = snapshot.val();
-        if (!order || !order.items || order.items.length === 0) {
-            alert("❌ Order not found or empty!");
-            return;
-        }
-        let subtotal = 0;
-        order.items.forEach(item => {
-            subtotal += (item.qty || 1) * (item.price || 0);
-        });
-        const gst = Math.round(subtotal * 0.05);
-        const grandTotal = subtotal + gst;
-        let billHTML = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Bill - Table ${order.table}</title><style>body { font-family: Arial, sans-serif; padding: 20px; max-width: 420px; margin: 0 auto; background: #f8f9fa; } .bill { background: white; border: 4px solid #d84315; border-radius: 16px; padding: 25px; box-shadow: 0 6px 20px rgba(0,0,0,0.1); } h2 { text-align: center; color: #d84315; margin: 5px 0; } .subtitle { text-align: center; color: #555; font-size: 14px; } .info { margin: 18px 0; line-height: 1.6; } table { width: 100%; border-collapse: collapse; margin: 18px 0; } th, td { padding: 10px 8px; border-bottom: 1px solid #ddd; } th { background: #fff3e0; color: #d84315; } .amount { text-align: right; } .grand-total { font-size: 19px; font-weight: bold; color: #d84315; text-align: right; border-top: 2px solid #d84315; padding-top: 10px; } .footer { text-align: center; margin-top: 25px; color: #666; font-size: 13.5px; }</style></head><body><div class="bill"><h2>Shree & Shriyan Dhaba</h2><p class="subtitle">Durlaga, Jharsuguda, Odisha • +91 7077088311</p><div class="info"><strong>Table:</strong> ${order.table}<br><strong>Customer:</strong> ${order.name || 'Guest'}<br><strong>Date:</strong> ${order.timestamp || new Date().toLocaleString()}<br><strong>Invoice:</strong> INV-${String(order.id).slice(-6)}</div><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Rate</th><th class="amount">Amount</th></tr></thead><tbody>`;
-        order.items.forEach(item => {
-            const amt = (item.qty || 1) * (item.price || 0);
-            billHTML += `<tr><td>${item.name_en || item.name}</td><td style="text-align:center">${item.qty || 1}</td><td style="text-align:right">₹${item.price || 0}</td><td class="amount">₹${amt}</td></tr>`;
-        });
-        billHTML += `</tbody></table><div style="margin-top:15px;"><div>Subtotal: ₹${subtotal}</div><div>GST (5%): ₹${gst}</div><div class="grand-total">Grand Total: ₹${grandTotal}</div></div><div class="footer"><p>Thank You! Visit Again 😊</p><p>UPI: 8847810037jp@ybl</p></div></div></body></html>`;
-        const blob = new Blob([billHTML], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Bill_Table${order.table}_${new Date().toISOString().slice(0,10)}.html`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        alert(`✅ Bill for Table ${order.table} downloaded successfully!`);
-    });
-};
-
+// ====================== MODAL FUNCTIONS ======================
 function showNewOrderPopup(order) {
     currentPendingOrder = order;
     document.getElementById('modalTitle').innerHTML = '🚨 NEW ORDER RECEIVED';
@@ -664,11 +602,13 @@ function showNewOrderPopup(order) {
     document.getElementById('modalOrderDetails').innerHTML = details;
     document.getElementById('newOrderModal').style.display = 'flex';
 }
+
 function closeNewOrderModal() {
     document.getElementById('newOrderModal').style.display = 'none';
     currentPendingOrder = null;
     currentPaymentOrder = null;
 }
+
 function acceptAndPrintFromModal() {
     closeNewOrderModal();
     if (currentPaymentOrder) {
@@ -678,6 +618,7 @@ function acceptAndPrintFromModal() {
         acceptLiveOrder(currentPendingOrder.id);
     }
 }
+
 function acceptLiveOrder(orderId) {
     db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
         const order = snapshot.val();
@@ -686,6 +627,7 @@ function acceptLiveOrder(orderId) {
         showBillOptionsModal(order);
     });
 }
+
 function showBillOptionsModal(order) {
     if (!order || !order.id) return alert("Invalid order data!");
     let modalHTML = `
@@ -705,10 +647,12 @@ function showBillOptionsModal(order) {
     tempDiv.innerHTML = modalHTML;
     document.body.appendChild(tempDiv.firstElementChild);
 }
+
 window.closeBillOptionsModal = function() {
     const modals = document.querySelectorAll('.modal');
     if (modals.length) modals[modals.length-1].remove();
 };
+
 window.printNormalFromModal = function(orderId) {
     closeBillOptionsModal();
     db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
@@ -719,6 +663,7 @@ window.printNormalFromModal = function(orderId) {
         alert("✅ Normal Print & Clear done");
     });
 };
+
 window.printThermalFromModal = function(orderId) {
     closeBillOptionsModal();
     db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
@@ -729,6 +674,7 @@ window.printThermalFromModal = function(orderId) {
         alert("✅ Thermal Print + Auto Cut done");
     });
 };
+
 window.sendWhatsAppFromModal = function(orderId) {
     closeBillOptionsModal();
     const mobile = prompt("Enter 10 digit mobile number:");
@@ -752,7 +698,7 @@ window.sendWhatsAppFromModal = function(orderId) {
     });
 };
 
-// Menu Management
+// ====================== MENU MANAGEMENT ======================
 function loadAndListenMenu() {
     db.ref('menu').on('value', (snapshot) => {
         const data = snapshot.val();
@@ -761,11 +707,13 @@ function loadAndListenMenu() {
         if (document.getElementById("menuSection").style.display !== "none") loadCustomerMenu();
     });
 }
+
 function saveMenu() {
     const menuObj = {};
     items.forEach((item, i) => menuObj[i] = item);
     db.ref('menu').set(menuObj);
 }
+
 function renderStaffMenu() {
     const select = document.getElementById("item");
     select.innerHTML = '<option value="">-- Select Item --</option>';
@@ -773,6 +721,7 @@ function renderStaffMenu() {
         select.innerHTML += `<option value="${idx}">${item.name_en} - ₹${item.price}</option>`;
     });
 }
+
 async function addNewMenuItem() {
     const nameEn = document.getElementById("newItemName").value.trim();
     const price = parseFloat(document.getElementById("newItemPrice").value);
@@ -795,6 +744,7 @@ async function addNewMenuItem() {
     document.getElementById("newItemName").value = "";
     document.getElementById("newItemPrice").value = "";
 }
+
 async function translateText(text, targetLang) {
     try {
         const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
@@ -803,13 +753,16 @@ async function translateText(text, targetLang) {
         return data[0][0][0] || text;
     } catch (e) { return text; }
 }
+
 function showCurrentMenu() {
     document.getElementById("currentMenuSection").style.display = "block";
     renderCurrentMenu();
 }
+
 function hideCurrentMenu() {
     document.getElementById("currentMenuSection").style.display = "none";
 }
+
 function renderCurrentMenu() {
     const container = document.getElementById("currentMenuList");
     container.innerHTML = "";
@@ -835,6 +788,7 @@ function renderCurrentMenu() {
         container.appendChild(div);
     });
 }
+
 function deleteMenuItem(index) {
     if (!confirm(`Delete "${items[index].name_en}"?`)) return;
     items.splice(index, 1);
@@ -842,6 +796,7 @@ function deleteMenuItem(index) {
     renderCurrentMenu();
     renderStaffMenu();
 }
+
 function toggleAvailability(index) {
     if (index < 0 || index >= items.length) return;
     items[index].available = !items[index].available;
@@ -851,7 +806,7 @@ function toggleAvailability(index) {
     renderCurrentMenu();
 }
 
-// Staff Billing
+// ====================== STAFF BILLING ======================
 function addItem() {
     const idx = document.getElementById("item").value;
     if (!idx) return alert("Please select an item");
@@ -862,6 +817,7 @@ function addItem() {
     else bill.push({name: item.name_en, qty: qty, price: item.price});
     renderBill();
 }
+
 function renderBill() {
     let html = "", subtotal = 0;
     bill.forEach((b, i) => {
@@ -875,91 +831,19 @@ function renderBill() {
     const grandTotal = subtotal + gst;
     document.getElementById("total").innerText = grandTotal.toFixed(2);
 }
+
 function removeItem(i) {
     bill.splice(i, 1);
     renderBill();
 }
+
 function voiceAdd() {
     alert("🎤 Voice Add feature coming soon.");
 }
 
-// Printing
-function printBill() {
-    if (bill.length === 0) return alert("Bill is empty!");
-
-    const subtotal = bill.reduce((sum, b) => sum + (b.qty * b.price), 0);
-    const gst = gstEnabled ? Math.round(subtotal * 0.05) : 0;
-    const grandTotal = subtotal + gst;
-    const customer = document.getElementById("customerName").value.trim() || "Walk-in";
-    const invoiceNo = document.getElementById("invoice").value;
-
-    const billData = {
-        invoiceNo: invoiceNo,
-        type: "staff_pos",
-        tableInfo: "Walk-in",
-        customerName: customer,
-        items: bill,
-        subtotal: subtotal,
-        gst: gst,
-        grandTotal: grandTotal,
-        date: new Date().toISOString().split('T')[0]
-    };
-
-    fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(billData),
-        headers: { "Content-Type": "application/json" }
-    })
-    .then(res => res.json())
-    .then(result => {
-        if (result.status === "success") {
-            console.log("✅ Bill saved to Google Sheets");
-        } else {
-            console.error("Save failed:", result);
-        }
-    })
-    .catch(err => {
-        console.error("Google Sheets save error:", err);
-        alert("Warning: Bill printed but could not save to Google Sheet. Check internet.");
-    });
-
-    // Print part (unchanged)
-    const printWindow = window.open('', '_blank');
-    let htmlContent = '<html><head><title>Bill - Shree & Shriyan Dhaba</title>';
-    htmlContent += '<style>body{font-family:monospace;padding:20px;max-width:300px;margin:auto;}table{width:100%;border-collapse:collapse;}th,td{border-bottom:1px dotted #000;padding:4px 0;text-align:center;} img{display:block;margin:10px auto;}</style></head><body>';
-    htmlContent += '<div style="text-align:center;">';
-    htmlContent += '<img src="./logo_180x90.jpg" alt="Shree & Shriyan Dhaba" style="max-width:180px;height:auto;">';
-    htmlContent += '<h2>Shree & Shriyan Dhaba</h2>';
-    htmlContent += '<p style="font-size:12px;">Durlaga, Jharsuguda, Odisha<br>📞 +91 7077088311</p>';
-    htmlContent += '<p>Customer: ' + customer + ' | Invoice: ' + invoiceNo + '</p>';
-    htmlContent += '<p>Date: ' + new Date().toLocaleString() + '</p>';
-    htmlContent += '<table><thead><tr><th>Item</th><th>Qty</th><th>Amt</th></tr></thead><tbody>';
-    bill.forEach(b => {
-        htmlContent += '<tr><td>' + b.name + '</td><td>' + b.qty + '</td><td>₹' + (b.qty * b.price) + '</td></tr>';
-    });
-    htmlContent += '</tbody></table>';
-    htmlContent += '<p>Subtotal: ₹' + subtotal + '</p>';
-    if (gstEnabled) htmlContent += '<p>GST (5%): ₹' + gst + '</p>';
-    htmlContent += '<h3 style="text-align:center;">Grand Total: ₹' + grandTotal + '</h3>';
-    htmlContent += '<p style="text-align:center; font-size:12px;">Thank You! Visit Again</p></div>';
-    htmlContent += '<script>window.print(); setTimeout(() => window.close(), 800);<\/script></body></html>';
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-
-    // Clear bill
-    bill = [];
-    renderBill();
-    count++;
-    document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
-    localStorage.setItem("inv", count);
-}
-function printThermalBill() {
-    if (bill.length === 0) return alert("Bill is empty!");
-    alert("🖨️ Thermal Print triggered.");
-    printBill();
-}
+// ====================== EXPORT & WHATSAPP ======================
 function exportExcel() {
-    if (bill.length === 0) return alert("No items in the bill!");
+    if (isBillEmpty()) return;
     let csv = "Item,Quantity,Rate,Amount\n";
     let subtotal = 0;
     bill.forEach(item => {
@@ -976,8 +860,9 @@ function exportExcel() {
     link.click();
     alert("✅ Bill exported as CSV!");
 }
+
 function sendWhatsApp() {
-    if (bill.length === 0) return alert("Bill is empty!");
+    if (isBillEmpty()) return;
     const mobile = prompt("Enter 10 digit mobile number:");
     if (!mobile || mobile.length !== 10) return alert("Please enter valid 10-digit number!");
     const subtotal = bill.reduce((sum, b) => sum + (b.qty * b.price), 0);
@@ -987,12 +872,10 @@ function sendWhatsApp() {
     msg += `📍 Durlaga, Jharsuguda, Odisha\n`;
     msg += `📞 +91 7077088311\n\n`;
     msg += `Customer: ${document.getElementById("customerName").value || "Walk-in"}\n`;
-    msg += `Invoice: INV${String(count).padStart(3,'0')}\n`;
+    msg += `Invoice: ${document.getElementById("invoice").value}\n`;
     msg += `Date: ${new Date().toLocaleString()}\n\n`;
     msg += `──────────────────\n`;
-    bill.forEach(b => {
-        msg += `${b.name} ×${b.qty} = ₹${b.qty * b.price}\n`;
-    });
+    bill.forEach(b => msg += `${b.name} ×${b.qty} = ₹${b.qty * b.price}\n`);
     msg += `──────────────────\n`;
     msg += `Subtotal : ₹${subtotal}\n`;
     if (gstEnabled) msg += `GST (5%) : ₹${gst}\n`;
@@ -1002,7 +885,7 @@ function sendWhatsApp() {
     window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-// Updated Daily Report & Manage Bills
+// ====================== DAILY REPORT & MANAGE BILLS ======================
 function dailyReport() {
     const today = new Date().toISOString().split('T')[0];
     fetch(`${GOOGLE_SCRIPT_URL}?date=${today}`)
@@ -1046,6 +929,7 @@ function manageBills() {
     document.body.appendChild(div.firstElementChild);
     loadAllBills();
 }
+
 function loadAllBills() {
     fetch(`${GOOGLE_SCRIPT_URL}?action=all`)
         .then(res => res.json())
@@ -1057,6 +941,7 @@ function loadAllBills() {
             document.getElementById('billsTableContainer').innerHTML = `<p style="color:red;text-align:center;">Failed to load bills.<br>Check internet or Web App URL.</p>`;
         });
 }
+
 function renderBillsTable(bills) {
     if (!bills || bills.length === 0) {
         document.getElementById('billsTableContainer').innerHTML = `<p style="text-align:center;color:#999;">No bills found in Google Sheet.</p>`;
@@ -1081,6 +966,7 @@ function renderBillsTable(bills) {
     html += `</tbody></table>`;
     document.getElementById('billsTableContainer').innerHTML = html;
 }
+
 window.deleteBill = function(rowIndex) {
     if (!confirm("⚠️ Delete this bill permanently from Google Sheet?\nThis action cannot be undone!")) return;
     fetch(GOOGLE_SCRIPT_URL, {
@@ -1099,17 +985,19 @@ window.deleteBill = function(rowIndex) {
     })
     .catch(() => alert("Error deleting bill. Check internet or Web App URL."));
 };
+
 function closeManageModal() {
     const modal = document.getElementById('manageBillsModal');
     if (modal) modal.remove();
 }
 
-// Live Table Orders
+// ====================== LIVE TABLE ORDERS ======================
 function showTableOrders() {
     const section = document.getElementById("liveOrdersSection");
     section.style.display = (section.style.display === "block") ? "none" : "block";
     if (section.style.display === "block") loadLiveOrdersRealTime();
 }
+
 function loadLiveOrdersRealTime() {
     const tbody = document.getElementById("liveOrdersBody");
     if (liveOrdersRef) liveOrdersRef.off();
@@ -1140,12 +1028,13 @@ function loadLiveOrdersRealTime() {
         });
     });
 }
+
 function deleteLiveOrder(orderId) {
     if (!confirm("Delete this order?")) return;
     db.ref('tableOrders/' + orderId).remove();
 }
 
-// Real-time Listener
+// ====================== REAL-TIME LISTENER ======================
 db.ref('tableOrders').on('child_added', (snapshot) => {
     const data = snapshot.val();
     if (!data) return;
@@ -1168,7 +1057,7 @@ db.ref('tableOrders').on('child_added', (snapshot) => {
     }
 });
 
-// Customer Side
+// ====================== CUSTOMER SIDE ======================
 function generateDynamicPhonePeQR() {
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
     const container = document.getElementById("dynamicPhonePeQR");
@@ -1182,6 +1071,7 @@ function generateDynamicPhonePeQR() {
     container.innerHTML = `<img src="${qrUrl}" style="cursor:pointer;" onclick="window.open('${upiLink}','_blank')" alt="UPI QR"><p style="margin:8px 0 0 0; font-weight:bold; color:#6739B7;">₹${total.toFixed(2)} — Tap to Pay</p>`;
     container.style.display = "block";
 }
+
 function generateQRCode() {
     const tableNo = document.getElementById("qrTableNum").value.trim();
     if (!tableNo) return alert("Enter Table Number");
@@ -1193,6 +1083,7 @@ function generateQRCode() {
         <p style="margin-top:10px; font-weight:bold; color:#d84315;">Table ${tableNo} - Scan to Order</p>
     `;
 }
+
 function joinTable() {
     currentTable = document.getElementById("custTable").value.trim();
     currentName = document.getElementById("custName").value.trim();
@@ -1204,6 +1095,7 @@ function joinTable() {
     document.getElementById("displayName").innerText = currentName;
     loadCustomerMenu();
 }
+
 function loadCustomerMenu() {
     let html = '';
     if (items.length === 0) {
@@ -1228,6 +1120,7 @@ function loadCustomerMenu() {
     });
     document.getElementById("menuItems").innerHTML = html;
 }
+
 function addCustomerItem(idx) {
     const item = items[idx];
     let existing = customerOrder.find(o => o.name_en === item.name_en);
@@ -1235,6 +1128,7 @@ function addCustomerItem(idx) {
     else customerOrder.push({...item, qty: 1});
     renderCustomerOrder();
 }
+
 function renderCustomerOrder() {
     let html = "", total = 0;
     customerOrder.forEach((b, i) => {
@@ -1246,16 +1140,19 @@ function renderCustomerOrder() {
     document.getElementById("custTotal").innerText = total.toFixed(2);
     generateDynamicPhonePeQR();
 }
+
 function delCustomerItem(i) {
     customerOrder.splice(i, 1);
     renderCustomerOrder();
 }
+
 function clearCustomerOrder() {
     if (confirm("Clear cart?")) {
         customerOrder = [];
         renderCustomerOrder();
     }
 }
+
 function showCustomerCashConfirmation() {
     let existing = document.getElementById('customerCashConfirmModal');
     if (existing) existing.remove();
@@ -1285,72 +1182,20 @@ function showCustomerCashConfirmation() {
         }, 1000);
     }, 100);
 }
+
 window.closeCustomerCashModal = function() {
     const modal = document.getElementById('customerCashConfirmModal');
     if (modal) modal.remove();
 };
+
 function speakCustomerCashConfirmation() {
     let message = "Your pay by cash request has been sent to staff. Please wait, staff will come to collect cash.";
     if (currentLang === 'hi') message = "आपका कैश पेमेंट रिक्वेस्ट स्टाफ को भेज दिया गया है। कृपया प्रतीक्षा करें, स्टाफ कैश लेने आएगा।";
     else if (currentLang === 'or') message = "ଆପଣଙ୍କ କ୍ୟାଶ୍ ପେମେଣ୍ଟ ରିକ୍ୱେଷ୍ଟ ଷ୍ଟାଫଙ୍କୁ ପଠାଯାଇଛି। ଦୟାକରି ଅପେକ୍ଷା କରନ୍ତୁ, ଷ୍ଟାଫ କ୍ୟାଶ୍ ନେବାକୁ ଆସିବେ।";
     speak(message, currentLang);
 }
-// New: Dedicated Save Bill to Google Sheet (without printing)
-function saveBillToSheet() {
-    if (bill.length === 0) {
-        return alert("❌ Bill is empty! Add some items first.");
-    }
 
-    const subtotal = bill.reduce((sum, b) => sum + (b.qty * b.price), 0);
-    const gst = gstEnabled ? Math.round(subtotal * 0.05) : 0;
-    const grandTotal = subtotal + gst;
-
-    const customer = document.getElementById("customerName").value.trim() || "Walk-in";
-    const invoiceNo = document.getElementById("invoice").value;
-
-    const billData = {
-        invoiceNo: invoiceNo,
-        type: "staff_pos",
-        tableInfo: "Walk-in",
-        customerName: customer,
-        items: bill,
-        subtotal: subtotal,
-        gst: gst,
-        grandTotal: grandTotal,
-        date: new Date().toISOString().split('T')[0]
-    };
-
-    // Show loading feedback
-    const saveBtn = event ? event.currentTarget : null;
-    if (saveBtn) saveBtn.innerHTML = "⏳ Saving...";
-    if (saveBtn) saveBtn.disabled = true;
-
-    fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(billData),
-        headers: { "Content-Type": "application/json" }
-    })
-    .then(res => res.json())
-    .then(result => {
-        if (result.status === "success") {
-            alert(`✅ Bill SAVED successfully to Google Sheet!\nInvoice: ${invoiceNo}\nTotal: ₹${grandTotal}`);
-            console.log("Bill saved:", result);
-        } else {
-            alert("⚠️ Save failed: " + (result.message || "Unknown error"));
-        }
-    })
-    .catch(err => {
-        console.error("Save error:", err);
-        alert("❌ Could not save to Google Sheet.\nCheck your internet or Web App URL.");
-    })
-    .finally(() => {
-        if (saveBtn) {
-            saveBtn.innerHTML = "💾 Save Bill (to Sheet)";
-            saveBtn.disabled = false;
-        }
-    });
-}
-// Initialize
+// ====================== INITIALIZE ======================
 function initializeApp() {
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
@@ -1369,6 +1214,7 @@ function initializeApp() {
     document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
     loadAndListenMenu();
 }
+
 initializeApp();
 window.onbeforeunload = () => localStorage.setItem("inv", count);
 </script>
