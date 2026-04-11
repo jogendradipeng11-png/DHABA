@@ -1153,18 +1153,35 @@ function manageBills() {
     loadAllBills();
 }
 function loadAllBills() {
+    const container = document.getElementById('billsTableContainer');
+    container.innerHTML = `<p style="text-align:center;color:#666;">Loading bills from Google Sheet...</p>`;
+
     fetch(`${GOOGLE_SCRIPT_URL}?action=all`)
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+            return res.json();
+        })
         .then(bills => {
+            // bills is now an array of arrays from Google Sheet
             allBillsWithRow = bills.map((bill, idx) => ({
                 data: bill,
-                rowIndex: idx + 2
+                rowIndex: idx + 2   // row 1 is header, so data starts at row 2
             }));
             displayedBillsWithRow = [...allBillsWithRow];
             renderBillsTable(displayedBillsWithRow);
         })
-        .catch(() => {
-            document.getElementById('billsTableContainer').innerHTML = `<p style="color:red;text-align:center;">Failed to load bills.<br>Check internet connection.</p>`;
+        .catch(err => {
+            console.error("Load bills error:", err);
+            container.innerHTML = `
+                <p style="color:red;text-align:center;">
+                    ❌ Failed to load bills.<br>
+                    <small>${err.message}</small><br><br>
+                    Please check:
+                    <br>• Internet connection
+                    <br>• Google Script is deployed as "Anyone"
+                    <br>• Try opening this URL in new tab:<br>
+                    <strong style="word-break:break-all;">${GOOGLE_SCRIPT_URL}?action=all</strong>
+                </p>`;
         });
 }
 function renderBillsTable(billsWithRow) {
