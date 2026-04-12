@@ -1055,67 +1055,77 @@ function deleteLiveOrder(orderId) {
     db.ref('tableOrders/' + orderId).remove();
 }
 
-// ====================== MANAGE BILLS ======================
-// ====================== MANAGE BILLS ======================
+// ====================== MANAGE BILLS - COMPLETE & FIXED ======================
 let allBillsData = [];
 
 // Open Manage Bills Modal
 function manageBills() {
     const modalHTML = `
     <div id="manageBillsModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:100000;display:flex;align-items:center;justify-content:center;">
-        <div style="background:white;width:95%;max-width:1000px;max-height:92vh;border-radius:15px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.4);">
-            <div style="background:#d84315;color:white;padding:15px 20px;font-size:20px;font-weight:bold;display:flex;justify-content:space-between;">
-                <span>🗒️ Manage Bills</span>
-                <span onclick="closeManageModal()" style="cursor:pointer;font-size:28px;">×</span>
+        <div style="background:white;width:95%;max-width:1100px;max-height:92vh;border-radius:15px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.4);">
+            
+            <!-- Header -->
+            <div style="background:#d84315;color:white;padding:15px 20px;font-size:20px;font-weight:bold;display:flex;justify-content:space-between;align-items:center;">
+                <span>📋 Manage Bills (<span id="billCount">0</span>)</span>
+                <span onclick="closeManageModal()" style="cursor:pointer;font-size:28px;font-weight:normal;">×</span>
             </div>
+
+            <!-- Content -->
             <div style="padding:20px;overflow:auto;max-height:70vh;" id="billsTableContainer">
-                <p style="text-align:center;color:#666;padding:60px;">Loading bills from Google Sheet...</p>
+                <p style="text-align:center;color:#666;padding:80px 20px;">Loading bills from Google Sheet...</p>
             </div>
+
+            <!-- Footer -->
             <div style="padding:15px;background:#f8f9fa;text-align:right;border-top:1px solid #eee;">
                 <button onclick="closeManageModal()" style="padding:10px 25px;background:#666;color:white;border:none;border-radius:8px;">Close</button>
             </div>
         </div>
     </div>`;
 
+    // Remove old modal if exists
     if (document.getElementById('manageBillsModal')) document.getElementById('manageBillsModal').remove();
 
     const div = document.createElement('div');
     div.innerHTML = modalHTML;
     document.body.appendChild(div.firstElementChild);
 
-    loadAllBills();
+    loadAllBills();   // Load bills immediately
 }
 
-// Load bills
+// Load bills from Google Sheet
 function loadAllBills() {
     const container = document.getElementById('billsTableContainer');
-    container.innerHTML = `<p style="text-align:center;color:#666;padding:60px;">Loading bills from Google Sheet...</p>`;
+    container.innerHTML = `<p style="text-align:center;color:#666;padding:80px 20px;">Loading bills from Google Sheet...</p>`;
 
     fetch(`${GOOGLE_SCRIPT_URL}?action=all`)
-        .then(res => {
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.json();
-        })
+        .then(res => res.json())
         .then(result => {
             console.log("✅ Manage Bills Response:", result);
+
             if (result.ok) {
                 allBillsData = result.bills || [];
+                document.getElementById('billCount').textContent = allBillsData.length;
                 renderBillsTable(allBillsData);
             } else {
-                container.innerHTML = `<p style="color:red;text-align:center;">Error: ${result.error || 'Unknown'}</p>`;
+                container.innerHTML = `<p style="color:red;text-align:center;">Error: ${result.error || 'Unknown error'}</p>`;
             }
         })
         .catch(err => {
             console.error("Load bills error:", err);
-            container.innerHTML = `<p style="color:red;text-align:center;">Failed to load bills.<br>Check internet or Script URL.<br><small>${err.message}</small></p>`;
+            container.innerHTML = `
+                <p style="color:red;text-align:center;padding:60px;">
+                    Failed to load bills.<br>
+                    Check internet connection or Google Script URL.<br>
+                    <small>${err.message}</small>
+                </p>`;
         });
 }
 
-// Render Table
+// Render Bills Table with Delete Button
 function renderBillsTable(bills) {
     if (bills.length === 0) {
         document.getElementById('billsTableContainer').innerHTML = 
-            `<p style="text-align:center;color:#888;padding:60px;">No bills found yet.</p>`;
+            `<p style="text-align:center;color:#888;padding:80px;">No bills found yet.</p>`;
         return;
     }
 
@@ -1124,10 +1134,10 @@ function renderBillsTable(bills) {
             <thead>
                 <tr style="background:#f1f1f1;">
                     <th style="padding:12px;border:1px solid #ddd;text-align:left;">Date</th>
-                    <th style="padding:12px;border:1px solid #ddd;text-align:left;">Invoice</th>
+                    <th style="padding:12px;border:1px solid #ddd;text-align:left;">Invoice No</th>
                     <th style="padding:12px;border:1px solid #ddd;text-align:left;">Table / Customer</th>
-                    <th style="padding:12px;border:1px solid #ddd;text-align:right;">Total</th>
-                    <th style="padding:12px;border:1px solid #ddd;width:100px;">Action</th>
+                    <th style="padding:12px;border:1px solid #ddd;text-align:right;">Grand Total</th>
+                    <th style="padding:12px;border:1px solid #ddd;text-align:center;width:140px;">Actions</th>
                 </tr>
             </thead>
             <tbody>`;
@@ -1138,9 +1148,18 @@ function renderBillsTable(bills) {
                 <td style="padding:12px;border:1px solid #ddd;">${bill.date || bill.fullTimestamp || 'N/A'}</td>
                 <td style="padding:12px;border:1px solid #ddd;">${bill.invoiceNo}</td>
                 <td style="padding:12px;border:1px solid #ddd;">${bill.tableInfo} - ${bill.customerName}</td>
-                <td style="padding:12px;border:1px solid #ddd;text-align:right;font-weight:bold;">₹${Number(bill.grandTotal || 0).toFixed(2)}</td>
+                <td style="padding:12px;border:1px solid #ddd;text-align:right;font-weight:bold;color:#d84315;">
+                    ₹${Number(bill.grandTotal || 0).toFixed(2)}
+                </td>
                 <td style="padding:12px;border:1px solid #ddd;text-align:center;">
-                    <button onclick="viewBillItems('${bill.invoiceNo}')" style="padding:6px 12px;background:#1976d2;color:white;border:none;border-radius:5px;cursor:pointer;">View Items</button>
+                    <button onclick="viewBillItems('${bill.invoiceNo}')" 
+                            style="padding:6px 12px;background:#1976d2;color:white;border:none;border-radius:5px;margin-right:5px;">
+                        👁️ View
+                    </button>
+                    <button onclick="deleteBill(${bill.rowIndex})" 
+                            style="padding:6px 12px;background:#d32f2f;color:white;border:none;border-radius:5px;">
+                        🗑️ Delete
+                    </button>
                 </td>
             </tr>`;
     });
@@ -1149,62 +1168,57 @@ function renderBillsTable(bills) {
     document.getElementById('billsTableContainer').innerHTML = html;
 }
 
+// View Bill Items
 function viewBillItems(invoiceNo) {
     const bill = allBillsData.find(b => b.invoiceNo === invoiceNo);
-    if (bill && bill.items) {
-        try {
-            const itemsList = typeof bill.items === 'string' 
-                ? JSON.parse(bill.items) 
-                : bill.items;
-            let msg = `Invoice: ${bill.invoiceNo}\nTotal: ₹${bill.grandTotal}\n\nItems:\n`;
-            if (Array.isArray(itemsList)) {
-                itemsList.forEach(item => {
-                    msg += `• ${item.name || item} × ${item.qty || 1} = ₹${(item.price || 0) * (item.qty || 1)}\n`;
-                });
-            } else {
-                msg += bill.items;
-            }
-            alert(msg);
-        } catch(e) {
-            alert(`Invoice: ${bill.invoiceNo}\nItems:\n${bill.items}`);
+    if (!bill) return alert("Bill not found!");
+
+    let msg = `📄 Invoice: ${bill.invoiceNo}\n`;
+    msg += `💰 Total: ₹${Number(bill.grandTotal).toFixed(2)}\n`;
+    msg += `📅 Date: ${bill.date || bill.fullTimestamp}\n\n`;
+    msg += `Items:\n`;
+
+    try {
+        const itemsList = typeof bill.items === 'string' ? JSON.parse(bill.items) : bill.items;
+        if (Array.isArray(itemsList)) {
+            itemsList.forEach(item => {
+                msg += `• ${item.name || item} × ${item.qty || 1} = ₹${(item.price || 0) * (item.qty || 1)}\n`;
+            });
+        } else {
+            msg += bill.items;
         }
-    } else {
-        alert("No items found for this bill.");
+    } catch (e) {
+        msg += bill.items;
     }
+
+    alert(msg);
 }
 
-function closeManageModal() {
-    const modal = document.getElementById('manageBillsModal');
-    if (modal) modal.remove();
+// Delete Bill
+function deleteBill(rowIndex) {
+    if (!confirm("⚠️ Delete this bill permanently?\nThis action cannot be undone!")) return;
+
+    fetch(`${GOOGLE_SCRIPT_URL}?action=delete&rowIndex=${rowIndex}`)
+        .then(res => res.json())
+        .then(result => {
+            if (result.ok) {
+                alert("✅ Bill deleted successfully!");
+                loadAllBills();        // Refresh the list
+            } else {
+                alert("Delete failed: " + (result.error || "Unknown error"));
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Failed to delete bill. Check internet.");
+        });
 }
+
 // Close Modal
 function closeManageModal() {
     const modal = document.getElementById('manageBillsModal');
     if (modal) modal.remove();
 }
-
-// Optional: View items of a bill (you can improve this later)
-function viewBillItems(invoiceNo) {
-    const bill = allBillsData.find(b => b.invoiceNo === invoiceNo);
-    if (bill) {
-        alert(`Invoice: ${bill.invoiceNo}\nItems:\n${bill.items}`);
-    }
-}
-window.deleteBill = function(rowIndex) {
-    if (!confirm("⚠️ Delete this bill permanently from Google Sheet?\nThis action cannot be undone!")) return;
-    fetch(`${GOOGLE_SCRIPT_URL}?action=delete&rowIndex=${rowIndex}`)
-        .then(res => res.json())
-        .then(() => {
-            alert("✅ Bill deleted successfully!");
-            loadAllBills();
-        })
-        .catch(() => alert("Error deleting bill. Please try again."));
-};
-function closeManageModal() {
-    const modal = document.getElementById('manageBillsModal');
-    if (modal) modal.remove();
-}
-
 // ====================== REAL-TIME LISTENER ======================
 db.ref('tableOrders').on('child_added', (snapshot) => {
     const data = snapshot.val();
