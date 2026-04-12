@@ -120,9 +120,10 @@
         <button onclick="sendWhatsApp()">📲 WhatsApp</button>
         <button onclick="dailyReport()">📊 Daily Report</button>
         <button onclick="manageBills()" style="background:#d84315;">📋 Manage Bills</button>
+        <button onclick="showTableOrders()" style="background:#d84315;">📋 Live Table Orders</button>
         <button onclick="testGoogleSheetConnection()" style="background:#1976d2; margin-top:8px;">
-    🔍 Test Google Sheet Connection
-</button>
+        🔍 Test Google Sheet Connection
+        </button>
         <button onclick="showTableOrders()" style="background:#d84315;">📋 Live Table Orders</button>
         <button onclick="openKitchenDisplay()" style="background:#e65100; margin-top:8px;">🔥 Open Kitchen Display</button>
         <h4>Manage Menu (Real-time Sync)</h4>
@@ -1558,6 +1559,37 @@ function initializeApp() {
     }
     document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
     loadAndListenMenu();
+}
+    // ====================== TEST SEND TO GOOGLE SHEET ======================
+function testSendToSheet() {
+    alert("Testing SEND to Google Sheet...");
+
+    const testData = {
+        invoiceNo: "TEST-" + Date.now().toString().slice(-6),
+        type: "staff_pos",
+        tableInfo: "Test",
+        customerName: "Test User",
+        items: [{ name: "Test Rice", qty: 2, price: 150 }],
+        subtotal: 300,
+        gst: 15,
+        grandTotal: 315,
+        date: new Date().toISOString().split('T')[0]
+    };
+
+    fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(testData),
+        headers: { "Content-Type": "application/json" }
+    })
+    .then(res => res.text())
+    .then(text => {
+        console.log("Response:", text);
+        alert("✅ Test Result:\n\n" + text.substring(0, 300));
+    })
+    .catch(err => {
+        console.error(err);
+        alert("❌ Send Failed!\n\nError: " + err.message);
+    });
 }
 initializeApp();
 window.onbeforeunload = () => localStorage.setItem("inv", count);
