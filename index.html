@@ -276,38 +276,52 @@ let gstEnabled = true;
 let currentPendingOrder = null;
 let currentPaymentOrder = null;
 
-// ====================== GOOGLE SHEETS SYNC ======================
+
+// ==================== GOOGLE SHEETS SYNC FUNCTION ====================
 async function saveBillToGoogleSheets(billData) {
-  const WEB_APP_URL = "https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbzDb_af-Ane4kNR0A9PbMmoHS-bx2vrO5QLNXxhZUubzA3jKw6Wz2PRZItpNLhxeof8Fg/exec";   // ← Paste your /exec URL here
+  
+  // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+  // PASTE YOUR CURRENT /exec URL HERE
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzDb_af-Ane4kNR0A9PbMmoHS-bx2vrO5QLNXxhZUubzA3jKw6Wz2PRZItpNLhxeof8Fg/exec";
+  // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+
+  console.log("Sending bill to Google Sheet...", billData);
 
   try {
     const response = await fetch(WEB_APP_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'text/plain'     // Important: Use text/plain to avoid CORS issues
       },
-      body: JSON.stringify(billData)   // billData contains invoiceNo, items, subtotal, etc.
+      body: JSON.stringify(billData)
     });
 
+    console.log("Response status:", response.status);
+
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`Server returned ${response.status}`);
     }
 
     const result = await response.json();
+    console.log("Server response:", result);
 
     if (result.ok) {
-      console.log("✅ Bill synced to Google Sheet successfully");
-      // Optional: show a small success message in your POS
+      console.log("✅ Bill successfully synced to Google Sheet!");
+      // Optional: Show success message in your POS
+      // alert("Bill saved to Google Sheet ✅");
+      return true;
     } else {
-      console.error("Sync failed:", result.error);
-      alert("Failed to sync with Google Sheet: " + (result.error || "Unknown"));
+      console.error("Server error:", result.error);
+      alert("Sync failed: " + (result.error || "Unknown error"));
+      return false;
     }
+
   } catch (err) {
-    console.error("Sync error:", err);
-    alert("Failed to sync with Google Sheet (check internet or URL).");
+    console.error("❌ Sync failed - Full error:", err);
+    alert("Failed to sync with Google Sheet.\n\nCheck console (F12) for details.");
+    return false;
   }
 }
-
 // ====================== SAVE BILL FROM MODAL WITH SYNC ======================
 window.saveBillFromModal = async function(orderId) {
     closeBillOptionsModal();
