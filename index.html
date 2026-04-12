@@ -120,6 +120,9 @@
         <button onclick="sendWhatsApp()">📲 WhatsApp</button>
         <button onclick="dailyReport()">📊 Daily Report</button>
         <button onclick="manageBills()" style="background:#d84315;">📋 Manage Bills</button>
+        <button onclick="testGoogleSheetConnection()" style="background:#1976d2; margin-top:8px;">
+    🔍 Test Google Sheet Connection
+</button>
         <button onclick="showTableOrders()" style="background:#d84315;">📋 Live Table Orders</button>
         <button onclick="openKitchenDisplay()" style="background:#e65100; margin-top:8px;">🔥 Open Kitchen Display</button>
         <h4>Manage Menu (Real-time Sync)</h4>
@@ -1071,6 +1074,46 @@ function dailyReport() {
             console.error(err);
             alert("Cannot connect to Google Sheet.\nPlease check your internet connection.");
         });
+}
+    // ====================== TEST GOOGLE SHEET CONNECTION ======================
+function testGoogleSheetConnection() {
+    alert("Testing connection to Google Sheet...");
+
+    const testData = {
+        invoiceNo: "TEST-" + Date.now().toString().slice(-6),
+        type: "test_connection",
+        tableInfo: "Test",
+        customerName: "Connection Test",
+        items: [{ name: "Test Item", qty: 1, price: 100 }],
+        subtotal: 100,
+        gst: 5,
+        grandTotal: 105,
+        date: new Date().toISOString().split('T')[0]
+    };
+
+    fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(testData),
+        headers: { "Content-Type": "application/json" }
+    })
+    .then(res => res.text())
+    .then(text => {
+        console.log("Test Response:", text);
+        try {
+            const result = JSON.parse(text);
+            if (result.status === "success" || result.message?.includes("saved")) {
+                alert("✅ SUCCESS! Connection is working.\n\nA test bill was saved to Google Sheet.\n\nCheck your 'DhabaBills' sheet.");
+            } else {
+                alert("⚠️ Response received but may have issue:\n" + text);
+            }
+        } catch(e) {
+            alert("✅ Response received (raw):\n" + text.substring(0, 200));
+        }
+    })
+    .catch(err => {
+        console.error("Test failed:", err);
+        alert("❌ Connection Failed!\n\nError: " + err.message + "\n\nPlease check:\n1. GOOGLE_SCRIPT_URL is correct\n2. Script is deployed as 'Anyone'\n3. Internet connection");
+    });
 }
 // ====================== LIVE TABLE ORDERS ======================
 function showTableOrders() {
