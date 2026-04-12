@@ -1055,23 +1055,40 @@ function deleteLiveOrder(orderId) {
     db.ref('tableOrders/' + orderId).remove();
 }
 
-// ====================== MANAGE BILLS - COMPLETE & FIXED ======================
+// ====================== MANAGE BILLS - COMPLETE WITH SEARCH & DATE FILTER ======================
 let allBillsData = [];
 
 // Open Manage Bills Modal
 function manageBills() {
     const modalHTML = `
     <div id="manageBillsModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:100000;display:flex;align-items:center;justify-content:center;">
-        <div style="background:white;width:95%;max-width:1100px;max-height:92vh;border-radius:15px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.4);">
+        <div style="background:white;width:95%;max-width:1200px;max-height:94vh;border-radius:15px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.4);">
             
             <!-- Header -->
             <div style="background:#d84315;color:white;padding:15px 20px;font-size:20px;font-weight:bold;display:flex;justify-content:space-between;align-items:center;">
                 <span>📋 Manage Bills (<span id="billCount">0</span>)</span>
-                <span onclick="closeManageModal()" style="cursor:pointer;font-size:28px;font-weight:normal;">×</span>
+                <span onclick="closeManageModal()" style="cursor:pointer;font-size:28px;">×</span>
             </div>
 
-            <!-- Content -->
-            <div style="padding:20px;overflow:auto;max-height:70vh;" id="billsTableContainer">
+            <!-- Filters -->
+            <div style="padding:15px 20px;background:#f8f9fa;border-bottom:1px solid #ddd;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+                <input type="date" id="fromDate" style="padding:8px;border-radius:6px;border:1px solid #ddd;">
+                <span style="color:#666;">to</span>
+                <input type="date" id="toDate" style="padding:8px;border-radius:6px;border:1px solid #ddd;">
+                
+                <input type="text" id="searchInput" placeholder="Search Invoice / Customer / Table..." 
+                       style="flex:1;padding:8px;border-radius:6px;border:1px solid #ddd;min-width:250px;">
+                
+                <button onclick="applyFilters()" style="padding:8px 20px;background:#1976d2;color:white;border:none;border-radius:6px;cursor:pointer;">
+                    🔍 Filter
+                </button>
+                <button onclick="resetFilters()" style="padding:8px 20px;background:#666;color:white;border:none;border-radius:6px;cursor:pointer;">
+                    Reset
+                </button>
+            </div>
+
+            <!-- Table Container -->
+            <div style="padding:20px;overflow:auto;max-height:65vh;" id="billsTableContainer">
                 <p style="text-align:center;color:#666;padding:80px 20px;">Loading bills from Google Sheet...</p>
             </div>
 
@@ -1082,17 +1099,22 @@ function manageBills() {
         </div>
     </div>`;
 
-    // Remove old modal if exists
     if (document.getElementById('manageBillsModal')) document.getElementById('manageBillsModal').remove();
 
     const div = document.createElement('div');
     div.innerHTML = modalHTML;
     document.body.appendChild(div.firstElementChild);
 
-    loadAllBills();   // Load bills immediately
+    // Set default dates (last 30 days)
+    const today = new Date().toISOString().split('T')[0];
+    const thirtyDaysAgo = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
+    document.getElementById('fromDate').value = thirtyDaysAgo;
+    document.getElementById('toDate').value = today;
+
+    loadAllBills();
 }
 
-// Load bills from Google Sheet
+// Load all bills
 function loadAllBills() {
     const container = document.getElementById('billsTableContainer');
     container.innerHTML = `<p style="text-align:center;color:#666;padding:80px 20px;">Loading bills from Google Sheet...</p>`;
@@ -1100,32 +1122,70 @@ function loadAllBills() {
     fetch(`${GOOGLE_SCRIPT_URL}?action=all`)
         .then(res => res.json())
         .then(result => {
-            console.log("✅ Manage Bills Response:", result);
-
             if (result.ok) {
                 allBillsData = result.bills || [];
                 document.getElementById('billCount').textContent = allBillsData.length;
-                renderBillsTable(allBillsData);
+                applyFilters();   // Show with default filter
             } else {
-                container.innerHTML = `<p style="color:red;text-align:center;">Error: ${result.error || 'Unknown error'}</p>`;
+                container.innerHTML = `<p style="color:red;text-align:center;">Error: ${result.error}</p>`;
             }
         })
         .catch(err => {
-            console.error("Load bills error:", err);
-            container.innerHTML = `
-                <p style="color:red;text-align:center;padding:60px;">
-                    Failed to load bills.<br>
-                    Check internet connection or Google Script URL.<br>
-                    <small>${err.message}</small>
-                </p>`;
+            console.error(err);
+            container.innerHTML = `<p style="color:red;text-align:center;">Failed to load bills.<br>Check internet.</p>`;
         });
 }
 
-// Render Bills Table with Delete Button
+// Apply Search + Date Filter
+function applyFilters() {
+    const fromDate = document.getElementById('fromDate').value;
+    const toDate = document.getElementById('toDate').value;
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+
+    let filteredBills = allBillsData;
+
+    // Date Filter
+    if (fromDate || toDate) {
+        filteredBills = filteredBills.filter(bill => {
+            const billDate = bill.date || bill.fullTimestamp?.split(',')[0] || '';
+            if (!billDate) return true;
+            
+            const billDateObj = new Date(billDate);
+            const from = fromDate ? new Date(fromDate) : new Date(0);
+            const to = toDate ? new Date(toDate) : new Date(9999, 11, 31);
+            
+            return billDateObj >= from && billDateObj <= to;
+        });
+    }
+
+    // Search Filter
+    if (searchTerm) {
+        filteredBills = filteredBills.filter(bill => 
+            (bill.invoiceNo && bill.invoiceNo.toLowerCase().includes(searchTerm)) ||
+            (bill.customerName && bill.customerName.toLowerCase().includes(searchTerm)) ||
+            (bill.tableInfo && bill.tableInfo.toLowerCase().includes(searchTerm))
+        );
+    }
+
+    renderBillsTable(filteredBills);
+}
+
+// Reset Filters
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    const today = new Date().toISOString().split('T')[0];
+    const thirtyDaysAgo = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
+    document.getElementById('fromDate').value = thirtyDaysAgo;
+    document.getElementById('toDate').value = today;
+    applyFilters();
+}
+
+// Render Table
 function renderBillsTable(bills) {
+    const container = document.getElementById('billsTableContainer');
+    
     if (bills.length === 0) {
-        document.getElementById('billsTableContainer').innerHTML = 
-            `<p style="text-align:center;color:#888;padding:80px;">No bills found yet.</p>`;
+        container.innerHTML = `<p style="text-align:center;color:#888;padding:80px;">No bills found for selected filter.</p>`;
         return;
     }
 
@@ -1137,7 +1197,7 @@ function renderBillsTable(bills) {
                     <th style="padding:12px;border:1px solid #ddd;text-align:left;">Invoice No</th>
                     <th style="padding:12px;border:1px solid #ddd;text-align:left;">Table / Customer</th>
                     <th style="padding:12px;border:1px solid #ddd;text-align:right;">Grand Total</th>
-                    <th style="padding:12px;border:1px solid #ddd;text-align:center;width:140px;">Actions</th>
+                    <th style="padding:12px;border:1px solid #ddd;text-align:center;width:160px;">Actions</th>
                 </tr>
             </thead>
             <tbody>`;
@@ -1165,7 +1225,7 @@ function renderBillsTable(bills) {
     });
 
     html += `</tbody></table>`;
-    document.getElementById('billsTableContainer').innerHTML = html;
+    container.innerHTML = html;
 }
 
 // View Bill Items
@@ -1175,8 +1235,7 @@ function viewBillItems(invoiceNo) {
 
     let msg = `📄 Invoice: ${bill.invoiceNo}\n`;
     msg += `💰 Total: ₹${Number(bill.grandTotal).toFixed(2)}\n`;
-    msg += `📅 Date: ${bill.date || bill.fullTimestamp}\n\n`;
-    msg += `Items:\n`;
+    msg += `📅 Date: ${bill.date || bill.fullTimestamp}\n\nItems:\n`;
 
     try {
         const itemsList = typeof bill.items === 'string' ? JSON.parse(bill.items) : bill.items;
@@ -1190,28 +1249,24 @@ function viewBillItems(invoiceNo) {
     } catch (e) {
         msg += bill.items;
     }
-
     alert(msg);
 }
 
 // Delete Bill
 function deleteBill(rowIndex) {
-    if (!confirm("⚠️ Delete this bill permanently?\nThis action cannot be undone!")) return;
+    if (!confirm("⚠️ Delete this bill permanently?\nThis cannot be undone!")) return;
 
     fetch(`${GOOGLE_SCRIPT_URL}?action=delete&rowIndex=${rowIndex}`)
         .then(res => res.json())
         .then(result => {
             if (result.ok) {
                 alert("✅ Bill deleted successfully!");
-                loadAllBills();        // Refresh the list
+                loadAllBills();
             } else {
-                alert("Delete failed: " + (result.error || "Unknown error"));
+                alert("Delete failed: " + (result.error || "Unknown"));
             }
         })
-        .catch(err => {
-            console.error(err);
-            alert("Failed to delete bill. Check internet.");
-        });
+        .catch(() => alert("Failed to delete. Check internet."));
 }
 
 // Close Modal
