@@ -281,7 +281,7 @@ async function saveBillToGoogleSheets(billData) {
   console.log("Sending bill to Google Sheet...", billData);
 
   try {
-    const response = await fetch(GOOGLE_SCRIPT_URL, {   // Use the global URL
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain'
@@ -298,57 +298,12 @@ async function saveBillToGoogleSheets(billData) {
       console.log("✅ Bill synced to Google Sheet successfully!");
       return true;
     } else {
-      alert("Sync failed: " + (result.error || "Unknown"));
+      alert("Sync failed: " + (result.error || "Unknown error"));
       return false;
     }
   } catch (err) {
     console.error("❌ Sync error:", err);
-    alert("Failed to sync with Google Sheet.\nCheck console (F12).");
-    return false;
-  }
-}
-  
-  // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
-  // PASTE YOUR CURRENT /exec URL HERE
-  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzDb_af-Ane4kNR0A9PbMmoHS-bx2vrO5QLNXxhZUubzA3jKw6Wz2PRZItpNLhxeof8Fg/exec";
-
-    let allBillsData = [];
-  // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
-
-  console.log("Sending bill to Google Sheet...", billData);
-
-  try {
-    const response = await fetch(WEB_APP_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain'     // Important: Use text/plain to avoid CORS issues
-      },
-      body: JSON.stringify(billData)
-    });
-
-    console.log("Response status:", response.status);
-
-    if (!response.ok) {
-      throw new Error(`Server returned ${response.status}`);
-    }
-
-    const result = await response.json();
-    console.log("Server response:", result);
-
-    if (result.ok) {
-      console.log("✅ Bill successfully synced to Google Sheet!");
-      // Optional: Show success message in your POS
-      // alert("Bill saved to Google Sheet ✅");
-      return true;
-    } else {
-      console.error("Server error:", result.error);
-      alert("Sync failed: " + (result.error || "Unknown error"));
-      return false;
-    }
-
-  } catch (err) {
-    console.error("❌ Sync failed - Full error:", err);
-    alert("Failed to sync with Google Sheet.\n\nCheck console (F12) for details.");
+    alert("Failed to sync with Google Sheet.\nCheck console (F12) for details.");
     return false;
   }
 }
