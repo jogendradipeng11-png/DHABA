@@ -1077,43 +1077,23 @@ function dailyReport() {
 }
     // ====================== TEST GOOGLE SHEET CONNECTION ======================
 function testGoogleSheetConnection() {
-    alert("Testing connection to Google Sheet...");
+    const url = GOOGLE_SCRIPT_URL + "?action=all";
+    alert("Testing connection...\n\nURL: " + url);
 
-    const testData = {
-        invoiceNo: "TEST-" + Date.now().toString().slice(-6),
-        type: "test_connection",
-        tableInfo: "Test",
-        customerName: "Connection Test",
-        items: [{ name: "Test Item", qty: 1, price: 100 }],
-        subtotal: 100,
-        gst: 5,
-        grandTotal: 105,
-        date: new Date().toISOString().split('T')[0]
-    };
-
-    fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(testData),
-        headers: { "Content-Type": "application/json" }
-    })
-    .then(res => res.text())
-    .then(text => {
-        console.log("Test Response:", text);
-        try {
-            const result = JSON.parse(text);
-            if (result.status === "success" || result.message?.includes("saved")) {
-                alert("✅ SUCCESS! Connection is working.\n\nA test bill was saved to Google Sheet.\n\nCheck your 'DhabaBills' sheet.");
-            } else {
-                alert("⚠️ Response received but may have issue:\n" + text);
-            }
-        } catch(e) {
-            alert("✅ Response received (raw):\n" + text.substring(0, 200));
-        }
-    })
-    .catch(err => {
-        console.error("Test failed:", err);
-        alert("❌ Connection Failed!\n\nError: " + err.message + "\n\nPlease check:\n1. GOOGLE_SCRIPT_URL is correct\n2. Script is deployed as 'Anyone'\n3. Internet connection");
-    });
+    fetch(url, { method: 'GET' })
+        .then(res => {
+            console.log("Response status:", res.status);
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return res.text();
+        })
+        .then(text => {
+            alert("✅ Connection SUCCESS!\n\nResponse received (first 300 chars):\n\n" + text.substring(0, 300));
+            console.log("Full response:", text);
+        })
+        .catch(err => {
+            console.error("Fetch error:", err);
+            alert("❌ Failed to fetch\n\nError: " + err.message + "\n\nPossible causes:\n1. Wrong GOOGLE_SCRIPT_URL\n2. Script not deployed as 'Anyone'\n3. Old deployment still active");
+        });
 }
 // ====================== LIVE TABLE ORDERS ======================
 function showTableOrders() {
