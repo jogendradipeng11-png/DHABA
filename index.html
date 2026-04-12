@@ -754,22 +754,20 @@ window.sendWhatsAppFromModal = function(orderId) {
 // ====================== NEW: SAVE TABLE ORDER TO GOOGLE SHEETS (triggered on Accept & Print from Live Table) ======================
 function saveTableOrderToGoogleSheets(order) {
     if (!order || !order.items || order.items.length === 0) return;
+
     let subtotal = 0;
     const billItems = order.items.map(item => {
         const qty = parseInt(item.qty) || 1;
         const price = parseFloat(item.price) || 0;
-        const amt = qty * price;
-        subtotal += amt;
-        return {
-            name: item.name_en || item.name || 'Unknown',
-            qty: qty,
-            price: price
-        };
+        subtotal += qty * price;
+        return { name: item.name_en || item.name || 'Unknown', qty: qty, price: price };
     });
+
     const gst = Math.round(subtotal * 0.05);
     const grandTotal = subtotal + gst;
+
     const billData = {
-        invoiceNo: "TBL-" + String(order.id || Date.now()).slice(-4).padStart(6, '0'),
+        invoiceNo: "TBL-" + String(order.id || Date.now()).slice(-6),
         type: "table_order",
         tableInfo: `Table ${order.table || 'Walk-in'}`,
         customerName: order.name || 'Guest',
@@ -777,20 +775,17 @@ function saveTableOrderToGoogleSheets(order) {
         subtotal: subtotal,
         gst: gst,
         grandTotal: grandTotal,
-        date: new Date(order.timestamp || Date.now()).toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0]
     };
+
     fetch(GOOGLE_SCRIPT_URL, {
         method: "POST",
         body: JSON.stringify(billData),
         headers: { "Content-Type": "application/json" }
     })
-    .then(res => res.json())
-    .then(result => {
-        console.log("✅ Table order bill saved to Google Sheets:", result);
-    })
-    .catch(err => {
-        console.error("❌ Google Sheets save for table order failed:", err);
-    });
+    .then(res => res.text())
+    .then(text => console.log("Table order saved:", text))
+    .catch(err => console.error("Save table order failed:", err));
 }
 // ====================== MENU ======================
 function loadAndListenMenu() {
@@ -1152,12 +1147,16 @@ function manageBills() {
     document.body.appendChild(div.firstElementChild);
     loadAllBills();
 }
+    function closeManageModal() {
+    const modal = document.getElementById('manageBillsModal');
+    if (modal) modal.remove();
+}
 function loadAllBills() {
     const container = document.getElementById('billsTableContainer');
     container.innerHTML = `<p style="text-align:center;color:#666;">Loading bills from Google Sheet...</p>`;
 
     fetch(`${GOOGLE_SCRIPT_URL}?action=all`)
-        .then(res => res.text())           // Use text() for maximum compatibility
+        .then(res => res.text())
         .then(text => {
             let bills = [];
             try {
@@ -1165,14 +1164,12 @@ function loadAllBills() {
             } catch (e) {
                 console.error("JSON parse failed:", text);
             }
-
             if (!Array.isArray(bills)) bills = [];
 
             allBillsWithRow = bills.map((bill, idx) => ({
                 data: bill,
                 rowIndex: idx + 2
             }));
-
             displayedBillsWithRow = [...allBillsWithRow];
             renderBillsTable(displayedBillsWithRow);
         })
@@ -1185,10 +1182,7 @@ function loadAllBills() {
                     Please check:<br>
                     • Internet connection<br>
                     • Script deployed as "Anyone"<br>
-                    • Open this URL in new tab:<br>
-                    <strong style="word-break:break-all;font-size:13px;">
-                        ${GOOGLE_SCRIPT_URL}?action=all
-                    </strong>
+                    • Open this URL: <strong>${GOOGLE_SCRIPT_URL}?action=all</strong>
                 </p>`;
         });
 }
