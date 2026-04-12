@@ -211,7 +211,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // ====================== GOOGLE SCRIPT ======================
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwOmg6nNZcjaOf3l9nd-jiojnz_nQIM04qWQMp-9T55pBM9Y2_glSIMiYTqpMqUFn_EZQ/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyIs4cNxuruNjywxr5MhGd3sgMZKFpQ0zbzEVRYERC8_4f6bYmNB8F8vTOLVsCcln6HBw/exec";
 
 let items = [];
 let bill = [];
@@ -230,7 +230,7 @@ let displayedBillsWithRow = [];
 
 // ====================== TEST SEND TO GOOGLE SHEET ======================
 function testSendToSheet() {
-    alert("Testing SEND to Google Sheet...");
+    alert("Testing connection to Google Sheet...");
 
     const testData = {
         invoiceNo: "TEST-" + Date.now().toString().slice(-6),
@@ -249,14 +249,15 @@ function testSendToSheet() {
         body: JSON.stringify(testData),
         headers: { "Content-Type": "application/json" }
     })
-    .then(res => res.text())
+    .then(res => {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.text();
+    })
     .then(text => {
-        alert("Test Result:\n\n" + text);
-        console.log("Response:", text);
+        alert("✅ SUCCESS!\n\nResponse:\n" + text);
     })
     .catch(err => {
-        alert("Send Failed!\nError: " + err.message);
-        console.error(err);
+        alert("❌ Failed to fetch\n\nError: " + err.message + "\n\nMake sure:\n1. You used the NEW URL after redeploy\n2. Script is deployed as 'Anyone'\n3. You redeployed after changing Code.gs");
     });
 }
 
