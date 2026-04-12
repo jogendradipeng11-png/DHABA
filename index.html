@@ -8,7 +8,10 @@
     body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #ff9800, #ff5722); padding: 10px; margin: 0; }
     .container { max-width: 520px; margin: auto; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
     .lang-selector { text-align: center; margin-bottom: 15px; padding: 8px 0; }
-    .lang-btn { padding: 12px 20px; margin: 0 6px; border: 2px solid #d84315; background: #fff; cursor: pointer; border-radius: 8px; font-size: 16px; font-weight: bold; color: #d84315; }
+    .lang-btn {
+        padding: 12px 20px; margin: 0 6px; border: 2px solid #d84315; background: #fff;
+        cursor: pointer; border-radius: 8px; font-size: 16px; font-weight: bold; color: #d84315;
+    }
     .lang-btn.active { background: #d84315; color: white; border-color: #d84315; }
     h2 { text-align: center; color: #d84315; margin: 8px 0 4px 0; }
     h3, h4 { color: #d84315; }
@@ -20,17 +23,46 @@
     .menu-item { display: flex; align-items: center; justify-content: space-between; background: #fff3e0; border: 2px solid #ff9800; border-radius: 10px; padding: 12px; margin: 10px 0; }
     table { width: 100%; border-collapse: collapse; margin: 10px 0; }
     th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-    .kitchen-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f0f0f; color: #fff; overflow-y: auto; z-index: 9999; }
-    .kitchen-header { background: #d84315; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; position: sticky; top: 0; z-index: 100; }
-    .kitchen-orders { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 20px; padding: 20px; }
-    .kitchen-card { background: #1f1f1f; border: 6px solid #ff9800; border-radius: 18px; padding: 20px; box-shadow: 0 10px 30px rgba(255,152,0,0.4); }
+    .kitchen-view {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: #0f0f0f; color: #fff; overflow-y: auto; z-index: 9999;
+    }
+    .kitchen-header {
+        background: #d84315; padding: 20px; text-align: center; font-size: 32px;
+        font-weight: bold; position: sticky; top: 0; z-index: 100;
+    }
+    .kitchen-orders {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+        gap: 20px; padding: 20px;
+    }
+    .kitchen-card {
+        background: #1f1f1f; border: 6px solid #ff9800; border-radius: 18px;
+        padding: 20px; box-shadow: 0 10px 30px rgba(255,152,0,0.4);
+    }
     .kitchen-table { font-size: 32px; font-weight: bold; color: #ffeb3b; }
-    .kitchen-btn { padding: 16px; font-size: 18px; margin: 8px 4px; border: none; border-radius: 10px; cursor: pointer; width: 48%; }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center; }
-    .modal-content { background: white; padding: 25px; border-radius: 15px; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-    .cash-staff-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; }
-    .cash-staff-content { background: #fff3e0; padding: 25px; border-radius: 18px; max-width: 420px; width: 92%; text-align: center; border: 5px solid #f57c00; box-shadow: 0 10px 30px rgba(245,124,0,0.5); }
-    .cash-staff-content h3 { color: #d84315; margin: 0 0 15px 0; }
+    .kitchen-btn {
+        padding: 16px; font-size: 18px; margin: 8px 4px; border: none;
+        border-radius: 10px; cursor: pointer; width: 48%;
+    }
+    .voice-control {
+        background: #333; padding: 12px; border-radius: 10px; margin: 15px 0; text-align: center;
+    }
+    .modal {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center;
+    }
+    .modal-content {
+        background: white; padding: 25px; border-radius: 15px; max-width: 420px; width: 90%;
+        text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .cash-staff-modal {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;
+    }
+    .cash-staff-content {
+        background: #fff3e0; padding: 25px; border-radius: 18px; max-width: 420px; width: 92%;
+        text-align: center; border: 5px solid #f57c00; box-shadow: 0 10px 30px rgba(245,124,0,0.5);
+    }
 </style>
 </head>
 <body>
@@ -53,18 +85,22 @@
             </p>
             <p id="staffPosLabel" style="text-align:center;color:#d84315;font-weight:bold;">STAFF POS</p>
         </div>
+
         <input id="customerName" placeholder="Customer Name (optional)">
         <input id="invoice" readonly value="INV001">
         <select id="item"></select>
         <input id="qty" type="number" placeholder="Qty" value="1" min="1">
         <button onclick="addItem()">➕ Add Item</button>
         <button onclick="voiceAdd()">🎤 Voice Add</button>
+
         <table border="1">
             <thead><tr><th>Item</th><th>Qty</th><th>Amt</th><th>X</th></tr></thead>
             <tbody id="bill"></tbody>
         </table>
+
         <label><input type="checkbox" id="gst" checked onchange="renderBill()"> GST 5%</label>
         <div class="total">Total: ₹ <span id="total">0</span></div>
+
         <button onclick="printBill()">🧾 Normal Print & Clear</button>
         <button onclick="printThermalBill()" style="background:#d84315;">🖨️ Print Thermal + Auto Cut</button>
         <button onclick="exportExcel()">📊 Export Excel</button>
@@ -72,12 +108,6 @@
         <button onclick="dailyReport()">📊 Daily Report</button>
         <button onclick="manageBills()" style="background:#d84315;">📋 Manage Bills</button>
         <button onclick="showTableOrders()" style="background:#d84315;">📋 Live Table Orders</button>
-        
-        <!-- TEST BUTTON -->
-        <button onclick="testSendToSheet()" style="background:#1976d2; margin-top:8px;">
-            🔍 Test Send to Google Sheet
-        </button>
-
         <button onclick="openKitchenDisplay()" style="background:#e65100; margin-top:8px;">🔥 Open Kitchen Display</button>
 
         <h4>Manage Menu (Real-time Sync)</h4>
@@ -85,10 +115,28 @@
         <input id="newItemPrice" type="number" placeholder="Price (₹)">
         <button onclick="addNewMenuItem()" style="background:#ff9800;">➕ Add / Update Item</button>
         <button onclick="showCurrentMenu()" style="background:#666;">📋 Show Current Menu</button>
+
         <div id="currentMenuSection" style="display:none;">
             <h4 style="color:#d84315;">Current Menu Items</h4>
             <div id="currentMenuList"></div>
             <button onclick="hideCurrentMenu()" style="background:#666; margin-top:10px;">Close Menu</button>
+        </div>
+
+        <h4>Generate QR for Table Ordering</h4>
+        <input id="qrTableNum" type="number" placeholder="Table Number">
+        <button onclick="generateQRCode()" style="background:#ff9800;">📱 Generate Table QR</button>
+        <div id="qrContainer" style="text-align:center;margin:15px 0;"></div>
+
+        <!-- Live Table Orders Section -->
+        <div id="liveOrdersSection" style="display:none; margin-top:20px;">
+            <h4 style="color:#d84315;">📋 Live Table Orders (Real-time)</h4>
+            <div id="liveOrdersContainer" style="max-height:400px; overflow-y:auto;">
+                <table id="liveOrdersTable" border="1" style="width:100%;">
+                    <thead><tr><th>Table</th><th>Customer</th><th>Total ₹</th><th>Time</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody id="liveOrdersBody"></tbody>
+                </table>
+            </div>
+            <button onclick="showTableOrders()" style="margin-top:10px;background:#666;">Close Live Orders</button>
         </div>
     </div>
 
@@ -117,7 +165,7 @@
             <div class="total">Your Total: ₹ <span id="custTotal">0</span></div>
             <button onclick="placeCustomerOrder()" id="placeOrderBtn" style="background:#d84315;">✅ Place Order for Kitchen</button>
             <div id="customerOrderStatus" style="display:none; padding:25px; margin:15px 0; border-radius:12px; text-align:center; font-size:22px; font-weight:bold; background:#2e7d32; color:white;"></div>
-       
+        
             <div class="payment-section">
                 <h4 id="paymentTitle" style="margin:12px 0 8px 0; color:#2e7d32;">💰 Payment Options</h4>
                 <input id="custWhatsApp" type="tel" placeholder="WhatsApp Number (for receipt)" maxlength="10">
@@ -149,7 +197,7 @@
     <button onclick="closeKitchenDisplay()" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); padding:15px 40px; background:#d84315; font-size:18px;">Close Kitchen Display</button>
 </div>
 
-<!-- NEW ORDER MODAL -->
+<!-- NEW ORDER / PAYMENT POPUP -->
 <div id="newOrderModal" class="modal">
     <div class="modal-content">
         <h3 id="modalTitle" style="color:#d84315;">🚨 NEW ORDER RECEIVED</h3>
@@ -159,7 +207,7 @@
     </div>
 </div>
 
-<!-- CASH STAFF MODAL -->
+<!-- CASH PAYMENT NOTIFICATION POPUP FOR STAFF -->
 <div id="cashStaffModal" class="cash-staff-modal">
     <div class="cash-staff-content">
         <h3>💵 CASH PAYMENT REQUEST</h3>
@@ -210,9 +258,11 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// ====================== GOOGLE SCRIPT ======================
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyIs4cNxuruNjywxr5MhGd3sgMZKFpQ0zbzEVRYERC8_4f6bYmNB8F8vTOLVsCcln6HBw/exec";
+// ====================== GOOGLE SHEETS CONFIG ======================
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyIs4cNxuruNjywxr5MhGd3sgMZKFpQ0zbzEVRYERC8_4f6bYmNB8F8vTOLVsCcln6HBw/exec"; 
+// ← Replace above URL with your new deployed web app URL after deploying the Apps Script
 
+// ====================== VARIABLES ======================
 let items = [];
 let bill = [];
 let customerOrder = [];
@@ -225,41 +275,128 @@ let voiceSpeed = 0.95;
 let gstEnabled = true;
 let currentPendingOrder = null;
 let currentPaymentOrder = null;
-let allBillsWithRow = [];
-let displayedBillsWithRow = [];
 
-// ====================== TEST SEND TO GOOGLE SHEET ======================
-function testSendToSheet() {
-    alert("Testing connection to Google Sheet...");
-
-    const testData = {
-        invoiceNo: "TEST-" + Date.now().toString().slice(-6),
-        type: "staff_pos",
-        tableInfo: "Test",
-        customerName: "Test User",
-        items: [{ name: "Test Rice", qty: 2, price: 150 }],
-        subtotal: 300,
-        gst: 15,
-        grandTotal: 315,
-        date: new Date().toISOString().split('T')[0]
-    };
-
-    fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(testData),
-        headers: { "Content-Type": "application/json" }
-    })
-    .then(res => {
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        return res.text();
-    })
-    .then(text => {
-        alert("✅ SUCCESS!\n\nResponse:\n" + text);
-    })
-    .catch(err => {
-        alert("❌ Failed to fetch\n\nError: " + err.message + "\n\nMake sure:\n1. You used the NEW URL after redeploy\n2. Script is deployed as 'Anyone'\n3. You redeployed after changing Code.gs");
-    });
+// ====================== GOOGLE SHEETS SYNC ======================
+async function saveBillToGoogleSheets(billData) {
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify(billData),
+            headers: { "Content-Type": "application/json" }
+        });
+        const result = await response.json();
+        return result.ok === true;
+    } catch (err) {
+        console.error("Google Sheets sync error:", err);
+        return false;
+    }
 }
+
+// ====================== SAVE BILL FROM MODAL WITH SYNC ======================
+window.saveBillFromModal = async function(orderId) {
+    closeBillOptionsModal();
+    db.ref('tableOrders/' + orderId).once('value', async (snapshot) => {
+        const order = snapshot.val();
+        if (!order || !order.items || order.items.length === 0) {
+            alert("❌ Order not found or empty!");
+            return;
+        }
+
+        let subtotal = 0;
+        order.items.forEach(item => {
+            subtotal += (item.qty || 1) * (item.price || 0);
+        });
+        const gst = Math.round(subtotal * 0.05);
+        const grandTotal = subtotal + gst;
+
+        const billDataForSheets = {
+            invoiceNo: `INV-${String(order.id || Date.now()).slice(-6)}`,
+            type: "table_order",
+            tableInfo: `Table ${order.table || 'Walk-in'}`,
+            customerName: order.name || 'Guest',
+            items: order.items.map(item => ({
+                name: item.name_en || item.name,
+                qty: item.qty || 1,
+                price: item.price || 0
+            })),
+            subtotal: subtotal,
+            gst: gst,
+            grandTotal: grandTotal,
+            date: new Date().toISOString().split('T')[0]
+        };
+
+        const syncSuccess = await saveBillToGoogleSheets(billDataForSheets);
+
+        // Generate and download HTML bill
+        let billHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill - Table ${order.table}</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 420px; margin: 0 auto; background: #f8f9fa; }
+        .bill { background: white; border: 4px solid #d84315; border-radius: 16px; padding: 25px; box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #d84315; margin: 5px 0; }
+        .subtitle { text-align: center; color: #555; font-size: 14px; }
+        .info { margin: 18px 0; line-height: 1.6; }
+        table { width: 100%; border-collapse: collapse; margin: 18px 0; }
+        th, td { padding: 10px 8px; border-bottom: 1px solid #ddd; }
+        th { background: #fff3e0; color: #d84315; }
+        .amount { text-align: right; }
+        .grand-total { font-size: 19px; font-weight: bold; color: #d84315; text-align: right; border-top: 2px solid #d84315; padding-top: 10px; }
+        .footer { text-align: center; margin-top: 25px; color: #666; font-size: 13.5px; }
+    </style>
+</head>
+<body>
+    <div class="bill">
+        <h2>Shree & Shriyan Dhaba</h2>
+        <p class="subtitle">Durlaga, Jharsuguda, Odisha • +91 7077088311</p>
+        <div class="info">
+            <strong>Table:</strong> ${order.table}<br>
+            <strong>Customer:</strong> ${order.name || 'Guest'}<br>
+            <strong>Date:</strong> ${order.timestamp || new Date().toLocaleString()}<br>
+            <strong>Invoice:</strong> ${billDataForSheets.invoiceNo}
+        </div>
+        <table>
+            <thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Rate</th><th class="amount">Amount</th></tr></thead>
+            <tbody>`;
+        
+        order.items.forEach(item => {
+            const amt = (item.qty || 1) * (item.price || 0);
+            billHTML += `<tr><td>${item.name_en || item.name}</td><td style="text-align:center">${item.qty || 1}</td><td style="text-align:right">₹${item.price || 0}</td><td class="amount">₹${amt}</td></tr>`;
+        });
+
+        billHTML += `</tbody></table>
+        <div style="margin-top:15px;">
+            <div>Subtotal: ₹${subtotal}</div>
+            <div>GST (5%): ₹${gst}</div>
+            <div class="grand-total">Grand Total: ₹${grandTotal}</div>
+        </div>
+        <div class="footer">
+            <p>Thank You! Visit Again 😊</p>
+            <p>UPI: 8847810037jp@ybl</p>
+        </div>
+    </div>
+</body></html>`;
+
+        const blob = new Blob([billHTML], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Bill_Table${order.table}_${new Date().toISOString().slice(0,10)}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        if (syncSuccess) {
+            alert(`✅ Bill for Table ${order.table} downloaded AND synchronized with Google Sheet successfully!`);
+        } else {
+            alert(`✅ Bill downloaded.\n⚠️ Failed to sync with Google Sheet (check internet).`);
+        }
+    });
+};
 
 // ====================== SPEECH ======================
 function speak(text, lang = 'en') {
@@ -271,7 +408,6 @@ function speak(text, lang = 'en') {
     speechSynthesis.cancel();
     speechSynthesis.speak(utterance);
 }
-
 function updateVoiceSpeed(value) {
     voiceSpeed = parseFloat(value);
     document.getElementById('speedValue').textContent = voiceSpeed.toFixed(2) + 'x';
@@ -425,8 +561,7 @@ function showCashStaffPopup(data) {
     detailsDiv.innerHTML = `
         <strong>Table: ${data.table}</strong><br>
         Customer: ${data.name}<br><br>
-        <strong>Items:</strong><br>
-        ${itemsHtml}<br>
+        <strong>Items:</strong><br>${itemsHtml}<br>
         <strong style="color:#d84315; font-size:18px;">Total Amount: ₹${data.total}</strong><br><br>
         <span style="color:#2e7d32;">Please collect cash from the customer.</span>
     `;
@@ -497,87 +632,6 @@ function sendCustomerBillToWhatsApp(mobile) {
     alert(`✅ Bill sent to +91${mobile}`);
 }
 
-// ====================== SAVE BILL FROM MODAL ======================
-window.saveBillFromModal = function(orderId) {
-    closeBillOptionsModal();
-    db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
-        const order = snapshot.val();
-        if (!order || !order.items || order.items.length === 0) {
-            alert("❌ Order not found or empty!");
-            return;
-        }
-        let subtotal = 0;
-        order.items.forEach(item => {
-            subtotal += (item.qty || 1) * (item.price || 0);
-        });
-        const gst = Math.round(subtotal * 0.05);
-        const grandTotal = subtotal + gst;
-        let billHTML = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bill - Table ${order.table}</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 420px; margin: 0 auto; background: #f8f9fa; }
-        .bill { background: white; border: 4px solid #d84315; border-radius: 16px; padding: 25px; box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #d84315; margin: 5px 0; }
-        .subtitle { text-align: center; color: #555; font-size: 14px; }
-        .info { margin: 18px 0; line-height: 1.6; }
-        table { width: 100%; border-collapse: collapse; margin: 18px 0; }
-        th, td { padding: 10px 8px; border-bottom: 1px solid #ddd; }
-        th { background: #fff3e0; color: #d84315; }
-        .amount { text-align: right; }
-        .grand-total { font-size: 19px; font-weight: bold; color: #d84315; text-align: right; border-top: 2px solid #d84315; padding-top: 10px; }
-        .footer { text-align: center; margin-top: 25px; color: #666; font-size: 13.5px; }
-    </style>
-</head>
-<body>
-    <div class="bill">
-        <h2>Shree & Shriyan Dhaba</h2>
-        <p class="subtitle">Durlaga, Jharsuguda, Odisha • +91 7077088311</p>
-        <div class="info">
-            <strong>Table:</strong> ${order.table}<br>
-            <strong>Customer:</strong> ${order.name || 'Guest'}<br>
-            <strong>Date:</strong> ${order.timestamp || new Date().toLocaleString()}<br>
-            <strong>Invoice:</strong> INV-${String(order.id).slice(-6)}
-        </div>
-        <table>
-            <thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Rate</th><th class="amount">Amount</th></tr></thead>
-            <tbody>`;
-        order.items.forEach(item => {
-            const amt = (item.qty || 1) * (item.price || 0);
-            billHTML += `<tr><td>${item.name_en || item.name}</td><td style="text-align:center">${item.qty || 1}</td><td style="text-align:right">₹${item.price || 0}</td><td class="amount">₹${amt}</td></tr>`;
-        });
-        billHTML += `
-            </tbody>
-        </table>
-        <div style="margin-top:15px;">
-            <div>Subtotal: ₹${subtotal}</div>
-            <div>GST (5%): ₹${gst}</div>
-            <div class="grand-total">Grand Total: ₹${grandTotal}</div>
-        </div>
-        <div class="footer">
-            <p>Thank You! Visit Again 😊</p>
-            <p>UPI: 8847810037jp@ybl</p>
-        </div>
-    </div>
-</body>
-</html>`;
-        const blob = new Blob([billHTML], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Bill_Table${order.table}_${new Date().toISOString().slice(0,10)}.html`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        alert(`✅ Bill for Table ${order.table} downloaded successfully!`);
-    });
-};
-
 // ====================== MODAL FUNCTIONS ======================
 function showNewOrderPopup(order) {
     currentPendingOrder = order;
@@ -609,7 +663,6 @@ function acceptLiveOrder(orderId) {
         const order = snapshot.val();
         if (!order) return;
         db.ref('tableOrders/' + orderId + '/status').set("accepted");
-        saveTableOrderToGoogleSheets(order);
         showBillOptionsModal(order);
     });
 }
@@ -683,40 +736,6 @@ window.sendWhatsAppFromModal = function(orderId) {
         window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
     });
 };
-
-// ====================== SAVE TABLE ORDER TO GOOGLE SHEETS ======================
-function saveTableOrderToGoogleSheets(order) {
-    if (!order || !order.items || order.items.length === 0) return;
-    let subtotal = 0;
-    const billItems = order.items.map(item => {
-        const qty = parseInt(item.qty) || 1;
-        const price = parseFloat(item.price) || 0;
-        subtotal += qty * price;
-        return { name: item.name_en || item.name || 'Unknown', qty: qty, price: price };
-    });
-    const gst = Math.round(subtotal * 0.05);
-    const grandTotal = subtotal + gst;
-    const billData = {
-        invoiceNo: "TBL-" + String(order.id || Date.now()).slice(-6),
-        type: "table_order",
-        tableInfo: `Table ${order.table || 'Walk-in'}`,
-        customerName: order.name || 'Guest',
-        items: billItems,
-        subtotal: subtotal,
-        gst: gst,
-        grandTotal: grandTotal,
-        date: new Date(order.timestamp || Date.now()).toISOString().split('T')[0]
-    };
-
-    fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(billData),
-        headers: { "Content-Type": "application/json" }
-    })
-    .then(res => res.text())
-    .then(text => console.log("Table order saved:", text))
-    .catch(err => console.error("Save failed:", err));
-}
 
 // ====================== MENU ======================
 function loadAndListenMenu() {
@@ -795,12 +814,10 @@ function renderCurrentMenu() {
             <strong style="font-size:16px;">${item.name_en}</strong><br>
             <small>Hindi: ${item.name_hi || '-'} | Odia: ${item.name_or || '-'}</small><br>
             <strong>Price: ₹${item.price}</strong><br><br>
-            <button onclick="toggleAvailability(${index})" style="background:${isAvailable ? '#f44336' : '#4caf50'};color:white;padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">
+            <button onclick="toggleAvailability(${index})" style="background:${isAvailable ? '#f44336' : '#4caf50'}; color:white; padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">
                 ${isAvailable ? '🚫 Mark Not Available' : '✅ Mark Available'}
             </button>
-            <button onclick="deleteMenuItem(${index})" style="background:#e74c3c;color:white;padding:8px 16px;border:none;border-radius:6px;cursor:pointer;margin-left:8px;">
-                Delete
-            </button>
+            <button onclick="deleteMenuItem(${index})" style="background:#e74c3c; color:white; padding:8px 16px; border:none; border-radius:6px; cursor:pointer; margin-left:8px;">Delete</button>
         `;
         container.appendChild(div);
     });
@@ -874,18 +891,11 @@ function printBill() {
         date: new Date().toISOString().split('T')[0]
     };
 
-    fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(billData),
-        headers: { "Content-Type": "application/json" }
-    })
-    .then(res => res.text())
-    .then(text => console.log("Bill saved:", text))
-    .catch(err => console.error("Google Sheets save failed:", err));
+    saveBillToGoogleSheets(billData);
 
     const printWindow = window.open('', '_blank');
     let htmlContent = '<html><head><title>Bill - Shree & Shriyan Dhaba</title>';
-    htmlContent += '<style>body{font-family:monospace;padding:20px;max-width:300px;margin:auto;}table{width:100%;border-collapse:collapse;}th,td{border-bottom:1px dotted #000;padding:4px 0;text-align:center;} img{display:block;margin:10px auto;}</style></head><body>';
+    htmlContent += '<style>body{font-family:monospace;padding:20px;max-width:300px;margin:auto;}table{width:100%;border-collapse:collapse;}th,td{border-bottom:1px dotted #000;padding:4px 0;text-align:center;}</style></head><body>';
     htmlContent += '<div style="text-align:center;">';
     htmlContent += '<img src="./logo_180x90.jpg" alt="Shree & Shriyan Dhaba" style="max-width:180px;height:auto;">';
     htmlContent += '<h2>Shree & Shriyan Dhaba</h2>';
@@ -963,14 +973,11 @@ function sendWhatsApp() {
     window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-// ====================== DAILY REPORT ======================
 function dailyReport() {
     const today = new Date().toISOString().split('T')[0];
     fetch(`${GOOGLE_SCRIPT_URL}?date=${today}`)
-        .then(res => res.text())
-        .then(text => {
-            let bills = [];
-            try { bills = JSON.parse(text); } catch(e) {}
+        .then(res => res.json())
+        .then(bills => {
             if (bills.length === 0) return alert("No bills found for today!");
             const dataForExcel = bills.map(b => ({
                 Timestamp: b[0],
@@ -989,10 +996,7 @@ function dailyReport() {
             XLSX.writeFile(wb, `Dhaba_Daily_Report_${today}.xlsx`);
             alert(`✅ Daily Report Exported Successfully!\nTotal Bills: ${bills.length}\nTotal Sales Today: ₹${bills.reduce((sum, b) => sum + (parseFloat(b[8])||0), 0)}`);
         })
-        .catch(err => {
-            console.error(err);
-            alert("Cannot connect to Google Sheet.\nPlease check your internet connection.");
-        });
+        .catch(err => alert("Cannot connect to Google Sheet.\nPlease check your internet connection."));
 }
 
 // ====================== LIVE TABLE ORDERS ======================
@@ -1036,7 +1040,105 @@ function deleteLiveOrder(orderId) {
     db.ref('tableOrders/' + orderId).remove();
 }
 
-// ====================== CUSTOMER SIDE FUNCTIONS ======================
+// ====================== MANAGE BILLS ======================
+let allBillsData = [];
+function manageBills() {
+    const modalHTML = `
+    <div id="manageBillsModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:100000;display:flex;align-items:center;justify-content:center;">
+        <div style="background:white;width:95%;max-width:920px;max-height:90vh;border-radius:15px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.4);">
+            <div style="background:#d84315;color:white;padding:15px 20px;font-size:20px;font-weight:bold;display:flex;justify-content:space-between;">
+                <span>🗑️ Manage & Delete Bills</span>
+                <span onclick="closeManageModal()" style="cursor:pointer;font-size:28px;">×</span>
+            </div>
+            <div style="padding:20px;overflow:auto;max-height:70vh;" id="billsTableContainer">
+                <p style="text-align:center;color:#666;">Loading bills from Google Sheet...</p>
+            </div>
+            <div style="padding:15px;background:#f8f9fa;text-align:right;">
+                <button onclick="closeManageModal()" style="padding:10px 25px;background:#666;color:white;border:none;border-radius:8px;margin-right:10px;">Close</button>
+            </div>
+        </div>
+    </div>`;
+    if (document.getElementById('manageBillsModal')) document.getElementById('manageBillsModal').remove();
+    const div = document.createElement('div');
+    div.innerHTML = modalHTML;
+    document.body.appendChild(div.firstElementChild);
+    loadAllBills();
+}
+function loadAllBills() {
+    fetch(`${GOOGLE_SCRIPT_URL}?action=all`)
+        .then(res => res.json())
+        .then(bills => {
+            allBillsData = bills;
+            renderBillsTable(bills);
+        })
+        .catch(() => {
+            document.getElementById('billsTableContainer').innerHTML = `<p style="color:red;text-align:center;">Failed to load bills.<br>Check internet connection.</p>`;
+        });
+}
+function renderBillsTable(bills) {
+    if (bills.length === 0) {
+        document.getElementById('billsTableContainer').innerHTML = `<p style="text-align:center;color:#999;">No bills found in Google Sheet.</p>`;
+        return;
+    }
+    let html = `<table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#fff3e0;"><th style="padding:12px;border:1px solid #ddd;text-align:left;">Date</th><th style="padding:12px;border:1px solid #ddd;">Invoice No</th><th style="padding:12px;border:1px solid #ddd;">Type</th><th style="padding:12px;border:1px solid #ddd;">Customer / Table</th><th style="padding:12px;border:1px solid #ddd;text-align:right;">Amount</th><th style="padding:12px;border:1px solid #ddd;width:110px;">Action</th></tr></thead><tbody>`;
+    bills.forEach((bill, index) => {
+        const rowNumber = index + 2;
+        const grandTotal = parseFloat(bill[8]) || 0;
+        const display = bill[3] ? `${bill[3]} - ${bill[4] || 'Guest'}` : (bill[4] || 'Guest');
+        html += `<tr style="border-bottom:1px solid #ddd;">
+            <td style="padding:12px;">${bill[9]||'N/A'}</td>
+            <td style="padding:12px;font-weight:bold;">${bill[1]||'N/A'}</td>
+            <td style="padding:12px;">${bill[2]||'staff_pos'}</td>
+            <td style="padding:12px;">${display}</td>
+            <td style="padding:12px;text-align:right;font-weight:bold;color:#d84315;">₹${grandTotal}</td>
+            <td style="padding:12px;">
+                <button onclick="deleteBill(${rowNumber})" style="background:#e74c3c;color:white;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;">🗑️ Delete</button>
+            </td>
+        </tr>`;
+    });
+    html += `</tbody></table>`;
+    document.getElementById('billsTableContainer').innerHTML = html;
+}
+window.deleteBill = function(rowIndex) {
+    if (!confirm("⚠️ Delete this bill permanently from Google Sheet?\nThis action cannot be undone!")) return;
+    fetch(`${GOOGLE_SCRIPT_URL}?action=delete&rowIndex=${rowIndex}`)
+        .then(res => res.json())
+        .then(() => {
+            alert("✅ Bill deleted successfully!");
+            loadAllBills();
+        })
+        .catch(() => alert("Error deleting bill. Please try again."));
+};
+function closeManageModal() {
+    const modal = document.getElementById('manageBillsModal');
+    if (modal) modal.remove();
+}
+
+// ====================== REAL-TIME LISTENER ======================
+db.ref('tableOrders').on('child_added', (snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
+    const staffView = document.getElementById('staffView');
+    const isStaffPage = staffView && staffView.style.display !== 'none';
+    if (data.type === "order" && data.status === "pending") {
+        let receivedMsg = `ORDER RECEIVED FROM TABLE ${data.table} ${data.name || 'Guest'}`;
+        if (data.lang === 'hi') receivedMsg = `टेबल ${data.table} ${data.name || 'Guest'} से ऑर्डर प्राप्त हुआ`;
+        else if (data.lang === 'or') receivedMsg = `ଟେବୁଲ ${data.table} ${data.name || 'Guest'} ରୁ ଅର୍ଡର ପ୍ରାପ୍ତ ହୋଇଛି`;
+        speak(receivedMsg, data.lang || 'en');
+        showNewOrderPopup(data);
+    }
+    else if (data.type === "cash_payment_notification" && data.status === "cash_pending") {
+        if (isStaffPage) {
+            let cashMsg = `CASH PAYMENT REQUEST - TABLE ${data.table} - ₹${data.total || 0} - ${data.name || 'Guest'}`;
+            if (data.lang === 'hi') cashMsg = `टेबल ${data.table} - ₹${data.total || 0} - कैश पेमेंट रिक्वेस्ट - ${data.name || 'Guest'}`;
+            else if (data.lang === 'or') cashMsg = `ଟେବୁଲ ${data.table} - ₹${data.total || 0} - କ୍ୟାଶ୍ ପେମେଣ୍ଟ ରିକ୍ୱେଷ୍ଟ - ${data.name || 'Guest'}`;
+            speak(cashMsg, 'en');
+            showCashStaffPopup(data);
+        }
+    }
+});
+
+// ====================== CUSTOMER SIDE ======================
 function generateDynamicPhonePeQR() {
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
     const container = document.getElementById("dynamicPhonePeQR");
@@ -1045,7 +1147,7 @@ function generateDynamicPhonePeQR() {
         return;
     }
     const txnNote = `Table${currentTable}_${Date.now()}`;
-    const upiLink = `upi://pay?pa=${MERCHANT_UPI}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${total.toFixed(2)}&cu=INR&tn=${encodeURIComponent(txnNote)}`;
+    const upiLink = `upi://pay?pa=8847810037jp@ybl&pn=${encodeURIComponent("Shree & Shriyan Dhaba")}&am=${total.toFixed(2)}&cu=INR&tn=${encodeURIComponent(txnNote)}`;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(upiLink)}`;
     container.innerHTML = `<img src="${qrUrl}" style="cursor:pointer;" onclick="window.open('${upiLink}','_blank')" alt="UPI QR"><p style="margin:8px 0 0 0; font-weight:bold; color:#6739B7;">₹${total.toFixed(2)} — Tap to Pay</p>`;
     container.style.display = "block";
@@ -1092,7 +1194,7 @@ function loadCustomerMenu() {
                 <small>₹${item.price}</small>
                 ${!isAvailable ? '<br><small style="color:#f44336; font-weight:bold;">(Not Available Today)</small>' : ''}
             </span>
-            <button onclick="addCustomerItem(${idx})" style="background:${isAvailable ? '#2e7d32' : '#999'};padding:8px 16px;border-radius:6px;cursor: ${isAvailable ? 'pointer' : 'not-allowed'};" ${!isAvailable ? 'disabled' : ''}>
+            <button onclick="addCustomerItem(${idx})" style="background:${isAvailable ? '#2e7d32' : '#999'}; padding:8px 16px; border-radius:6px; cursor: ${isAvailable ? 'pointer' : 'not-allowed'};" ${!isAvailable ? 'disabled' : ''}>
                 ${isAvailable ? '+ Add' : 'Not Available'}
             </button>
         </div>`;
@@ -1153,18 +1255,17 @@ function showCustomerCashConfirmation() {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = modalHTML;
     document.body.appendChild(tempDiv.firstElementChild);
-    setTimeout(() => {
-        let timeLeft = 8;
-        const timerElement = document.getElementById('seconds');
-        const countdownInterval = setInterval(() => {
-            timeLeft--;
-            if (timerElement) timerElement.textContent = timeLeft;
-            if (timeLeft <= 0) {
-                clearInterval(countdownInterval);
-                closeCustomerCashModal();
-            }
-        }, 1000);
-    }, 100);
+
+    let timeLeft = 8;
+    const timerElement = document.getElementById('seconds');
+    const countdownInterval = setInterval(() => {
+        timeLeft--;
+        if (timerElement) timerElement.textContent = timeLeft;
+        if (timeLeft <= 0) {
+            clearInterval(countdownInterval);
+            closeCustomerCashModal();
+        }
+    }, 1000);
 }
 
 window.closeCustomerCashModal = function() {
