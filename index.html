@@ -73,7 +73,6 @@
         <button class="lang-btn" onclick="changeLanguage('hi')">हिंदी</button>
         <button class="lang-btn" onclick="changeLanguage('or')">ଓଡ଼ିଆ</button>
     </div>
-
     <!-- STAFF POS VIEW -->
     <div id="staffView">
         <div class="logo">
@@ -85,22 +84,18 @@
             </p>
             <p id="staffPosLabel" style="text-align:center;color:#d84315;font-weight:bold;">STAFF POS</p>
         </div>
-
         <input id="customerName" placeholder="Customer Name (optional)">
         <input id="invoice" readonly value="INV001">
         <select id="item"></select>
         <input id="qty" type="number" placeholder="Qty" value="1" min="1">
         <button onclick="addItem()">➕ Add Item</button>
         <button onclick="voiceAdd()">🎤 Voice Add</button>
-
         <table border="1">
             <thead><tr><th>Item</th><th>Qty</th><th>Amt</th><th>X</th></tr></thead>
             <tbody id="bill"></tbody>
         </table>
-
         <label><input type="checkbox" id="gst" checked onchange="renderBill()"> GST 5%</label>
         <div class="total">Total: ₹ <span id="total">0</span></div>
-
         <button onclick="printBill()">🧾 Normal Print & Clear</button>
         <button onclick="printThermalBill()" style="background:#d84315;">🖨️ Print Thermal + Auto Cut</button>
         <button onclick="exportExcel()">📊 Export Excel</button>
@@ -109,24 +104,20 @@
         <button onclick="manageBills()" style="background:#d84315;">📋 Manage Bills</button>
         <button onclick="showTableOrders()" style="background:#d84315;">📋 Live Table Orders</button>
         <button onclick="openKitchenDisplay()" style="background:#e65100; margin-top:8px;">🔥 Open Kitchen Display</button>
-
         <h4>Manage Menu (Real-time Sync)</h4>
         <input id="newItemName" placeholder="New Item Name (English)">
         <input id="newItemPrice" type="number" placeholder="Price (₹)">
         <button onclick="addNewMenuItem()" style="background:#ff9800;">➕ Add / Update Item</button>
         <button onclick="showCurrentMenu()" style="background:#666;">📋 Show Current Menu</button>
-
         <div id="currentMenuSection" style="display:none;">
             <h4 style="color:#d84315;">Current Menu Items</h4>
             <div id="currentMenuList"></div>
             <button onclick="hideCurrentMenu()" style="background:#666; margin-top:10px;">Close Menu</button>
         </div>
-
         <h4>Generate QR for Table Ordering</h4>
         <input id="qrTableNum" type="number" placeholder="Table Number">
         <button onclick="generateQRCode()" style="background:#ff9800;">📱 Generate Table QR</button>
         <div id="qrContainer" style="text-align:center;margin:15px 0;"></div>
-
         <!-- Live Table Orders Section -->
         <div id="liveOrdersSection" style="display:none; margin-top:20px;">
             <h4 style="color:#d84315;">📋 Live Table Orders (Real-time)</h4>
@@ -139,7 +130,6 @@
             <button onclick="showTableOrders()" style="margin-top:10px;background:#666;">Close Live Orders</button>
         </div>
     </div>
-
     <!-- CUSTOMER VIEW -->
     <div id="customerView" style="display:none;">
         <div class="logo">
@@ -165,7 +155,7 @@
             <div class="total">Your Total: ₹ <span id="custTotal">0</span></div>
             <button onclick="placeCustomerOrder()" id="placeOrderBtn" style="background:#d84315;">✅ Place Order for Kitchen</button>
             <div id="customerOrderStatus" style="display:none; padding:25px; margin:15px 0; border-radius:12px; text-align:center; font-size:22px; font-weight:bold; background:#2e7d32; color:white;"></div>
-        
+      
             <div class="payment-section">
                 <h4 id="paymentTitle" style="margin:12px 0 8px 0; color:#2e7d32;">💰 Payment Options</h4>
                 <input id="custWhatsApp" type="tel" placeholder="WhatsApp Number (for receipt)" maxlength="10">
@@ -181,7 +171,6 @@
         </div>
     </div>
 </div>
-
 <!-- KITCHEN DISPLAY -->
 <div id="kitchenView" class="kitchen-view">
     <div class="kitchen-header">
@@ -196,7 +185,6 @@
     <div class="kitchen-orders" id="kitchenOrdersContainer"></div>
     <button onclick="closeKitchenDisplay()" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); padding:15px 40px; background:#d84315; font-size:18px;">Close Kitchen Display</button>
 </div>
-
 <!-- NEW ORDER / PAYMENT POPUP -->
 <div id="newOrderModal" class="modal">
     <div class="modal-content">
@@ -206,7 +194,6 @@
         <button onclick="closeNewOrderModal()" style="background:#666; padding:12px; font-size:18px; margin-left:10px;">Close</button>
     </div>
 </div>
-
 <!-- CASH PAYMENT NOTIFICATION POPUP FOR STAFF -->
 <div id="cashStaffModal" class="cash-staff-modal">
     <div class="cash-staff-content">
@@ -215,7 +202,6 @@
         <button onclick="closeCashStaffModal()" style="background:#2e7d32; padding:12px 30px; font-size:17px;">✅ OK - I Will Collect</button>
     </div>
 </div>
-
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
@@ -226,7 +212,6 @@ const langData = {
     or: { staffTitle: "ଶ୍ରୀ ଏଣ୍ଡ ଶ୍ରୀୟାନ ଢାବା", staffPosLabel: "ଷ୍ଟାଫ POS", welcomeText: "ସ୍ୱାଗତ!", custTitle: "ଶ୍ରୀ ଏଣ୍ଡ ଶ୍ରୀୟାନ ଢାବା", custLabel: "ଟେବୁଲ ଅର୍ଡରିଂ", startOrdering: "✅ ଅର୍ଡରିଂ ଆରମ୍ଭ କରନ୍ତୁ", placeOrderKitchen: "✅ କିଚେନ୍ ପାଇଁ ଅର୍ଡର ପ୍ଲେସ୍ କରନ୍ତୁ", paymentTitle: "💰 ପେମେଣ୍ଟ ବିକଳ୍ପ", iHavePaid: "✅ ମୁଁ ପେମେଣ୍ଟ କରିଛି - ୱାଟ୍ସଆପ୍ ରେ ରସିଦ ପାଆନ୍ତୁ", clearCart: "🗑️ କାର୍ଟ ଖାଲି କରନ୍ତୁ" }
 };
 let currentLang = 'en';
-
 function changeLanguage(lang) {
     currentLang = lang;
     document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
@@ -244,7 +229,6 @@ function changeLanguage(lang) {
     document.getElementById('clearCartBtn').textContent = t.clearCart;
     if (document.getElementById("menuSection").style.display !== "none") loadCustomerMenu();
 }
-
 // ====================== FIREBASE ======================
 const firebaseConfig = {
   apiKey: "AIzaSyCOtpaUWrVF6yAsHv9b-gj_OA0p5_hWAQ4",
@@ -257,11 +241,8 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-
 // ====================== GOOGLE SHEETS CONFIG ======================
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxoNkvH9Z8JwoJp73tKhAoWI1CLgWbupADm1VeSpIa7aDpjNnGna1KlNnRkN7ESHcGE8Q/exec"; 
-// ← Replace above URL with your new deployed web app URL after deploying the Apps Script
-
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwcclXtDoV9i31jA4DF3YBvqAVCjnCyxp47sKz4spNrOL-ZjTpa7yWul0ki0KH3xjzfww/exec";
 // ====================== VARIABLES ======================
 let items = [];
 let bill = [];
@@ -275,11 +256,12 @@ let voiceSpeed = 0.95;
 let gstEnabled = true;
 let currentPendingOrder = null;
 let currentPaymentOrder = null;
-
+let allBillsData = [];
+let currentFilterFrom = null;
+let currentFilterTo = null;
 // ==================== GOOGLE SHEETS SYNC ====================
 async function saveBillToGoogleSheets(billData) {
   console.log("Sending bill to Google Sheet...", billData);
-
   try {
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
@@ -288,12 +270,9 @@ async function saveBillToGoogleSheets(billData) {
       },
       body: JSON.stringify(billData)
     });
-
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
     const result = await response.json();
     console.log("Server response:", result);
-
     if (result.ok) {
       console.log("✅ Bill synced to Google Sheet successfully!");
       return true;
@@ -316,14 +295,12 @@ window.saveBillFromModal = async function(orderId) {
             alert("❌ Order not found or empty!");
             return;
         }
-
         let subtotal = 0;
         order.items.forEach(item => {
             subtotal += (item.qty || 1) * (item.price || 0);
         });
         const gst = Math.round(subtotal * 0.05);
         const grandTotal = subtotal + gst;
-
         const billDataForSheets = {
             invoiceNo: `INV-${String(order.id || Date.now()).slice(-6)}`,
             type: "table_order",
@@ -339,9 +316,7 @@ window.saveBillFromModal = async function(orderId) {
             grandTotal: grandTotal,
             date: new Date().toISOString().split('T')[0]
         };
-
         const syncSuccess = await saveBillToGoogleSheets(billDataForSheets);
-
         // Generate and download HTML bill
         let billHTML = `<!DOCTYPE html>
 <html lang="en">
@@ -376,12 +351,11 @@ window.saveBillFromModal = async function(orderId) {
         <table>
             <thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Rate</th><th class="amount">Amount</th></tr></thead>
             <tbody>`;
-        
+      
         order.items.forEach(item => {
             const amt = (item.qty || 1) * (item.price || 0);
             billHTML += `<tr><td>${item.name_en || item.name}</td><td style="text-align:center">${item.qty || 1}</td><td style="text-align:right">₹${item.price || 0}</td><td class="amount">₹${amt}</td></tr>`;
         });
-
         billHTML += `</tbody></table>
         <div style="margin-top:15px;">
             <div>Subtotal: ₹${subtotal}</div>
@@ -394,7 +368,6 @@ window.saveBillFromModal = async function(orderId) {
         </div>
     </div>
 </body></html>`;
-
         const blob = new Blob([billHTML], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -404,7 +377,6 @@ window.saveBillFromModal = async function(orderId) {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-
         if (syncSuccess) {
             alert(`✅ Bill for Table ${order.table} downloaded AND synchronized with Google Sheet successfully!`);
         } else {
@@ -412,7 +384,6 @@ window.saveBillFromModal = async function(orderId) {
         }
     });
 };
-
 // ====================== SPEECH ======================
 function speak(text, lang = 'en') {
     if (!('speechSynthesis' in window)) return;
@@ -427,7 +398,6 @@ function updateVoiceSpeed(value) {
     voiceSpeed = parseFloat(value);
     document.getElementById('speedValue').textContent = voiceSpeed.toFixed(2) + 'x';
 }
-
 // ====================== KITCHEN DISPLAY ======================
 function openKitchenDisplay() {
     document.getElementById('kitchenView').style.display = 'block';
@@ -488,7 +458,6 @@ window.updateOrderStatus = function(orderId, status) {
         }
     });
 };
-
 // ====================== CUSTOMER ORDER ======================
 function placeCustomerOrder() {
     if (customerOrder.length === 0) return alert("Cart is empty!");
@@ -532,7 +501,6 @@ function listenToCustomerOrderStatus() {
         }
     });
 }
-
 // ====================== PAYMENT FUNCTIONS ======================
 function notifyStaffAboutPayment(paymentData) {
     currentPaymentOrder = paymentData;
@@ -542,7 +510,6 @@ function notifyStaffAboutPayment(paymentData) {
     document.getElementById('modalOrderDetails').innerHTML = details;
     document.getElementById('newOrderModal').style.display = 'flex';
 }
-
 function notifyCashPaymentToStaff() {
     if (customerOrder.length === 0) return;
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
@@ -562,7 +529,6 @@ function notifyCashPaymentToStaff() {
     let msg = `CASH PAYMENT REQUEST - TABLE ${currentTable} - ₹${total} - ${currentName}`;
     speak(msg, 'en');
 }
-
 function showCashStaffPopup(data) {
     const staffView = document.getElementById('staffView');
     if (!staffView || staffView.style.display === 'none') return;
@@ -582,7 +548,6 @@ function showCashStaffPopup(data) {
     `;
     modal.style.display = 'flex';
 }
-
 function closeCashStaffModal() {
     const modal = document.getElementById('cashStaffModal');
     modal.style.display = 'none';
@@ -591,7 +556,6 @@ function closeCashStaffModal() {
         currentPaymentOrder = null;
     }
 }
-
 function markAsPaid() {
     const whatsappNum = document.getElementById("custWhatsApp").value.trim();
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
@@ -613,7 +577,6 @@ function markAsPaid() {
     };
     notifyStaffAboutPayment(paymentData);
 }
-
 function payByCash() {
     if (customerOrder.length === 0) return alert("Cart is empty!");
     notifyCashPaymentToStaff();
@@ -622,7 +585,6 @@ function payByCash() {
     showCustomerCashConfirmation();
     speakCustomerCashConfirmation();
 }
-
 function sendCustomerBillToWhatsApp(mobile) {
     if (customerOrder.length === 0) return;
     let msg = `*Shree & Shriyan Dhaba*\n\n`;
@@ -646,7 +608,6 @@ function sendCustomerBillToWhatsApp(mobile) {
     renderCustomerOrder();
     alert(`✅ Bill sent to +91${mobile}`);
 }
-
 // ====================== MODAL FUNCTIONS ======================
 function showNewOrderPopup(order) {
     currentPendingOrder = order;
@@ -656,13 +617,11 @@ function showNewOrderPopup(order) {
     document.getElementById('modalOrderDetails').innerHTML = details;
     document.getElementById('newOrderModal').style.display = 'flex';
 }
-
 function closeNewOrderModal() {
     document.getElementById('newOrderModal').style.display = 'none';
     currentPendingOrder = null;
     currentPaymentOrder = null;
 }
-
 function acceptAndPrintFromModal() {
     closeNewOrderModal();
     if (currentPaymentOrder) {
@@ -672,7 +631,6 @@ function acceptAndPrintFromModal() {
         acceptLiveOrder(currentPendingOrder.id);
     }
 }
-
 function acceptLiveOrder(orderId) {
     db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
         const order = snapshot.val();
@@ -681,7 +639,6 @@ function acceptLiveOrder(orderId) {
         showBillOptionsModal(order);
     });
 }
-
 function showBillOptionsModal(order) {
     if (!order || !order.id) return alert("Invalid order data!");
     let modalHTML = `
@@ -701,12 +658,10 @@ function showBillOptionsModal(order) {
     tempDiv.innerHTML = modalHTML;
     document.body.appendChild(tempDiv.firstElementChild);
 }
-
 window.closeBillOptionsModal = function() {
     const modals = document.querySelectorAll('.modal');
     if (modals.length) modals[modals.length-1].remove();
 };
-
 window.printNormalFromModal = function(orderId) {
     closeBillOptionsModal();
     db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
@@ -717,7 +672,6 @@ window.printNormalFromModal = function(orderId) {
         alert("✅ Normal Print & Clear done");
     });
 };
-
 window.printThermalFromModal = function(orderId) {
     closeBillOptionsModal();
     db.ref('tableOrders/' + orderId).once('value', (snapshot) => {
@@ -728,7 +682,6 @@ window.printThermalFromModal = function(orderId) {
         alert("✅ Thermal Print + Auto Cut done");
     });
 };
-
 window.sendWhatsAppFromModal = function(orderId) {
     closeBillOptionsModal();
     const mobile = prompt("Enter 10 digit mobile number:");
@@ -751,7 +704,6 @@ window.sendWhatsAppFromModal = function(orderId) {
         window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
     });
 };
-
 // ====================== MENU ======================
 function loadAndListenMenu() {
     db.ref('menu').on('value', (snapshot) => {
@@ -852,7 +804,6 @@ function toggleAvailability(index) {
     saveMenu();
     renderCurrentMenu();
 }
-
 // ====================== STAFF BILLING ======================
 function addItem() {
     const idx = document.getElementById("item").value;
@@ -884,7 +835,6 @@ function removeItem(i) {
 function voiceAdd() {
     alert("🎤 Voice Add feature coming soon.");
 }
-
 // ====================== PRINTING ======================
 function printBill() {
     if (bill.length === 0) return alert("Bill is empty!");
@@ -893,7 +843,6 @@ function printBill() {
     const grandTotal = subtotal + gst;
     const customer = document.getElementById("customerName").value.trim() || "Walk-in";
     const invoiceNo = document.getElementById("invoice").value;
-
     const billData = {
         invoiceNo: invoiceNo,
         type: "staff_pos",
@@ -905,9 +854,7 @@ function printBill() {
         grandTotal: grandTotal,
         date: new Date().toISOString().split('T')[0]
     };
-
     saveBillToGoogleSheets(billData);
-
     const printWindow = window.open('', '_blank');
     let htmlContent = '<html><head><title>Bill - Shree & Shriyan Dhaba</title>';
     htmlContent += '<style>body{font-family:monospace;padding:20px;max-width:300px;margin:auto;}table{width:100%;border-collapse:collapse;}th,td{border-bottom:1px dotted #000;padding:4px 0;text-align:center;}</style></head><body>';
@@ -929,20 +876,17 @@ function printBill() {
     htmlContent += '<script>window.print(); setTimeout(() => window.close(), 800);<\/script></body></html>';
     printWindow.document.write(htmlContent);
     printWindow.document.close();
-
     bill = [];
     renderBill();
     count++;
     document.getElementById("invoice").value = "INV" + String(count).padStart(3, '0');
     localStorage.setItem("inv", count);
 }
-
 function printThermalBill() {
     if (bill.length === 0) return alert("Bill is empty!");
     alert("🖨️ Thermal Print triggered.");
     printBill();
 }
-
 function exportExcel() {
     if (bill.length === 0) return alert("No items in the bill!");
     let csv = "Item,Quantity,Rate,Amount\n";
@@ -961,7 +905,6 @@ function exportExcel() {
     link.click();
     alert("✅ Bill exported as CSV!");
 }
-
 function sendWhatsApp() {
     if (bill.length === 0) return alert("Bill is empty!");
     const mobile = prompt("Enter 10 digit mobile number:");
@@ -987,7 +930,6 @@ function sendWhatsApp() {
     msg += `📱 Pay via UPI: 8847810037jp@ybl`;
     window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`, '_blank');
 }
-
 function dailyReport() {
     const today = new Date().toISOString().split('T')[0];
     fetch(`${GOOGLE_SCRIPT_URL}?date=${today}`)
@@ -1013,7 +955,6 @@ function dailyReport() {
         })
         .catch(err => alert("Cannot connect to Google Sheet.\nPlease check your internet connection."));
 }
-
 // ====================== LIVE TABLE ORDERS ======================
 function showTableOrders() {
     const section = document.getElementById("liveOrdersSection");
@@ -1054,54 +995,57 @@ function deleteLiveOrder(orderId) {
     if (!confirm("Delete this order?")) return;
     db.ref('tableOrders/' + orderId).remove();
 }
-
-// ====================== MANAGE BILLS - COMPLETE & FIXED ======================
-let allBillsData = [];
-
-// Open Manage Bills Modal
+// ====================== MANAGE BILLS (WITH DATE FILTER, EDIT, DELETE + NEW PRINT OPTION) ======================
 function manageBills() {
     const modalHTML = `
     <div id="manageBillsModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:100000;display:flex;align-items:center;justify-content:center;">
         <div style="background:white;width:95%;max-width:1100px;max-height:92vh;border-radius:15px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.4);">
-            
+          
             <!-- Header -->
             <div style="background:#d84315;color:white;padding:15px 20px;font-size:20px;font-weight:bold;display:flex;justify-content:space-between;align-items:center;">
                 <span>📋 Manage Bills (<span id="billCount">0</span>)</span>
                 <span onclick="closeManageModal()" style="cursor:pointer;font-size:28px;font-weight:normal;">×</span>
             </div>
 
+            <!-- Date Filter Bar -->
+            <div style="background:#fff3e0;padding:15px 20px;display:flex;gap:15px;align-items:center;flex-wrap:wrap;border-bottom:1px solid #eee;">
+                <label style="font-weight:bold;color:#d84315;">From Date:</label>
+                <input type="date" id="filterFromDate" style="padding:8px 12px;border-radius:8px;border:2px solid #ff9800;">
+                <label style="font-weight:bold;color:#d84315;">To Date:</label>
+                <input type="date" id="filterToDate" style="padding:8px 12px;border-radius:8px;border:2px solid #ff9800;">
+                <button onclick="applyDateFilter()" style="padding:10px 24px;background:#d84315;color:white;border:none;border-radius:8px;font-weight:bold;">🔍 Filter by Date Range</button>
+                <button onclick="resetDateFilter()" style="padding:10px 24px;background:#666;color:white;border:none;border-radius:8px;">Show All Bills</button>
+            </div>
+            
             <!-- Content -->
             <div style="padding:20px;overflow:auto;max-height:70vh;" id="billsTableContainer">
                 <p style="text-align:center;color:#666;padding:80px 20px;">Loading bills from Google Sheet...</p>
             </div>
-
+            
             <!-- Footer -->
             <div style="padding:15px;background:#f8f9fa;text-align:right;border-top:1px solid #eee;">
                 <button onclick="closeManageModal()" style="padding:10px 25px;background:#666;color:white;border:none;border-radius:8px;">Close</button>
             </div>
         </div>
     </div>`;
-
-    // Remove old modal if exists
     if (document.getElementById('manageBillsModal')) document.getElementById('manageBillsModal').remove();
-
     const div = document.createElement('div');
     div.innerHTML = modalHTML;
     document.body.appendChild(div.firstElementChild);
-
-    loadAllBills();   // Load bills immediately
+    loadBills();
 }
 
-// Load bills from Google Sheet
-function loadAllBills() {
+function loadBills(fromDate = null, toDate = null) {
     const container = document.getElementById('billsTableContainer');
     container.innerHTML = `<p style="text-align:center;color:#666;padding:80px 20px;">Loading bills from Google Sheet...</p>`;
-
-    fetch(`${GOOGLE_SCRIPT_URL}?action=all`)
+    let url = `${GOOGLE_SCRIPT_URL}?action=all`;
+    if (fromDate && toDate) {
+        url += `&from=${fromDate}&to=${toDate}`;
+    }
+    fetch(url)
         .then(res => res.json())
         .then(result => {
             console.log("✅ Manage Bills Response:", result);
-
             if (result.ok) {
                 allBillsData = result.bills || [];
                 document.getElementById('billCount').textContent = allBillsData.length;
@@ -1121,14 +1065,12 @@ function loadAllBills() {
         });
 }
 
-// Render Bills Table with Delete Button
 function renderBillsTable(bills) {
     if (bills.length === 0) {
-        document.getElementById('billsTableContainer').innerHTML = 
+        document.getElementById('billsTableContainer').innerHTML =
             `<p style="text-align:center;color:#888;padding:80px;">No bills found yet.</p>`;
         return;
     }
-
     let html = `
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
             <thead>
@@ -1137,11 +1079,10 @@ function renderBillsTable(bills) {
                     <th style="padding:12px;border:1px solid #ddd;text-align:left;">Invoice No</th>
                     <th style="padding:12px;border:1px solid #ddd;text-align:left;">Table / Customer</th>
                     <th style="padding:12px;border:1px solid #ddd;text-align:right;">Grand Total</th>
-                    <th style="padding:12px;border:1px solid #ddd;text-align:center;width:140px;">Actions</th>
+                    <th style="padding:12px;border:1px solid #ddd;text-align:center;width:220px;">Actions</th>
                 </tr>
             </thead>
             <tbody>`;
-
     bills.forEach(bill => {
         html += `
             <tr>
@@ -1152,32 +1093,85 @@ function renderBillsTable(bills) {
                     ₹${Number(bill.grandTotal || 0).toFixed(2)}
                 </td>
                 <td style="padding:12px;border:1px solid #ddd;text-align:center;">
-                    <button onclick="viewBillItems('${bill.invoiceNo}')" 
+                    <button onclick="printManagedBill(${bill.rowIndex})"
+                            style="padding:6px 12px;background:#2e7d32;color:white;border:none;border-radius:5px;margin-right:5px;">
+                        🖨️ Print
+                    </button>
+                    <button onclick="viewBillItems('${bill.invoiceNo}')"
                             style="padding:6px 12px;background:#1976d2;color:white;border:none;border-radius:5px;margin-right:5px;">
                         👁️ View
                     </button>
-                    <button onclick="deleteBill(${bill.rowIndex})" 
+                    <button onclick="editBill(${bill.rowIndex})"
+                            style="padding:6px 12px;background:#ff9800;color:white;border:none;border-radius:5px;margin-right:5px;">
+                        ✏️ Edit
+                    </button>
+                    <button onclick="deleteBill(${bill.rowIndex})"
                             style="padding:6px 12px;background:#d32f2f;color:white;border:none;border-radius:5px;">
                         🗑️ Delete
                     </button>
                 </td>
             </tr>`;
     });
-
     html += `</tbody></table>`;
     document.getElementById('billsTableContainer').innerHTML = html;
 }
 
-// View Bill Items
+// ====================== NEW: PRINT BILL DIRECTLY FROM GOOGLE SHEET ======================
+function printManagedBill(rowIndex) {
+    const billData = allBillsData.find(b => b.rowIndex === rowIndex);
+    if (!billData) return alert("Bill not found!");
+
+    let itemsList = [];
+    try {
+        itemsList = typeof billData.items === 'string' ? JSON.parse(billData.items) : (billData.items || []);
+    } catch(e) {
+        itemsList = [];
+    }
+
+    const subtotal = parseFloat(billData.subtotal) || 0;
+    const gst = parseFloat(billData.gst) || 0;
+    const grandTotal = parseFloat(billData.grandTotal) || 0;
+    const customer = billData.customerName || 'Walk-in';
+    const invoiceNo = billData.invoiceNo || 'INV-UNKNOWN';
+    const billDate = billData.date || billData.fullTimestamp || new Date().toLocaleString();
+
+    const printWindow = window.open('', '_blank');
+    let htmlContent = '<html><head><title>Bill - Shree & Shriyan Dhaba</title>';
+    htmlContent += '<style>body{font-family:monospace;padding:20px;max-width:300px;margin:auto;}table{width:100%;border-collapse:collapse;}th,td{border-bottom:1px dotted #000;padding:4px 0;text-align:center;}</style></head><body>';
+    htmlContent += '<div style="text-align:center;">';
+    htmlContent += '<img src="./logo_180x90.jpg" alt="Shree & Shriyan Dhaba" style="max-width:180px;height:auto;">';
+    htmlContent += '<h2>Shree & Shriyan Dhaba</h2>';
+    htmlContent += '<p style="font-size:12px;">Durlaga, Jharsuguda, Odisha<br>📞 +91 7077088311</p>';
+    htmlContent += '<p>Customer: ' + customer + ' | Invoice: ' + invoiceNo + '</p>';
+    htmlContent += '<p>Date: ' + billDate + '</p>';
+    htmlContent += '<table><thead><tr><th>Item</th><th>Qty</th><th>Amt</th></tr></thead><tbody>';
+
+    itemsList.forEach(item => {
+        const name = item.name || item.name_en || 'Item';
+        const qty = item.qty || 1;
+        const price = item.price || 0;
+        const amt = qty * price;
+        htmlContent += '<tr><td>' + name + '</td><td>' + qty + '</td><td>₹' + amt + '</td></tr>';
+    });
+
+    htmlContent += '</tbody></table>';
+    htmlContent += '<p>Subtotal: ₹' + subtotal + '</p>';
+    if (gst > 0) htmlContent += '<p>GST (5%): ₹' + gst + '</p>';
+    htmlContent += '<h3 style="text-align:center;">Grand Total: ₹' + grandTotal + '</h3>';
+    htmlContent += '<p style="text-align:center; font-size:12px;">Thank You! Visit Again</p></div>';
+    htmlContent += '<script>window.print(); setTimeout(() => window.close(), 800);<\/script></body></html>';
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+}
+
 function viewBillItems(invoiceNo) {
     const bill = allBillsData.find(b => b.invoiceNo === invoiceNo);
     if (!bill) return alert("Bill not found!");
-
     let msg = `📄 Invoice: ${bill.invoiceNo}\n`;
     msg += `💰 Total: ₹${Number(bill.grandTotal).toFixed(2)}\n`;
     msg += `📅 Date: ${bill.date || bill.fullTimestamp}\n\n`;
     msg += `Items:\n`;
-
     try {
         const itemsList = typeof bill.items === 'string' ? JSON.parse(bill.items) : bill.items;
         if (Array.isArray(itemsList)) {
@@ -1190,20 +1184,17 @@ function viewBillItems(invoiceNo) {
     } catch (e) {
         msg += bill.items;
     }
-
     alert(msg);
 }
 
-// Delete Bill
 function deleteBill(rowIndex) {
     if (!confirm("⚠️ Delete this bill permanently?\nThis action cannot be undone!")) return;
-
     fetch(`${GOOGLE_SCRIPT_URL}?action=delete&rowIndex=${rowIndex}`)
         .then(res => res.json())
         .then(result => {
             if (result.ok) {
-                alert("✅ Bill deleted successfully!");
-                loadAllBills();        // Refresh the list
+                alert("✅ Bill deleted successfully from Google Sheet!");
+                loadBills(currentFilterFrom, currentFilterTo);
             } else {
                 alert("Delete failed: " + (result.error || "Unknown error"));
             }
@@ -1214,7 +1205,134 @@ function deleteBill(rowIndex) {
         });
 }
 
-// Close Modal
+function applyDateFilter() {
+    currentFilterFrom = document.getElementById('filterFromDate').value;
+    currentFilterTo = document.getElementById('filterToDate').value;
+    if (!currentFilterFrom || !currentFilterTo) {
+        alert("Please select both From and To dates!");
+        return;
+    }
+    loadBills(currentFilterFrom, currentFilterTo);
+}
+
+function resetDateFilter() {
+    currentFilterFrom = null;
+    currentFilterTo = null;
+    document.getElementById('filterFromDate').value = '';
+    document.getElementById('filterToDate').value = '';
+    loadBills();
+}
+
+function editBill(rowIndex) {
+    const bill = allBillsData.find(b => b.rowIndex === rowIndex);
+    if (!bill) return alert("Bill not found!");
+
+    let itemsJson = '';
+    try {
+        itemsJson = typeof bill.items === 'string' ? bill.items : JSON.stringify(bill.items || [], null, 2);
+    } catch(e) {
+        itemsJson = JSON.stringify(bill.items || [], null, 2);
+    }
+
+    let editModalHTML = `
+<div id="editBillModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:100001;display:flex;align-items:center;justify-content:center;">
+    <div style="background:white;width:95%;max-width:820px;border-radius:15px;padding:25px;max-height:92vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.4);">
+        <h3 style="color:#d84315;margin-bottom:20px;">✏️ Edit Bill - ${bill.invoiceNo}</h3>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+            <div>
+                <label style="display:block;margin-bottom:5px;font-weight:bold;">Invoice No</label>
+                <input id="editInvoiceNo" value="${bill.invoiceNo || ''}" style="width:100%;padding:12px;border-radius:8px;border:1px solid #ddd;">
+            </div>
+            <div>
+                <label style="display:block;margin-bottom:5px;font-weight:bold;">Date</label>
+                <input id="editDate" type="date" value="${bill.date || ''}" style="width:100%;padding:12px;border-radius:8px;border:1px solid #ddd;">
+            </div>
+        </div>
+
+        <div style="margin-top:15px;">
+            <label style="display:block;margin-bottom:5px;font-weight:bold;">Customer Name</label>
+            <input id="editCustomerName" value="${bill.customerName || ''}" style="width:100%;padding:12px;border-radius:8px;border:1px solid #ddd;">
+        </div>
+
+        <div style="margin-top:15px;">
+            <label style="display:block;margin-bottom:5px;font-weight:bold;">Table / Info</label>
+            <input id="editTableInfo" value="${bill.tableInfo || ''}" style="width:100%;padding:12px;border-radius:8px;border:1px solid #ddd;">
+        </div>
+
+        <div style="margin-top:15px;">
+            <label style="display:block;margin-bottom:5px;font-weight:bold;">Grand Total ₹</label>
+            <input id="editGrandTotal" type="number" step="0.01" value="${Number(bill.grandTotal || 0)}" style="width:100%;padding:12px;border-radius:8px;border:1px solid #ddd;">
+        </div>
+
+        <div style="margin-top:20px;">
+            <label style="display:block;margin-bottom:8px;font-weight:bold;">Items (JSON Array - edit carefully)</label>
+            <textarea id="editItemsJson" style="width:100%;height:180px;padding:12px;border-radius:8px;border:1px solid #ddd;font-family:monospace;font-size:13px;">${itemsJson}</textarea>
+        </div>
+
+        <div style="margin-top:25px;text-align:right;">
+            <button onclick="saveEditedBill(${rowIndex})" style="background:#2e7d32;color:white;padding:14px 32px;border:none;border-radius:12px;font-size:17px;margin-right:12px;">💾 Save Changes to Google Sheet</button>
+            <button onclick="closeEditModal()" style="background:#999;color:white;padding:14px 32px;border:none;border-radius:12px;font-size:17px;">Cancel</button>
+        </div>
+    </div>
+</div>`;
+
+    if (document.getElementById('editBillModal')) document.getElementById('editBillModal').remove();
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = editModalHTML;
+    document.body.appendChild(tempDiv.firstElementChild);
+}
+
+function closeEditModal() {
+    const modal = document.getElementById('editBillModal');
+    if (modal) modal.remove();
+}
+
+function saveEditedBill(rowIndex) {
+    const invoiceNo = document.getElementById('editInvoiceNo').value.trim();
+    const customerName = document.getElementById('editCustomerName').value.trim();
+    const tableInfo = document.getElementById('editTableInfo').value.trim();
+    const grandTotal = parseFloat(document.getElementById('editGrandTotal').value) || 0;
+    const date = document.getElementById('editDate').value;
+
+    let items = [];
+    try {
+        const jsonText = document.getElementById('editItemsJson').value.trim();
+        items = jsonText ? JSON.parse(jsonText) : [];
+    } catch (e) {
+        return alert("Invalid JSON in Items field! Please check format.");
+    }
+
+    const updatedData = {
+        invoiceNo: invoiceNo,
+        customerName: customerName,
+        tableInfo: tableInfo,
+        grandTotal: grandTotal,
+        date: date,
+        items: items
+    };
+
+    fetch(`${GOOGLE_SCRIPT_URL}?action=update&rowIndex=${rowIndex}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData)
+    })
+    .then(res => res.json())
+    .then(result => {
+        if (result.ok) {
+            alert(`✅ Bill ${invoiceNo} updated successfully in Google Sheet!`);
+            closeEditModal();
+            loadBills(currentFilterFrom, currentFilterTo);
+        } else {
+            alert("❌ Update failed: " + (result.error || "Unknown error"));
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Failed to update bill. Check internet or script.");
+    });
+}
+
 function closeManageModal() {
     const modal = document.getElementById('manageBillsModal');
     if (modal) modal.remove();
@@ -1242,7 +1360,6 @@ db.ref('tableOrders').on('child_added', (snapshot) => {
         }
     }
 });
-
 // ====================== CUSTOMER SIDE ======================
 function generateDynamicPhonePeQR() {
     const total = parseFloat(document.getElementById("custTotal").innerText) || 0;
@@ -1257,7 +1374,6 @@ function generateDynamicPhonePeQR() {
     container.innerHTML = `<img src="${qrUrl}" style="cursor:pointer;" onclick="window.open('${upiLink}','_blank')" alt="UPI QR"><p style="margin:8px 0 0 0; font-weight:bold; color:#6739B7;">₹${total.toFixed(2)} — Tap to Pay</p>`;
     container.style.display = "block";
 }
-
 function generateQRCode() {
     const tableNo = document.getElementById("qrTableNum").value.trim();
     if (!tableNo) return alert("Enter Table Number");
@@ -1269,7 +1385,6 @@ function generateQRCode() {
         <p style="margin-top:10px; font-weight:bold; color:#d84315;">Table ${tableNo} - Scan to Order</p>
     `;
 }
-
 function joinTable() {
     currentTable = document.getElementById("custTable").value.trim();
     currentName = document.getElementById("custName").value.trim();
@@ -1281,7 +1396,6 @@ function joinTable() {
     document.getElementById("displayName").innerText = currentName;
     loadCustomerMenu();
 }
-
 function loadCustomerMenu() {
     let html = '';
     if (items.length === 0) {
@@ -1306,7 +1420,6 @@ function loadCustomerMenu() {
     });
     document.getElementById("menuItems").innerHTML = html;
 }
-
 function addCustomerItem(idx) {
     const item = items[idx];
     let existing = customerOrder.find(o => o.name_en === item.name_en);
@@ -1314,7 +1427,6 @@ function addCustomerItem(idx) {
     else customerOrder.push({...item, qty: 1});
     renderCustomerOrder();
 }
-
 function renderCustomerOrder() {
     let html = "", total = 0;
     customerOrder.forEach((b, i) => {
@@ -1326,19 +1438,16 @@ function renderCustomerOrder() {
     document.getElementById("custTotal").innerText = total.toFixed(2);
     generateDynamicPhonePeQR();
 }
-
 function delCustomerItem(i) {
     customerOrder.splice(i, 1);
     renderCustomerOrder();
 }
-
 function clearCustomerOrder() {
     if (confirm("Clear cart?")) {
         customerOrder = [];
         renderCustomerOrder();
     }
 }
-
 function showCustomerCashConfirmation() {
     let existing = document.getElementById('customerCashConfirmModal');
     if (existing) existing.remove();
@@ -1360,7 +1469,6 @@ function showCustomerCashConfirmation() {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = modalHTML;
     document.body.appendChild(tempDiv.firstElementChild);
-
     let timeLeft = 8;
     const timerElement = document.getElementById('seconds');
     const countdownInterval = setInterval(() => {
@@ -1372,19 +1480,16 @@ function showCustomerCashConfirmation() {
         }
     }, 1000);
 }
-
 window.closeCustomerCashModal = function() {
     const modal = document.getElementById('customerCashConfirmModal');
     if (modal) modal.remove();
 };
-
 function speakCustomerCashConfirmation() {
     let message = "Your pay by cash request has been sent to staff. Please wait, staff will come to collect cash.";
     if (currentLang === 'hi') message = "आपका कैश पेमेंट रिक्वेस्ट स्टाफ को भेज दिया गया है। कृपया प्रतीक्षा करें, स्टाफ कैश लेने आएगा।";
     else if (currentLang === 'or') message = "ଆପଣଙ୍କ କ୍ୟାଶ୍ ପେମେଣ୍ଟ ରିକ୍ୱେଷ୍ଟ ଷ୍ଟାଫଙ୍କୁ ପଠାଯାଇଛି। ଦୟାକରି ଅପେକ୍ଷା କରନ୍ତୁ, ଷ୍ଟାଫ କ୍ୟାଶ୍ ନେବାକୁ ଆସିବେ।";
     speak(message, currentLang);
 }
-
 // ====================== INITIALIZE ======================
 function initializeApp() {
     const urlParams = new URLSearchParams(window.location.search);
